@@ -1,4 +1,4 @@
-import { LEGACY_STORAGE_KEYS, STORAGE_KEYS } from './constants.js';
+import { STORAGE_KEYS } from './constants.js';
 import { createDefaultSettings, normalizeSettings } from './settings.js';
 import { createInitialSession, normalizeSession } from './session.js';
 
@@ -43,12 +43,6 @@ export function loadActiveSession(settings, storage = getBrowserStorage()) {
 
 export function saveActiveSession(session, storage = getBrowserStorage()) {
   writeJson(storage, STORAGE_KEYS.activeSession, session);
-}
-
-export function clearLegacyStorage(storage = getBrowserStorage()) {
-  for (const key of LEGACY_STORAGE_KEYS) {
-    storage.removeItem(key);
-  }
 }
 
 export function createMemoryStorage(initialState = {}) {

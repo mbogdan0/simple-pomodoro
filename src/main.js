@@ -33,7 +33,6 @@ import {
 } from './core/session.js';
 import { sanitizeRepeatCount } from './core/settings.js';
 import {
-  clearLegacyStorage,
   loadActiveSession,
   loadSettings,
   saveActiveSession,
@@ -60,12 +59,6 @@ if (!root) {
 }
 
 const faviconLink = ensureFaviconLink();
-
-try {
-  clearLegacyStorage();
-} catch {
-  // localStorage cleanup is best-effort only.
-}
 
 const state = {
   activeSession: null,
@@ -131,7 +124,7 @@ function createWorkerInstance() {
     return null;
   }
 
-  const inlineSource = globalThis.__POMODORO_WORKER_SOURCE__;
+  const inlineSource = globalThis.__TIMER_WORKER_SOURCE__;
 
   if (typeof inlineSource === 'string' && inlineSource) {
     const blobUrl = URL.createObjectURL(

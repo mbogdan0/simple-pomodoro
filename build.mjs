@@ -43,7 +43,7 @@ async function buildAssets() {
   const commonOptions = {
     bundle: true,
     legalComments: 'none',
-    minify: false,
+    minify: true,
     target: 'es2020',
     write: false
   };
@@ -95,7 +95,7 @@ async function buildAssets() {
     )
     .replace(
       '<!-- WORKER_SOURCE -->',
-      `<script>window.__POMODORO_WORKER_SOURCE__ = ${JSON.stringify(escapeInlineScript(workerJs))};</script>`
+      `<script>window.__TIMER_WORKER_SOURCE__ = ${JSON.stringify(escapeInlineScript(workerJs))};</script>`
     )
     .replace(
       '<!-- APP_SCRIPT -->',

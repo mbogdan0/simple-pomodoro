@@ -40,12 +40,6 @@ export const STORAGE_KEYS = {
   activeSession: 'timer.active-session.v2'
 };
 
-export const LEGACY_STORAGE_KEYS = [
-  'pomodoro-orbit.settings.v1',
-  'pomodoro-orbit.history.v1',
-  'pomodoro-orbit.active-session.v1'
-];
-
 export const WORKER_TICK_INTERVAL_MS = 250;
 export const BACKGROUND_COMPLETION_THRESHOLD_MS = 1000;
 export const MIN_STEP_DURATION_MS = 60 * 1000;

@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { LEGACY_STORAGE_KEYS } from '../src/core/constants.js';
 import { createDefaultSettings } from '../src/core/settings.js';
 import { createInitialSession } from '../src/core/session.js';
 import {
-  clearLegacyStorage,
   createMemoryStorage,
   loadActiveSession,
   loadSettings,
@@ -45,22 +43,5 @@ describe('storage layer', () => {
 
     expect(loaded.lastOpenTab).toBe('timer');
     expect(loaded.repeatCount).toBeGreaterThanOrEqual(1);
-  });
-
-  it('clears legacy pomodoro-orbit keys without touching new ones', () => {
-    const initialState = {
-      [LEGACY_STORAGE_KEYS[0]]: '{"legacy":true}',
-      [LEGACY_STORAGE_KEYS[1]]: '[]',
-      [LEGACY_STORAGE_KEYS[2]]: '{"legacy":true}',
-      'timer.settings.v2': '{"keep":true}'
-    };
-    const storage = createMemoryStorage(initialState);
-
-    clearLegacyStorage(storage);
-
-    expect(storage.getItem(LEGACY_STORAGE_KEYS[0])).toBeNull();
-    expect(storage.getItem(LEGACY_STORAGE_KEYS[1])).toBeNull();
-    expect(storage.getItem(LEGACY_STORAGE_KEYS[2])).toBeNull();
-    expect(storage.getItem('timer.settings.v2')).toBe('{"keep":true}');
   });
 });
