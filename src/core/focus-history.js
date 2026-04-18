@@ -1,5 +1,5 @@
 import { createCompletionKey } from './alerts.js';
-import { STEP_TYPES } from './constants.js';
+import { MAX_FOCUS_HISTORY_ENTRIES, STEP_TYPES } from './constants.js';
 import { getCurrentStep } from './session.js';
 
 function normalizeHistoryId(value) {
@@ -52,7 +52,8 @@ export function normalizeFocusHistory(rawHistory = []) {
 
   return rawHistory
     .map((entry) => normalizeFocusHistoryEntry(entry))
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, MAX_FOCUS_HISTORY_ENTRIES);
 }
 
 export function createFocusHistoryEntry(session, completionKeyHint = '') {
@@ -96,7 +97,7 @@ export function appendFocusHistoryEntry(history = [], rawEntry) {
     return normalizedHistory;
   }
 
-  return [nextEntry, ...normalizedHistory];
+  return [nextEntry, ...normalizedHistory].slice(0, MAX_FOCUS_HISTORY_ENTRIES);
 }
 
 export function removeFocusHistoryEntry(history = [], entryId) {

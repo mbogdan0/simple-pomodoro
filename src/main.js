@@ -6,7 +6,7 @@ import {
   shouldDispatchCompletion,
   shouldDispatchFocusMinuteReminder
 } from './core/alerts.js';
-import { APP_NAME, STEP_TYPES, STEP_TYPE_LABELS, TAB_LABELS } from './core/constants.js';
+import { APP_NAME, STEP_TYPES, STEP_TYPE_LABELS, STORAGE_KEYS, TAB_LABELS } from './core/constants.js';
 import { createFaviconModel, renderFaviconDataUrl } from './core/favicon.js';
 import {
   appendFocusHistoryEntry,
@@ -192,23 +192,55 @@ function setupWorker() {
     }
 
     timerWorker.addEventListener('message', handleWorkerMessage);
-    timerWorker.addEventListener('error', () => {
-      state.backgroundNotice = BACKGROUND_UNAVAILABLE_NOTICE;
-      renderApp();
-    });
+    timerWorker.addEventListener('error', handleWorkerRuntimeError);
     syncWorkerState();
   } catch {
-    state.backgroundNotice = BACKGROUND_UNAVAILABLE_NOTICE;
-    renderApp();
+    disableWorkerAndSwitchToLocal(state.activeSession);
   }
+}
+
+function disposeWorker() {
+  if (!timerWorker) {
+    return;
+  }
+
+  try {
+    timerWorker.removeEventListener('message', handleWorkerMessage);
+    timerWorker.removeEventListener('error', handleWorkerRuntimeError);
+  } catch {
+    // Ignore worker listener cleanup errors.
+  }
+
+  try {
+    timerWorker.terminate?.();
+  } catch {
+    // Ignore worker termination errors.
+  }
+
+  timerWorker = null;
+}
+
+function disableWorkerAndSwitchToLocal(nextSession = state.activeSession) {
+  disposeWorker();
+  state.backgroundNotice = BACKGROUND_UNAVAILABLE_NOTICE;
+
+  commitSession(syncSession(normalizeSession(nextSession, state.settings), Date.now()), {
+    dispatchAlerts: true,
+    persist: true,
+    render: true,
+    syncWorker: false
+  });
+}
+
+function handleWorkerRuntimeError() {
+  disableWorkerAndSwitchToLocal(state.activeSession);
 }
 
 function handleWorkerMessage(event) {
   const { completionKey, session, type } = event.data ?? {};
 
   if (type === 'ERROR') {
-    state.backgroundNotice = BACKGROUND_UNAVAILABLE_NOTICE;
-    renderApp();
+    disableWorkerAndSwitchToLocal(session ?? state.activeSession);
     return;
   }
 
@@ -260,6 +292,43 @@ function bindGlobalEvents() {
     persistSession();
     syncWorkerNow();
   });
+
+  window.addEventListener('storage', handleStorageSyncEvent);
+}
+
+function handleStorageSyncEvent(event) {
+  if (!event?.key) {
+    return;
+  }
+
+  if (event.key === STORAGE_KEYS.settings) {
+    state.settings = loadSettings();
+
+    if (state.activeSession.status === 'idle' && state.activeSession.currentStepIndex === 0) {
+      const syncedIdleSession = syncIdleSessionWithSettings(
+        state.activeSession,
+        state.settings,
+        Date.now()
+      );
+      commitSession(syncedIdleSession, {
+        dispatchAlerts: false,
+        persist: false,
+        render: true,
+        syncWorker: true
+      });
+      return;
+    }
+
+    renderApp();
+    return;
+  }
+
+  if (event.key === STORAGE_KEYS.activeSession) {
+    restoreSessionFromStorage({
+      persist: false
+    });
+    syncWorkerNow();
+  }
 }
 
 function bindRootEvents() {
@@ -327,12 +396,16 @@ function syncWorkerState() {
     return;
   }
 
-  timerWorker.postMessage({
-    payload: {
-      session: state.activeSession
-    },
-    type: 'INIT'
-  });
+  try {
+    timerWorker.postMessage({
+      payload: {
+        session: state.activeSession
+      },
+      type: 'INIT'
+    });
+  } catch {
+    disableWorkerAndSwitchToLocal(state.activeSession);
+  }
 }
 
 function syncWorkerNow(now = Date.now()) {
@@ -345,13 +418,19 @@ function postWorkerAction(type, payload = {}) {
     return;
   }
 
-  timerWorker.postMessage({
-    payload,
-    type
-  });
+  try {
+    timerWorker.postMessage({
+      payload,
+      type
+    });
+  } catch {
+    disableWorkerAndSwitchToLocal(state.activeSession);
+    handleLocalAction(type, payload);
+  }
 }
 
-function restoreSessionFromStorage() {
+function restoreSessionFromStorage(options = {}) {
+  const { persist = true } = options;
   let storedSession;
 
   try {
@@ -369,7 +448,7 @@ function restoreSessionFromStorage() {
 
   commitSession(storedSession, {
     dispatchAlerts: true,
-    persist: true,
+    persist,
     render: true,
     syncWorker: true
   });

@@ -44,6 +44,7 @@ export const STORAGE_KEYS = {
   settings: 'timer.settings.v2',
   activeSession: 'timer.active-session.v2'
 };
+export const MAX_FOCUS_HISTORY_ENTRIES = 500;
 
 export const WORKER_TICK_INTERVAL_MS = 250;
 export const BACKGROUND_COMPLETION_THRESHOLD_MS = 1000;

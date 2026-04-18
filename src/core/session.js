@@ -110,13 +110,20 @@ export function startCurrentStep(session, now = Date.now()) {
 }
 
 export function prepareSessionForStepStart(session, settings, now = Date.now()) {
+  if (session.status === 'running') {
+    return session;
+  }
+
   let nextSession = session;
 
   if (nextSession.status === 'completed_waiting_next') {
     nextSession = goToNextStep(nextSession, now);
   }
 
-  nextSession = syncIdleSessionWithSettings(nextSession, settings, now);
+  if (nextSession.status === 'idle' && nextSession.currentStepIndex === 0) {
+    nextSession = syncIdleSessionWithSettings(nextSession, settings, now);
+  }
+
   return startCurrentStep(nextSession, now);
 }
 
@@ -217,17 +224,11 @@ export function goToNextStep(session, now = Date.now()) {
 
 export function syncSession(session, now = Date.now()) {
   if (session.status !== 'running') {
-    return {
-      ...session,
-      updatedAt: now
-    };
+    return session;
   }
 
   if (now < (session.endsAt ?? 0)) {
-    return {
-      ...session,
-      updatedAt: now
-    };
+    return session;
   }
 
   return {

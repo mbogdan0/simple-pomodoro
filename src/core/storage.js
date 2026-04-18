@@ -3,6 +3,8 @@ import { normalizeFocusHistory } from './focus-history.js';
 import { createDefaultSettings, normalizeSettings } from './settings.js';
 import { createInitialSession, normalizeSession } from './session.js';
 
+const memoryFallbackStorage = createMemoryStorage();
+
 function getBrowserStorage() {
   if (!globalThis.localStorage) {
     throw new Error('localStorage is not available in this environment.');
@@ -11,9 +13,33 @@ function getBrowserStorage() {
   return globalThis.localStorage;
 }
 
-function parseJson(storage, key) {
-  const rawValue = storage.getItem(key);
+function resolveStorage(storage) {
+  if (storage) {
+    return storage;
+  }
 
+  try {
+    return getBrowserStorage();
+  } catch {
+    return memoryFallbackStorage;
+  }
+}
+
+function safeGetItem(storage, key) {
+  try {
+    return {
+      ok: true,
+      rawValue: storage.getItem(key)
+    };
+  } catch {
+    return {
+      ok: false,
+      rawValue: null
+    };
+  }
+}
+
+function parseJsonRaw(rawValue) {
   if (!rawValue) {
     return null;
   }
@@ -25,33 +51,66 @@ function parseJson(storage, key) {
   }
 }
 
+function parseJson(storage, key) {
+  const primaryRead = safeGetItem(storage, key);
+
+  if (primaryRead.ok) {
+    const parsedPrimary = parseJsonRaw(primaryRead.rawValue);
+
+    if (parsedPrimary !== null || storage === memoryFallbackStorage) {
+      return parsedPrimary;
+    }
+  }
+
+  const fallbackRead = safeGetItem(memoryFallbackStorage, key);
+  if (!fallbackRead.ok) {
+    return null;
+  }
+
+  return parseJsonRaw(fallbackRead.rawValue);
+}
+
 function writeJson(storage, key, value) {
-  storage.setItem(key, JSON.stringify(value));
+  const serialized = JSON.stringify(value);
+
+  try {
+    storage.setItem(key, serialized);
+    return;
+  } catch {
+    // Ignore and continue to in-memory fallback.
+  }
+
+  try {
+    memoryFallbackStorage.setItem(key, serialized);
+  } catch {
+    // Ignore fallback write errors.
+  }
 }
 
-export function loadSettings(storage = getBrowserStorage()) {
-  return normalizeSettings(parseJson(storage, STORAGE_KEYS.settings) ?? createDefaultSettings());
+export function loadSettings(storage) {
+  const resolvedStorage = resolveStorage(storage);
+  return normalizeSettings(parseJson(resolvedStorage, STORAGE_KEYS.settings) ?? createDefaultSettings());
 }
 
-export function saveSettings(settings, storage = getBrowserStorage()) {
-  writeJson(storage, STORAGE_KEYS.settings, settings);
+export function saveSettings(settings, storage) {
+  writeJson(resolveStorage(storage), STORAGE_KEYS.settings, settings);
 }
 
-export function loadActiveSession(settings, storage = getBrowserStorage()) {
-  const rawSession = parseJson(storage, STORAGE_KEYS.activeSession);
+export function loadActiveSession(settings, storage) {
+  const rawSession = parseJson(resolveStorage(storage), STORAGE_KEYS.activeSession);
   return rawSession ? normalizeSession(rawSession, settings) : createInitialSession(settings);
 }
 
-export function saveActiveSession(session, storage = getBrowserStorage()) {
-  writeJson(storage, STORAGE_KEYS.activeSession, session);
+export function saveActiveSession(session, storage) {
+  writeJson(resolveStorage(storage), STORAGE_KEYS.activeSession, session);
 }
 
-export function loadFocusHistory(storage = getBrowserStorage()) {
-  return normalizeFocusHistory(parseJson(storage, STORAGE_KEYS.focusHistory));
+export function loadFocusHistory(storage) {
+  return normalizeFocusHistory(parseJson(resolveStorage(storage), STORAGE_KEYS.focusHistory));
 }
 
-export function saveFocusHistory(history, storage = getBrowserStorage()) {
-  writeJson(storage, STORAGE_KEYS.focusHistory, normalizeFocusHistory(history));
+export function saveFocusHistory(history, storage) {
+  writeJson(resolveStorage(storage), STORAGE_KEYS.focusHistory, normalizeFocusHistory(history));
 }
 
 export function createMemoryStorage(initialState = {}) {

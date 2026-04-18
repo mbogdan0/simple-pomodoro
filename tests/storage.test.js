@@ -135,4 +135,25 @@ describe('storage layer', () => {
     expect(loadSettings(storage).pipEnabled).toBe(true);
     expect(loadSettings(storage).pipClockTickEvery10s).toBe(true);
   });
+
+  it('falls back to in-memory storage when provided storage throws', () => {
+    const throwingStorage = {
+      getItem() {
+        throw new Error('Storage read is blocked.');
+      },
+      removeItem() {
+        throw new Error('Storage remove is blocked.');
+      },
+      setItem() {
+        throw new Error('Storage write is blocked.');
+      }
+    };
+    const settings = {
+      ...createDefaultSettings(),
+      repeatCount: 3
+    };
+
+    expect(() => saveSettings(settings, throwingStorage)).not.toThrow();
+    expect(loadSettings(throwingStorage).repeatCount).toBe(3);
+  });
 });

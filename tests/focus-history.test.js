@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { MAX_FOCUS_HISTORY_ENTRIES } from '../src/core/constants.js';
 import {
   appendFocusHistoryEntry,
   createFocusHistoryEntry,
@@ -60,5 +61,31 @@ describe('focus history helpers', () => {
     expect(withFirstEntry).toHaveLength(1);
     expect(withDuplicate).toHaveLength(1);
     expect(removeFocusHistoryEntry(withDuplicate, entry.id)).toEqual([]);
+  });
+
+  it('keeps focus history bounded to the most recent entries', () => {
+    const history = [];
+
+    for (let index = 0; index < MAX_FOCUS_HISTORY_ENTRIES + 25; index += 1) {
+      const next = {
+        completedAt: 1_710_000_000_000 + index,
+        durationMs: 25 * 60 * 1000,
+        id: `step-${index}`,
+        stepId: `step-${index}`,
+        stepType: 'work'
+      };
+      history.unshift(next);
+    }
+
+    const appended = appendFocusHistoryEntry(history, {
+      completedAt: 1_720_000_000_000,
+      durationMs: 25 * 60 * 1000,
+      id: 'latest-step',
+      stepId: 'latest-step',
+      stepType: 'work'
+    });
+
+    expect(appended).toHaveLength(MAX_FOCUS_HISTORY_ENTRIES);
+    expect(appended[0].id).toBe('latest-step');
   });
 });

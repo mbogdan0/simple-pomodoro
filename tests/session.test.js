@@ -43,6 +43,16 @@ describe('timer session engine', () => {
     expect(started.endsAt).toBe(1_000 + settings.templateDurations.work);
   });
 
+  it('ignores repeated start requests while already running', () => {
+    const started = prepareSessionForStepStart(createInitialSession(settings), settings, 1_000);
+    const restarted = prepareSessionForStepStart(started, settings, 5_000);
+
+    expect(restarted.status).toBe('running');
+    expect(restarted.stepStartedAt).toBe(started.stepStartedAt);
+    expect(restarted.endsAt).toBe(started.endsAt);
+    expect(restarted.updatedAt).toBe(started.updatedAt);
+  });
+
   it('pauses and resumes without losing remaining time', () => {
     const session = startCurrentStep(createInitialSession(settings), 10_000);
     const paused = pauseSession(session, 70_000);
@@ -72,6 +82,72 @@ describe('timer session engine', () => {
     expect(restarted.status).toBe('running');
     expect(restarted.currentStepIndex).toBe(1);
     expect(restarted.scenario[restarted.currentStepIndex].type).toBe('shortBreak');
+  });
+
+  it('keeps current cycle snapshot when settings change mid-cycle', () => {
+    const initialSettings = createDefaultSettings();
+    initialSettings.repeatCount = 3;
+    initialSettings.templateDurations.shortBreak = 3 * 60 * 1000;
+
+    const running = startCurrentStep(createInitialSession(initialSettings), 1_000);
+    const completed = syncSession(running, running.endsAt + 1_000);
+    const nextIdle = advanceAfterCompletion(completed, initialSettings, completed.finishedAt + 50);
+
+    expect(nextIdle.status).toBe('idle');
+    expect(nextIdle.currentStepIndex).toBe(1);
+
+    const changedSettings = {
+      ...initialSettings,
+      repeatCount: 1,
+      templateDurations: {
+        ...initialSettings.templateDurations,
+        shortBreak: 1 * 60 * 1000,
+        work: 10 * 60 * 1000
+      }
+    };
+    const restarted = prepareSessionForStepStart(
+      nextIdle,
+      changedSettings,
+      completed.finishedAt + 100
+    );
+
+    expect(restarted.currentStepIndex).toBe(1);
+    expect(restarted.scenario).toHaveLength(nextIdle.scenario.length);
+    expect(restarted.scenario[1].durationMs).toBe(3 * 60 * 1000);
+  });
+
+  it('applies latest settings when a new cycle starts', () => {
+    const initialSettings = createDefaultSettings();
+    const base = createInitialSession(initialSettings);
+    const runningLastStep = startCurrentStep(
+      {
+        ...base,
+        currentStepIndex: base.scenario.length - 1
+      },
+      5_000
+    );
+    const completed = syncSession(runningLastStep, runningLastStep.endsAt + 1_000);
+    const wrappedIdle = advanceAfterCompletion(completed, initialSettings, completed.finishedAt + 50);
+
+    expect(wrappedIdle.status).toBe('idle');
+    expect(wrappedIdle.currentStepIndex).toBe(0);
+
+    const changedSettings = {
+      ...initialSettings,
+      repeatCount: 1,
+      templateDurations: {
+        ...initialSettings.templateDurations,
+        work: 10 * 60 * 1000
+      }
+    };
+    const restarted = prepareSessionForStepStart(
+      wrappedIdle,
+      changedSettings,
+      completed.finishedAt + 100
+    );
+
+    expect(restarted.scenario).toHaveLength(2);
+    expect(restarted.scenario[0].durationMs).toBe(10 * 60 * 1000);
   });
 
   it('does not auto-start the next step by default after completion', () => {
@@ -140,6 +216,14 @@ describe('timer session engine', () => {
     expect(next.currentStepIndex).toBe(1);
     expect(wrapped.status).toBe('idle');
     expect(wrapped.currentStepIndex).toBe(0);
+  });
+
+  it('does not drift updatedAt while running step has not finished', () => {
+    const running = startCurrentStep(createInitialSession(settings), 1_000);
+    const synced = syncSession(running, 2_000);
+
+    expect(synced.status).toBe('running');
+    expect(synced.updatedAt).toBe(running.updatedAt);
   });
 
   it('resets full session to first step in idle state', () => {
