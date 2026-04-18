@@ -18,6 +18,7 @@ import {
   formatDocumentTitle,
   formatMinutesValue,
   formatNotificationPermissionLabel,
+  formatPipClock,
   formatStepTypeLabel,
   formatStatusLabel,
   parseMinutesValue
@@ -811,13 +812,15 @@ function renderSettingsPanel() {
             type="checkbox"
           >
         </label>
-        <p class="inline-note">
-          ${
-            pipSupported
-              ? 'Automatically opens PiP when you press Start. Manual Open/Close PiP is available on the Timer tab.'
-              : 'Picture-in-Picture is unavailable in this browser.'
-          }
-        </p>
+        <label class="toggle-row">
+          <span>PiP clock updates every 10 seconds</span>
+          <input
+            ${state.settings.pipClockTickEvery10s ? 'checked' : ''}
+            ${pipSupported ? '' : 'disabled'}
+            data-setting-toggle="pipClockTickEvery10s"
+            type="checkbox"
+          >
+        </label>
       </div>
 
       <div class="panel-section">
@@ -914,11 +917,11 @@ function updateTimerLiveRegion(now = Date.now()) {
     progressFillElement.style.width = `${timerModel.progressPercent}%`;
   }
 
-  syncPictureInPicture(timerModel);
+  syncPictureInPicture(timerModel, now);
   maybeDispatchFocusMinuteReminder(now);
 }
 
-function syncPictureInPicture(timerModel) {
+function syncPictureInPicture(timerModel, now = Date.now()) {
   const status = state.activeSession.status;
   const shouldKeepOpen = state.manualPipRequested ||
     (state.settings.pipEnabled && (status === 'running' || status === 'paused'));
@@ -928,8 +931,15 @@ function syncPictureInPicture(timerModel) {
     return;
   }
 
+  const remainingMs = getRemainingMs(state.activeSession, now);
+  const pipClock = formatPipClock(
+    remainingMs,
+    status,
+    state.settings.pipClockTickEvery10s
+  );
+
   pipController.update({
-    clock: timerModel.clock,
+    clock: pipClock,
     progressPercent: timerModel.progressPercent,
     status,
     stepLabel: timerModel.stepLabel
@@ -1139,6 +1149,14 @@ function handleRootChange(event) {
       state.settings.pipEnabled = target.checked;
       persistSettings();
       renderApp();
+      return;
+    }
+
+    if (key === 'pipClockTickEvery10s') {
+      state.settings.pipClockTickEvery10s = target.checked;
+      persistSettings();
+      renderApp();
+      return;
     }
   }
 }

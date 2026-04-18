@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { createFaviconModel, renderFaviconDataUrl } from '../src/core/favicon.js';
-import { formatDocumentTitle, formatNotificationPermissionLabel } from '../src/core/format.js';
+import {
+  formatClock,
+  formatDocumentTitle,
+  formatNotificationPermissionLabel,
+  formatPipClock
+} from '../src/core/format.js';
 import { createDefaultSettings } from '../src/core/settings.js';
 import { createInitialSession, startCurrentStep, syncSession } from '../src/core/session.js';
 
@@ -20,6 +25,29 @@ describe('presentation helpers', () => {
     expect(formatNotificationPermissionLabel('granted')).toBe('Allowed');
     expect(formatNotificationPermissionLabel('default')).toBe('Not allowed');
     expect(formatNotificationPermissionLabel('unsupported')).toBe('Unavailable');
+  });
+
+  it('keeps PiP clock format unchanged when 10-second ticking is disabled', () => {
+    const remainingMs = 24 * 60 * 1000 + 59 * 1000;
+
+    expect(formatPipClock(remainingMs, 'running', false)).toBe(formatClock(remainingMs));
+  });
+
+  it('quantizes PiP clock to the next 10-second boundary while running', () => {
+    expect(formatPipClock(24 * 60 * 1000 + 59 * 1000, 'running', true)).toBe('25:00');
+    expect(formatPipClock(24 * 60 * 1000 + 49 * 1000, 'running', true)).toBe('24:50');
+  });
+
+  it('shows per-second PiP clock updates for the final 9 seconds', () => {
+    expect(formatPipClock(9_000, 'running', true)).toBe('00:09');
+    expect(formatPipClock(8_000, 'running', true)).toBe('00:08');
+  });
+
+  it('does not quantize PiP clock outside running status', () => {
+    const remainingMs = 24 * 60 * 1000 + 59 * 1000;
+
+    expect(formatPipClock(remainingMs, 'paused', true)).toBe('24:59');
+    expect(formatPipClock(remainingMs, 'idle', true)).toBe('24:59');
   });
 
   it('describes favicon state for running, paused and completed sessions', () => {

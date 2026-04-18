@@ -15,6 +15,21 @@ export function formatClock(totalMs) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+export function formatPipClock(remainingMs, status, tickEvery10Seconds = false) {
+  if (!tickEvery10Seconds || status !== 'running') {
+    return formatClock(remainingMs);
+  }
+
+  const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+
+  if (remainingSeconds <= 9) {
+    return formatClock(remainingMs);
+  }
+
+  const roundedUpTo10Seconds = Math.ceil(remainingSeconds / 10) * 10;
+  return formatClock(roundedUpTo10Seconds * 1000);
+}
+
 export function formatStepTypeLabel(type) {
   return STEP_TYPE_LABELS[type] ?? STEP_TYPE_LABELS.work;
 }

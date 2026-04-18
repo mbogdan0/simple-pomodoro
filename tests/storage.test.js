@@ -16,6 +16,7 @@ import {
 describe('storage layer', () => {
   it('defaults picture-in-picture setting to disabled', () => {
     expect(createDefaultSettings().pipEnabled).toBe(false);
+    expect(createDefaultSettings().pipClockTickEvery10s).toBe(false);
   });
 
   it('roundtrips settings and active session through localStorage abstraction', () => {
@@ -48,6 +49,7 @@ describe('storage layer', () => {
       {
         lastOpenTab: 'unknown-tab',
         pipEnabled: 'yes',
+        pipClockTickEvery10s: 'yes',
         repeatCount: 0,
         autoStartNextStep: 'yes',
         templateDurations: {
@@ -63,6 +65,7 @@ describe('storage layer', () => {
 
     expect(loaded.lastOpenTab).toBe('timer');
     expect(loaded.pipEnabled).toBe(false);
+    expect(loaded.pipClockTickEvery10s).toBe(false);
     expect(loaded.repeatCount).toBeGreaterThanOrEqual(1);
     expect(loaded.autoStartNextStep).toBe(false);
   });
@@ -122,12 +125,14 @@ describe('storage layer', () => {
     const settings = {
       ...createDefaultSettings(),
       autoStartNextStep: true,
-      pipEnabled: true
+      pipEnabled: true,
+      pipClockTickEvery10s: true
     };
 
     saveSettings(settings, storage);
 
     expect(loadSettings(storage).autoStartNextStep).toBe(true);
     expect(loadSettings(storage).pipEnabled).toBe(true);
+    expect(loadSettings(storage).pipClockTickEvery10s).toBe(true);
   });
 });

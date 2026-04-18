@@ -32,6 +32,7 @@ export const MIN_REPEAT_COUNT = 1;
 export const MAX_REPEAT_COUNT = 24;
 export const DEFAULT_AUTO_START_NEXT_STEP = false;
 export const DEFAULT_PIP_ENABLED = false;
+export const DEFAULT_PIP_CLOCK_TICK_EVERY_10S = false;
 
 export const DEFAULT_ALERT_SETTINGS = {
   notificationsEnabled: true,
