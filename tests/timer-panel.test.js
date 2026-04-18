@@ -25,6 +25,10 @@ describe('simple timer panel', () => {
 
     expect(html).toContain('25:00');
     expect(html).toContain('data-live-cycle-progress');
+    expect(html).toContain('role="timer"');
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-valuenow="30"');
+    expect(html).toContain('role="status"');
     expect(html).toContain('cycle-dot__outer is-active');
     expect(html).toContain('cycle-dot__inner is-done');
     expect(html).toContain('Focus repeat 1/4');

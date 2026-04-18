@@ -17,11 +17,12 @@ import {
   parseMinutesValue
 } from './core/format.js';
 import { getCycleRepeatDots, getFocusRepeatProgress, getStepProgress } from './core/progress.js';
+import { createTimerPipController } from './core/pip.js';
 import {
+  advanceAfterCompletion,
   getCurrentStep,
   getProgressRatio,
   getRemainingMs,
-  goToNextStep,
   markAlertsDispatched,
   normalizeSession,
   pauseSession,
@@ -76,6 +77,18 @@ let timerWorker = null;
 let audioContext = null;
 let chromeSignature = '';
 let serviceWorkerRegistration = null;
+const pipController = createTimerPipController({
+  onAction(action) {
+    if (action === 'PAUSE') {
+      postWorkerAction('PAUSE');
+      return;
+    }
+
+    if (action === 'RESUME') {
+      postWorkerAction('RESUME');
+    }
+  }
+});
 
 persistSettings();
 commitSession(syncSession(state.activeSession, Date.now()), {
@@ -195,7 +208,7 @@ function handleWorkerMessage(event) {
     dispatchAlerts: true,
     persist: true,
     render: true,
-    syncWorker: false
+    syncWorker: type === 'STEP_FINISHED'
   });
 }
 
@@ -402,7 +415,7 @@ function commitSession(nextSession, options = {}) {
       state.lastCompletionKey = completionKey;
     }
 
-    session = goToNextStep(session, Date.now());
+    session = advanceAfterCompletion(session, state.settings, Date.now());
   }
 
   state.activeSession = session;
@@ -655,6 +668,8 @@ function renderApp() {
                   class="tab-button ${activeTab === tab ? 'is-active' : ''}"
                   data-action="switch-tab"
                   data-tab="${tab}"
+                  aria-current="${activeTab === tab ? 'page' : 'false'}"
+                  aria-pressed="${activeTab === tab ? 'true' : 'false'}"
                   type="button"
                 >
                   ${label}
@@ -681,9 +696,10 @@ function renderSettingsPanel() {
   const permissionState =
     'Notification' in window ? Notification.permission : 'unsupported';
   const permissionLabel = formatNotificationPermissionLabel(permissionState);
+  const pipSupported = pipController.isSupported();
 
   return `
-    <section class="panel settings-layout">
+    <section class="panel settings-layout" id="panel-settings" aria-label="Settings panel" role="region">
       <div class="panel-section">
         <div class="panel-heading">
           <h2>Cycle settings</h2>
@@ -720,6 +736,37 @@ function renderSettingsPanel() {
             <small>focus sessions in one cycle</small>
           </label>
         </div>
+        <label class="toggle-row">
+          <span>Auto-start next step</span>
+          <input
+            ${state.settings.autoStartNextStep ? 'checked' : ''}
+            data-setting-toggle="autoStartNextStep"
+            type="checkbox"
+          >
+        </label>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-heading">
+          <h2>Mini window</h2>
+        </div>
+
+        <label class="toggle-row">
+          <span>Picture-in-Picture</span>
+          <input
+            ${state.settings.pipEnabled ? 'checked' : ''}
+            ${pipSupported ? '' : 'disabled'}
+            data-setting-toggle="pipEnabled"
+            type="checkbox"
+          >
+        </label>
+        <p class="inline-note">
+          ${
+            pipSupported
+              ? 'Opens a small always-on-top timer window while the timer is running or paused.'
+              : 'Picture-in-Picture is unavailable in this browser.'
+          }
+        </p>
       </div>
 
       <div class="panel-section">
@@ -778,6 +825,7 @@ function updateTimerLiveRegion(now = Date.now()) {
   const timerModel = getTimerModel(now);
   const clockElement = root.querySelector('[data-live-clock]');
   const cycleProgressElement = root.querySelector('[data-live-cycle-progress]');
+  const progressBarElement = root.querySelector('[data-live-progress]');
   const statusElement = root.querySelector('[data-live-status]');
   const stepLabelElement = root.querySelector('[data-live-step-label]');
   const repeatMetaElement = root.querySelector('[data-live-repeat-meta]');
@@ -803,11 +851,38 @@ function updateTimerLiveRegion(now = Date.now()) {
     cycleProgressElement.innerHTML = renderCycleProgressMarkup(timerModel.cycleDots);
   }
 
+  if (progressBarElement) {
+    progressBarElement.setAttribute('aria-valuenow', String(timerModel.progressPercent));
+    progressBarElement.setAttribute(
+      'aria-valuetext',
+      `${timerModel.progressPercent}% complete in current step`
+    );
+  }
+
   if (progressFillElement) {
     progressFillElement.style.width = `${timerModel.progressPercent}%`;
   }
 
+  syncPictureInPicture(timerModel);
   maybeDispatchFocusMinuteReminder(now);
+}
+
+function syncPictureInPicture(timerModel) {
+  const status = state.activeSession.status;
+  const shouldKeepOpen =
+    state.settings.pipEnabled && (status === 'running' || status === 'paused');
+
+  if (!shouldKeepOpen) {
+    pipController.close();
+    return;
+  }
+
+  pipController.update({
+    clock: timerModel.clock,
+    progressPercent: timerModel.progressPercent,
+    status,
+    stepLabel: timerModel.stepLabel
+  });
 }
 
 function updatePageChrome(now = Date.now()) {
@@ -893,6 +968,10 @@ function handleRootClick(event) {
       postWorkerAction('RESUME');
       break;
     case 'start-step':
+      pipController.resetDismissedForNewStart();
+      if (state.settings.pipEnabled) {
+        void pipController.openFromUserGesture();
+      }
       postWorkerAction('START_STEP', { settings: state.settings });
       break;
     case 'switch-tab':
@@ -950,6 +1029,33 @@ function handleRootChange(event) {
     state.settings.alertSettings[key] = target.checked;
     persistSettings();
     renderApp();
+    return;
+  }
+
+  if (target.matches('[data-setting-toggle]')) {
+    const key = target.dataset.settingToggle;
+
+    if (!key || !(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (key === 'autoStartNextStep') {
+      state.settings.autoStartNextStep = target.checked;
+      persistSettings();
+      renderApp();
+      return;
+    }
+
+    if (key === 'pipEnabled') {
+      state.settings.pipEnabled = target.checked;
+      persistSettings();
+
+      if (!target.checked) {
+        pipController.close();
+      }
+
+      renderApp();
+    }
   }
 }
 

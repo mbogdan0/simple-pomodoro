@@ -1,7 +1,14 @@
 export const OFFLINE_CACHE_PREFIX = 'timer-offline-';
 export const OFFLINE_CACHE_NAME = `${OFFLINE_CACHE_PREFIX}v1`;
 
-const SHELL_PATHS = ['./', './index.html', './timer-worker.js'];
+const SHELL_PATHS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
+  './timer-worker.js'
+];
 
 export function isNavigationRequest(request) {
   return request?.mode === 'navigate';

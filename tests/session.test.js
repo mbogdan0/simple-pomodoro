@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createDefaultSettings } from '../src/core/settings.js';
 import {
+  advanceAfterCompletion,
   createInitialSession,
   getRemainingMs,
   goToNextStep,
@@ -71,6 +72,56 @@ describe('timer session engine', () => {
     expect(restarted.status).toBe('running');
     expect(restarted.currentStepIndex).toBe(1);
     expect(restarted.scenario[restarted.currentStepIndex].type).toBe('shortBreak');
+  });
+
+  it('does not auto-start the next step by default after completion', () => {
+    const running = startCurrentStep(createInitialSession(settings), 1_000);
+    const completed = syncSession(running, running.endsAt + 1_000);
+    const next = advanceAfterCompletion(completed, settings, completed.finishedAt + 50);
+
+    expect(next.status).toBe('idle');
+    expect(next.currentStepIndex).toBe(1);
+  });
+
+  it('auto-starts the next step when setting is enabled', () => {
+    const autoStartSettings = {
+      ...createDefaultSettings(),
+      autoStartNextStep: true
+    };
+    const running = startCurrentStep(createInitialSession(autoStartSettings), 1_000);
+    const completed = syncSession(running, running.endsAt + 1_000);
+    const next = advanceAfterCompletion(
+      completed,
+      autoStartSettings,
+      completed.finishedAt + 50
+    );
+
+    expect(next.status).toBe('running');
+    expect(next.currentStepIndex).toBe(1);
+  });
+
+  it('does not auto-start a new cycle after long break completion', () => {
+    const autoStartSettings = {
+      ...createDefaultSettings(),
+      autoStartNextStep: true
+    };
+    const base = createInitialSession(autoStartSettings);
+    const runningLastStep = startCurrentStep(
+      {
+        ...base,
+        currentStepIndex: base.scenario.length - 1
+      },
+      5_000
+    );
+    const completed = syncSession(runningLastStep, runningLastStep.endsAt + 1_000);
+    const next = advanceAfterCompletion(
+      completed,
+      autoStartSettings,
+      completed.finishedAt + 100
+    );
+
+    expect(next.status).toBe('idle');
+    expect(next.currentStepIndex).toBe(0);
   });
 
   it('moves to next step and wraps to first step at cycle end', () => {

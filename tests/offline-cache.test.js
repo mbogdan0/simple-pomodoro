@@ -37,6 +37,9 @@ describe('offline cache helpers', () => {
     expect(resolveShellUrls('https://mbogdan0.github.io/simple-pomodoro/')).toEqual([
       'https://mbogdan0.github.io/simple-pomodoro/',
       'https://mbogdan0.github.io/simple-pomodoro/index.html',
+      'https://mbogdan0.github.io/simple-pomodoro/manifest.webmanifest',
+      'https://mbogdan0.github.io/simple-pomodoro/assets/icons/icon-192.png',
+      'https://mbogdan0.github.io/simple-pomodoro/assets/icons/icon-512.png',
       'https://mbogdan0.github.io/simple-pomodoro/timer-worker.js'
     ]);
   });

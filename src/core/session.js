@@ -120,6 +120,21 @@ export function prepareSessionForStepStart(session, settings, now = Date.now()) 
   return startCurrentStep(nextSession, now);
 }
 
+export function advanceAfterCompletion(session, settings, now = Date.now()) {
+  if (session.status !== 'completed_waiting_next') {
+    return session;
+  }
+
+  const hasUpcomingStep = hasNextStep(session);
+  let nextSession = goToNextStep(session, now);
+
+  if (settings?.autoStartNextStep && hasUpcomingStep) {
+    nextSession = startCurrentStep(nextSession, now);
+  }
+
+  return nextSession;
+}
+
 export function pauseSession(session, now = Date.now()) {
   if (session.status !== 'running') {
     return session;

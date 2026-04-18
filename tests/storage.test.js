@@ -11,6 +11,10 @@ import {
 } from '../src/core/storage.js';
 
 describe('storage layer', () => {
+  it('defaults picture-in-picture setting to disabled', () => {
+    expect(createDefaultSettings().pipEnabled).toBe(false);
+  });
+
   it('roundtrips settings and active session through localStorage abstraction', () => {
     const storage = createMemoryStorage();
     const settings = createDefaultSettings();
@@ -29,7 +33,9 @@ describe('storage layer', () => {
     saveSettings(
       {
         lastOpenTab: 'history',
+        pipEnabled: 'yes',
         repeatCount: 0,
+        autoStartNextStep: 'yes',
         templateDurations: {
           longBreak: 15 * 60 * 1000,
           shortBreak: 5 * 60 * 1000,
@@ -42,6 +48,22 @@ describe('storage layer', () => {
     const loaded = loadSettings(storage);
 
     expect(loaded.lastOpenTab).toBe('timer');
+    expect(loaded.pipEnabled).toBe(false);
     expect(loaded.repeatCount).toBeGreaterThanOrEqual(1);
+    expect(loaded.autoStartNextStep).toBe(false);
+  });
+
+  it('persists auto-start and pip choices', () => {
+    const storage = createMemoryStorage();
+    const settings = {
+      ...createDefaultSettings(),
+      autoStartNextStep: true,
+      pipEnabled: true
+    };
+
+    saveSettings(settings, storage);
+
+    expect(loadSettings(storage).autoStartNextStep).toBe(true);
+    expect(loadSettings(storage).pipEnabled).toBe(true);
   });
 });

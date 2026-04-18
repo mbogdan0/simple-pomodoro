@@ -1,5 +1,7 @@
 import {
   DEFAULT_ALERT_SETTINGS,
+  DEFAULT_AUTO_START_NEXT_STEP,
+  DEFAULT_PIP_ENABLED,
   DEFAULT_REPEAT_COUNT,
   DEFAULT_TEMPLATE_DURATIONS_MS,
   MAX_REPEAT_COUNT,
@@ -91,9 +93,17 @@ export function normalizeSettings(rawSettings = {}) {
 
   return {
     alertSettings: normalizeAlertSettings(rawSettings.alertSettings),
+    autoStartNextStep:
+      typeof rawSettings.autoStartNextStep === 'boolean'
+        ? rawSettings.autoStartNextStep
+        : DEFAULT_AUTO_START_NEXT_STEP,
     lastOpenTab: ['timer', 'settings'].includes(rawSettings.lastOpenTab)
       ? rawSettings.lastOpenTab
       : 'timer',
+    pipEnabled:
+      typeof rawSettings.pipEnabled === 'boolean'
+        ? rawSettings.pipEnabled
+        : DEFAULT_PIP_ENABLED,
     repeatCount,
     templateDurations
   };

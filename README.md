@@ -4,6 +4,10 @@ Simple Pomodoro Timer is a Pomodoro-style productivity timer built with vanilla 
 It runs the classic cycle of focused work sessions, short breaks, and a long break directly in the browser,
 with no backend and no framework.
 
+## Live Example
+
+**Try it now:** [https://mbogdan0.github.io/simple-pomodoro/](https://mbogdan0.github.io/simple-pomodoro/)
+
 ## Project Idea
 
 The main goal is reliable timing in real browser conditions.
@@ -15,7 +19,7 @@ state reconciliation, and persisted sessions to keep timer behavior predictable.
 - A cycle is generated from your settings: repeated `work` sessions separated by `shortBreak`, then one `longBreak`.
 - You can customize all step durations and the number of work repeats per cycle.
 - When a step ends, the app marks it complete, sends alerts, and prepares the next step.
-- The next step starts explicitly when you press `Start`, so transitions stay user-controlled.
+- The next step can either wait for manual `Start` or auto-start (optional setting for in-cycle steps).
 
 ## What It Includes
 
@@ -23,6 +27,7 @@ state reconciliation, and persisted sessions to keep timer behavior predictable.
 - Configurable durations and repeat count (`1-480` minutes per step, `1-24` repeats)
 - Start, pause, and reset flow with cycle progress UI
 - Per-step progress bar and repeat/step indicators
+- Optional auto-start for next in-cycle step (long-break cycle end stays manual)
 - Browser notifications with service worker fallback channel selection
 - One-minute focus reminder notification before a work step ends
 - Optional completion sound (Web Audio) and vibration support (when available)
@@ -31,6 +36,7 @@ state reconciliation, and persisted sessions to keep timer behavior predictable.
 - Notification deduplication to avoid repeated alerts for the same step completion
 - Background-friendly ticking with worker timer + safety sync loop
 - App-shell caching for offline usage after the first online visit
+- Web app manifest and installable PWA metadata
 - Static build output for simple hosting (for example GitHub Pages)
 
 ## Reliability Approach
@@ -72,7 +78,6 @@ npm run build
 
 ## Offline Behavior (GitHub Pages)
 
-- Live example: [https://mbogdan0.github.io/simple-pomodoro/](https://mbogdan0.github.io/simple-pomodoro/)
 - Offline mode is available only after at least one successful online visit that installs the service worker and caches the app shell.
 - Opening the app offline in a fresh browser profile/incognito window (with no prior online load) is not supported.
 - Offline support remains available until browser site data for this origin is cleared.

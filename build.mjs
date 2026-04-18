@@ -6,6 +6,8 @@ const rootDir = process.cwd();
 const distDir = path.join(rootDir, 'dist');
 const sourceAssetsDir = path.join(rootDir, 'src', 'assets');
 const targetAssetsDir = path.join(distDir, 'assets');
+const sourceManifestPath = path.join(rootDir, 'src', 'manifest.webmanifest');
+const targetManifestPath = path.join(distDir, 'manifest.webmanifest');
 const templatePath = path.join(rootDir, 'src', 'index.template.html');
 
 function getTextOutput(result, extension) {
@@ -29,6 +31,20 @@ async function copyAssetsBestEffort() {
     await cp(sourceAssetsDir, targetAssetsDir, {
       force: true,
       recursive: true
+    });
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      return;
+    }
+
+    throw error;
+  }
+}
+
+async function copyManifestBestEffort() {
+  try {
+    await cp(sourceManifestPath, targetManifestPath, {
+      force: true
     });
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
@@ -110,7 +126,7 @@ async function buildAssets() {
     writeFile(path.join(distDir, 'timer-worker.js'), workerJs, 'utf8')
   ]);
 
-  await copyAssetsBestEffort();
+  await Promise.all([copyAssetsBestEffort(), copyManifestBestEffort()]);
 }
 
 buildAssets().catch((error) => {
