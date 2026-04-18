@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from './constants.js';
+import { normalizeFocusHistory } from './focus-history.js';
 import { createDefaultSettings, normalizeSettings } from './settings.js';
 import { createInitialSession, normalizeSession } from './session.js';
 
@@ -43,6 +44,14 @@ export function loadActiveSession(settings, storage = getBrowserStorage()) {
 
 export function saveActiveSession(session, storage = getBrowserStorage()) {
   writeJson(storage, STORAGE_KEYS.activeSession, session);
+}
+
+export function loadFocusHistory(storage = getBrowserStorage()) {
+  return normalizeFocusHistory(parseJson(storage, STORAGE_KEYS.focusHistory));
+}
+
+export function saveFocusHistory(history, storage = getBrowserStorage()) {
+  writeJson(storage, STORAGE_KEYS.focusHistory, normalizeFocusHistory(history));
 }
 
 export function createMemoryStorage(initialState = {}) {

@@ -90,6 +90,7 @@ export function normalizeAlertSettings(rawAlerts = {}) {
 export function normalizeSettings(rawSettings = {}) {
   const templateDurations = normalizeTemplateDurations(rawSettings.templateDurations);
   const repeatCount = sanitizeRepeatCount(rawSettings.repeatCount, DEFAULT_REPEAT_COUNT);
+  const supportedTabs = ['timer', 'settings', 'history'];
 
   return {
     alertSettings: normalizeAlertSettings(rawSettings.alertSettings),
@@ -97,7 +98,7 @@ export function normalizeSettings(rawSettings = {}) {
       typeof rawSettings.autoStartNextStep === 'boolean'
         ? rawSettings.autoStartNextStep
         : DEFAULT_AUTO_START_NEXT_STEP,
-    lastOpenTab: ['timer', 'settings'].includes(rawSettings.lastOpenTab)
+    lastOpenTab: supportedTabs.includes(rawSettings.lastOpenTab)
       ? rawSettings.lastOpenTab
       : 'timer',
     pipEnabled:

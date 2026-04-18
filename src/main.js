@@ -9,6 +9,11 @@ import {
 import { APP_NAME, STEP_TYPES, STEP_TYPE_LABELS, TAB_LABELS } from './core/constants.js';
 import { createFaviconModel, renderFaviconDataUrl } from './core/favicon.js';
 import {
+  appendFocusHistoryEntry,
+  createFocusHistoryEntry,
+  removeFocusHistoryEntry
+} from './core/focus-history.js';
+import {
   formatClock,
   formatDocumentTitle,
   formatMinutesValue,
@@ -36,10 +41,13 @@ import {
 import { sanitizeRepeatCount } from './core/settings.js';
 import {
   loadActiveSession,
+  loadFocusHistory,
   loadSettings,
   saveActiveSession,
+  saveFocusHistory,
   saveSettings
 } from './core/storage.js';
+import { renderHistoryPanel } from './ui/history-panel.js';
 import { renderCycleProgressMarkup, renderTimerPanel } from './ui/timer-panel.js';
 
 const BACKGROUND_UNAVAILABLE_NOTICE = 'Background timer support is currently unavailable.';
@@ -65,6 +73,7 @@ const faviconLink = ensureFaviconLink();
 const state = {
   activeSession: null,
   backgroundNotice: '',
+  focusHistory: loadFocusHistory(),
   lastCompletionKey: '',
   lastFocusMinuteReminderKey: '',
   manualPipRequested: false,
@@ -291,6 +300,27 @@ function persistSession() {
   saveActiveSession(state.activeSession);
 }
 
+function persistFocusHistory() {
+  saveFocusHistory(state.focusHistory);
+}
+
+function maybeTrackCompletedFocus(session, completionKey = '') {
+  const nextEntry = createFocusHistoryEntry(session, completionKey);
+
+  if (!nextEntry) {
+    return;
+  }
+
+  const nextHistory = appendFocusHistoryEntry(state.focusHistory, nextEntry);
+
+  if (nextHistory.length === state.focusHistory.length) {
+    return;
+  }
+
+  state.focusHistory = nextHistory;
+  persistFocusHistory();
+}
+
 function syncWorkerState() {
   if (!timerWorker) {
     return;
@@ -413,6 +443,7 @@ function commitSession(nextSession, options = {}) {
 
   if (session.status === 'completed_waiting_next') {
     const completionKey = completionKeyHint || createCompletionKey(session);
+    maybeTrackCompletedFocus(session, completionKey);
     const mayDispatchByKey = completionKey
       ? shouldDispatchCompletion(completionKey, state.lastCompletionKey)
       : !session.alertsDispatched;
@@ -702,6 +733,7 @@ function renderApp() {
       <section class="panel-grid">
         ${activeTab === 'timer' ? renderTimerPanel(timerModel) : ''}
         ${activeTab === 'settings' ? renderSettingsPanel() : ''}
+        ${activeTab === 'history' ? renderHistoryPanel(state.focusHistory) : ''}
       </section>
     </main>
   `;
@@ -1020,12 +1052,24 @@ function handleRootClick(event) {
       void toggleManualPipWindow();
       break;
     case 'switch-tab':
-      if (tab === 'timer' || tab === 'settings') {
+      if (tab === 'timer' || tab === 'settings' || tab === 'history') {
         state.settings.lastOpenTab = tab;
         persistSettings();
         renderApp();
       }
       break;
+    case 'clear-history-entry': {
+      const entryId = button.dataset.entryId;
+
+      if (!entryId) {
+        return;
+      }
+
+      state.focusHistory = removeFocusHistoryEntry(state.focusHistory, entryId);
+      persistFocusHistory();
+      renderApp();
+      break;
+    }
     case 'test-notification':
       void testNotification();
       break;

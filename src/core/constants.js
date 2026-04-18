@@ -10,7 +10,8 @@ export const STEP_TYPE_LABELS = {
 
 export const TAB_LABELS = {
   timer: 'Timer',
-  settings: 'Settings'
+  settings: 'Settings',
+  history: 'History'
 };
 
 export const STATUS_LABELS = {
@@ -38,6 +39,7 @@ export const DEFAULT_ALERT_SETTINGS = {
 };
 
 export const STORAGE_KEYS = {
+  focusHistory: 'timer.focus-history.v1',
   settings: 'timer.settings.v2',
   activeSession: 'timer.active-session.v2'
 };
