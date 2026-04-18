@@ -14,9 +14,9 @@ import {
 } from '../src/core/storage.js';
 
 describe('storage layer', () => {
-  it('defaults picture-in-picture setting to disabled', () => {
-    expect(createDefaultSettings().pipEnabled).toBe(false);
+  it('defaults picture-in-picture clock rounding to disabled', () => {
     expect(createDefaultSettings().pipClockTickEvery10s).toBe(false);
+    expect(createDefaultSettings()).not.toHaveProperty('pipEnabled');
   });
 
   it('roundtrips settings and active session through localStorage abstraction', () => {
@@ -48,7 +48,6 @@ describe('storage layer', () => {
     saveSettings(
       {
         lastOpenTab: 'unknown-tab',
-        pipEnabled: 'yes',
         pipClockTickEvery10s: 'yes',
         repeatCount: 0,
         autoStartNextStep: 'yes',
@@ -64,8 +63,8 @@ describe('storage layer', () => {
     const loaded = loadSettings(storage);
 
     expect(loaded.lastOpenTab).toBe('timer');
-    expect(loaded.pipEnabled).toBe(false);
     expect(loaded.pipClockTickEvery10s).toBe(false);
+    expect(loaded).not.toHaveProperty('pipEnabled');
     expect(loaded.repeatCount).toBeGreaterThanOrEqual(1);
     expect(loaded.autoStartNextStep).toBe(false);
   });
@@ -120,20 +119,19 @@ describe('storage layer', () => {
     ]);
   });
 
-  it('persists auto-start and pip choices', () => {
+  it('persists auto-start and PiP clock choices', () => {
     const storage = createMemoryStorage();
     const settings = {
       ...createDefaultSettings(),
       autoStartNextStep: true,
-      pipEnabled: true,
       pipClockTickEvery10s: true
     };
 
     saveSettings(settings, storage);
 
     expect(loadSettings(storage).autoStartNextStep).toBe(true);
-    expect(loadSettings(storage).pipEnabled).toBe(true);
     expect(loadSettings(storage).pipClockTickEvery10s).toBe(true);
+    expect(loadSettings(storage)).not.toHaveProperty('pipEnabled');
   });
 
   it('falls back to in-memory storage when provided storage throws', () => {

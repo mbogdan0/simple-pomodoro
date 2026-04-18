@@ -702,12 +702,11 @@ async function sendNotificationViaServiceWorker(payload) {
 }
 
 async function sendNotificationWithFallback(payload) {
-  const hasNotificationApi = typeof window.Notification === 'function';
-  const notificationPermission = hasNotificationApi ? Notification.permission : 'unsupported';
+  const notificationSupport = getNotificationSupportModel();
   const channel = selectNotificationChannel({
-    hasNotificationApi,
-    hasServiceWorker: state.serviceWorkerReady || 'serviceWorker' in navigator,
-    notificationPermission
+    hasNotificationApi: notificationSupport.hasNotificationApi,
+    hasServiceWorker: state.serviceWorkerReady || notificationSupport.hasServiceWorker,
+    notificationPermission: notificationSupport.permissionState
   });
 
   if (channel === 'window') {
@@ -751,6 +750,19 @@ function maybeDispatchFocusMinuteReminder(now = Date.now()) {
   });
 }
 
+function getNotificationSupportModel() {
+  const hasNotificationApi = typeof window.Notification === 'function';
+  const hasServiceWorker = 'serviceWorker' in navigator;
+  const permissionState = hasNotificationApi ? Notification.permission : 'unsupported';
+
+  return {
+    hasNotificationApi,
+    hasServiceWorker,
+    permissionState,
+    unsupported: !hasNotificationApi && !hasServiceWorker
+  };
+}
+
 function getTimerModel(now = Date.now()) {
   const session = state.activeSession;
   const step = getCurrentStep(session);
@@ -770,8 +782,8 @@ function getTimerModel(now = Date.now()) {
     cycleDots: getCycleRepeatDots(session),
     focusRepeatCurrent,
     focusRepeatTotal,
-    pipToggleDisabled: !pipSupported,
     pipToggleLabel: 'Toggle PiP',
+    showPipToggle: pipSupported,
     primaryAction: running ? 'pause-step' : paused ? 'resume-step' : 'start-step',
     primaryActionLabel: running ? 'Pause' : paused ? 'Resume' : 'Start',
     progressPercent: Math.round(progress * 100),
@@ -824,9 +836,8 @@ function renderApp() {
 
 function renderSettingsPanel() {
   const sessionLocked = ['running', 'paused'].includes(state.activeSession.status);
-  const permissionState =
-    'Notification' in window ? Notification.permission : 'unsupported';
-  const permissionLabel = formatNotificationPermissionLabel(permissionState);
+  const notificationSupport = getNotificationSupportModel();
+  const permissionLabel = formatNotificationPermissionLabel(notificationSupport.permissionState);
   const pipSupported = pipController.isSupported();
 
   return `
@@ -877,30 +888,26 @@ function renderSettingsPanel() {
         </label>
       </div>
 
-      <div class="panel-section">
-        <div class="panel-heading">
-          <h2>Mini window</h2>
-        </div>
+      ${
+        pipSupported
+          ? `
+            <div class="panel-section">
+              <div class="panel-heading">
+                <h2>Mini window</h2>
+              </div>
 
-        <label class="toggle-row">
-          <span>Auto-open PiP on Start</span>
-          <input
-            ${state.settings.pipEnabled ? 'checked' : ''}
-            ${pipSupported ? '' : 'disabled'}
-            data-setting-toggle="pipEnabled"
-            type="checkbox"
-          >
-        </label>
-        <label class="toggle-row">
-          <span>PiP clock updates every 10 seconds</span>
-          <input
-            ${state.settings.pipClockTickEvery10s ? 'checked' : ''}
-            ${pipSupported ? '' : 'disabled'}
-            data-setting-toggle="pipClockTickEvery10s"
-            type="checkbox"
-          >
-        </label>
-      </div>
+              <label class="toggle-row">
+                <span>PiP clock updates every 10 seconds</span>
+                <input
+                  ${state.settings.pipClockTickEvery10s ? 'checked' : ''}
+                  data-setting-toggle="pipClockTickEvery10s"
+                  type="checkbox"
+                >
+              </label>
+            </div>
+          `
+          : ''
+      }
 
       <div class="panel-section">
         <div class="panel-heading">
@@ -929,16 +936,33 @@ function renderSettingsPanel() {
             >
           </label>
           <div class="settings-actions">
-            <button class="ghost-button" data-action="request-notification-permission" type="button">
-              Allow notifications
-            </button>
+            ${
+              notificationSupport.hasNotificationApi
+                ? `
+                  <button class="ghost-button" data-action="request-notification-permission" type="button">
+                    Allow notifications
+                  </button>
+                `
+                : ''
+            }
             <button class="ghost-button" data-action="test-sound" type="button">
               Test sound
             </button>
-            <button class="ghost-button" data-action="test-notification" type="button">
-              Test notification
-            </button>
+            ${
+              notificationSupport.unsupported
+                ? ''
+                : `
+                  <button class="ghost-button" data-action="test-notification" type="button">
+                    Test notification
+                  </button>
+                `
+            }
           </div>
+          ${
+            notificationSupport.unsupported
+              ? '<p class="notice-banner subtle">Notifications are not supported in this browser.</p>'
+              : ''
+          }
           ${
             state.notificationNotice
               ? `<p class="inline-note">${state.notificationNotice}</p>`
@@ -1002,8 +1026,7 @@ function updateTimerLiveRegion(now = Date.now()) {
 
 function syncPictureInPicture(timerModel, now = Date.now()) {
   const status = state.activeSession.status;
-  const shouldKeepOpen = state.manualPipRequested ||
-    (state.settings.pipEnabled && (status === 'running' || status === 'paused'));
+  const shouldKeepOpen = state.manualPipRequested;
 
   if (!shouldKeepOpen) {
     pipController.close();
@@ -1011,11 +1034,12 @@ function syncPictureInPicture(timerModel, now = Date.now()) {
   }
 
   const remainingMs = getRemainingMs(state.activeSession, now);
-  const pipClock = formatPipClock(
+  const pipClock = formatPipClock({
     remainingMs,
     status,
-    state.settings.pipClockTickEvery10s
-  );
+    stepDurationMs: timerModel.step?.durationMs,
+    tickEvery10Seconds: state.settings.pipClockTickEvery10s
+  });
 
   pipController.update({
     clock: pipClock,
@@ -1037,7 +1061,7 @@ async function toggleManualPipWindow() {
     return;
   }
 
-  const opened = await pipController.openFromUserGesture({ bypassDismissLock: true });
+  const opened = await pipController.openFromUserGesture();
 
   if (!opened) {
     return;
@@ -1064,8 +1088,10 @@ function updatePageChrome(now = Date.now()) {
 }
 
 function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    state.notificationNotice = 'Notifications are unavailable in this browser.';
+  const notificationSupport = getNotificationSupportModel();
+
+  if (!notificationSupport.hasNotificationApi) {
+    state.notificationNotice = 'Notifications are not supported in this browser.';
     renderApp();
     return;
   }
@@ -1087,8 +1113,10 @@ function testSound() {
 }
 
 async function testNotification() {
-  if (!('Notification' in window) && !('serviceWorker' in navigator)) {
-    state.notificationNotice = 'Notifications are unavailable in this browser.';
+  const notificationSupport = getNotificationSupportModel();
+
+  if (notificationSupport.unsupported) {
+    state.notificationNotice = 'Notifications are not supported in this browser.';
     renderApp();
     return;
   }
@@ -1131,10 +1159,6 @@ function handleRootClick(event) {
       postWorkerAction('RESUME');
       break;
     case 'start-step':
-      pipController.resetDismissedForNewStart();
-      if (state.settings.pipEnabled) {
-        void pipController.openFromUserGesture();
-      }
       postWorkerAction('START_STEP', { settings: state.settings });
       break;
     case 'toggle-pip-window':
@@ -1219,13 +1243,6 @@ function handleRootChange(event) {
 
     if (key === 'autoStartNextStep') {
       state.settings.autoStartNextStep = target.checked;
-      persistSettings();
-      renderApp();
-      return;
-    }
-
-    if (key === 'pipEnabled') {
-      state.settings.pipEnabled = target.checked;
       persistSettings();
       renderApp();
       return;

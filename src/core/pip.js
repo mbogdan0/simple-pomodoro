@@ -187,7 +187,6 @@ export function createTimerPipController(options = {}) {
   const onWindowClosed =
     typeof options.onWindowClosed === 'function' ? options.onWindowClosed : () => {};
   let closeRequestedByApp = false;
-  let dismissedUntilNextStart = false;
   let latestModel = normalizeModel();
   let openRequest = null;
   let pageHideHandler = null;
@@ -218,11 +217,6 @@ export function createTimerPipController(options = {}) {
     pageHideHandler = () => {
       const wasManualClose = !closeRequestedByApp;
       detachWindow();
-
-      if (wasManualClose) {
-        dismissedUntilNextStart = true;
-      }
-
       onWindowClosed(wasManualClose ? 'user' : 'app');
     };
     pipWindow.addEventListener?.('pagehide', pageHideHandler);
@@ -284,13 +278,8 @@ export function createTimerPipController(options = {}) {
     });
   }
 
-  async function openFromUserGesture(options = {}) {
-    const bypassDismissLock = Boolean(options.bypassDismissLock);
-
-    if (
-      !isPictureInPictureSupported(hostWindow) ||
-      (!bypassDismissLock && dismissedUntilNextStart)
-    ) {
+  async function openFromUserGesture() {
+    if (!isPictureInPictureSupported(hostWindow)) {
       return false;
     }
 
@@ -359,17 +348,11 @@ export function createTimerPipController(options = {}) {
     return true;
   }
 
-  function resetDismissedForNewStart() {
-    dismissedUntilNextStart = false;
-  }
-
   return {
     close,
-    isDismissedUntilNextStart: () => dismissedUntilNextStart,
     isOpen: () => Boolean(resolveWindow()),
     isSupported: () => isPictureInPictureSupported(hostWindow),
     openFromUserGesture,
-    resetDismissedForNewStart,
     update
   };
 }

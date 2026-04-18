@@ -2,7 +2,6 @@ import {
   DEFAULT_ALERT_SETTINGS,
   DEFAULT_AUTO_START_NEXT_STEP,
   DEFAULT_PIP_CLOCK_TICK_EVERY_10S,
-  DEFAULT_PIP_ENABLED,
   DEFAULT_REPEAT_COUNT,
   DEFAULT_TEMPLATE_DURATIONS_MS,
   MAX_REPEAT_COUNT,
@@ -102,10 +101,6 @@ export function normalizeSettings(rawSettings = {}) {
     lastOpenTab: supportedTabs.includes(rawSettings.lastOpenTab)
       ? rawSettings.lastOpenTab
       : 'timer',
-    pipEnabled:
-      typeof rawSettings.pipEnabled === 'boolean'
-        ? rawSettings.pipEnabled
-        : DEFAULT_PIP_ENABLED,
     pipClockTickEvery10s:
       typeof rawSettings.pipClockTickEvery10s === 'boolean'
         ? rawSettings.pipClockTickEvery10s

@@ -14,8 +14,8 @@ describe('simple timer panel', () => {
       clock: '25:00',
       focusRepeatCurrent: 1,
       focusRepeatTotal: 4,
-      pipToggleDisabled: false,
       pipToggleLabel: 'Toggle PiP',
+      showPipToggle: true,
       primaryAction: 'start-step',
       primaryActionLabel: 'Start',
       progressPercent: 30,
@@ -49,7 +49,7 @@ describe('simple timer panel', () => {
     expect(html).not.toContain('permission');
   });
 
-  it('renders disabled PiP control when PiP is unsupported', () => {
+  it('does not render PiP control when PiP is unsupported', () => {
     const html = renderTimerPanel({
       accent: '#c85a3a',
       backgroundNotice: '',
@@ -57,8 +57,8 @@ describe('simple timer panel', () => {
       clock: '25:00',
       focusRepeatCurrent: 1,
       focusRepeatTotal: 4,
-      pipToggleDisabled: true,
       pipToggleLabel: 'Toggle PiP',
+      showPipToggle: false,
       primaryAction: 'start-step',
       primaryActionLabel: 'Start',
       progressPercent: 0,
@@ -68,8 +68,7 @@ describe('simple timer panel', () => {
       stepTotal: 8
     });
 
-    expect(html).toContain('Toggle PiP');
-    expect(html).toContain('data-action="toggle-pip-window"');
-    expect(html).toContain('disabled');
+    expect(html).not.toContain('Toggle PiP');
+    expect(html).not.toContain('data-action="toggle-pip-window"');
   });
 });

@@ -16,8 +16,7 @@ It runs fully in the browser with no backend and no framework, and it is optimiz
 - Per-step progress bar with repeat and step indicators
 - Optional auto-start for next in-cycle step (cycle end remains manual)
 - Picture-in-Picture mini window with a manual `Toggle PiP` control on the `Timer` tab
-- Optional PiP auto-open on `Start`
-- Optional PiP clock rounding to 10-second updates while running (final 9 seconds stay 1-second precise)
+- Optional PiP clock rounding to 10-second updates while running (first 10 seconds and final 9 seconds stay 1-second precise)
 - Browser notifications with service worker fallback channel selection
 - One-minute focus reminder notification before a work step ends
 - Optional completion sound (Web Audio) and vibration support (when available)

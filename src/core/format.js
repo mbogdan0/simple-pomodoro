@@ -15,12 +15,31 @@ export function formatClock(totalMs) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function formatPipClock(remainingMs, status, tickEvery10Seconds = false) {
+function toWholeSeconds(valueMs) {
+  const parsed = Number(valueMs);
+  return Number.isFinite(parsed) ? Math.max(0, Math.ceil(parsed / 1000)) : null;
+}
+
+export function formatPipClock({
+  remainingMs,
+  status,
+  stepDurationMs,
+  tickEvery10Seconds = false
+}) {
   if (!tickEvery10Seconds || status !== 'running') {
     return formatClock(remainingMs);
   }
 
   const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const stepDurationSeconds = toWholeSeconds(stepDurationMs);
+  const elapsedSeconds =
+    stepDurationSeconds === null
+      ? null
+      : Math.max(0, stepDurationSeconds - remainingSeconds);
+
+  if (elapsedSeconds !== null && elapsedSeconds < 10) {
+    return formatClock(remainingMs);
+  }
 
   if (remainingSeconds <= 9) {
     return formatClock(remainingMs);

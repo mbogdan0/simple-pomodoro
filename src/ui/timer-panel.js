@@ -29,7 +29,7 @@ export function renderCycleProgressMarkup(cycleDots = []) {
 
 export function renderTimerPanel(timerModel) {
   const pipToggleLabel = timerModel.pipToggleLabel ?? 'Toggle PiP';
-  const pipToggleDisabled = Boolean(timerModel.pipToggleDisabled);
+  const showPipToggle = Boolean(timerModel.showPipToggle);
 
   return `
     <section
@@ -91,16 +91,21 @@ export function renderTimerPanel(timerModel) {
           </button>
           <button class="action-button" data-action="reset-session" type="button">Reset</button>
         </div>
-        <div class="action-row__right">
-          <button
-            class="action-button subtle action-button--pip"
-            data-action="toggle-pip-window"
-            type="button"
-            ${pipToggleDisabled ? 'disabled' : ''}
-          >
-            ${pipToggleLabel}
-          </button>
-        </div>
+        ${
+          showPipToggle
+            ? `
+              <div class="action-row__right">
+                <button
+                  class="action-button subtle action-button--pip"
+                  data-action="toggle-pip-window"
+                  type="button"
+                >
+                  ${pipToggleLabel}
+                </button>
+              </div>
+            `
+            : ''
+        }
       </div>
 
       ${

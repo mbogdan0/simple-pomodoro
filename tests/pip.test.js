@@ -108,7 +108,7 @@ describe('picture-in-picture controller', () => {
     expect(controller.isOpen()).toBe(true);
   });
 
-  it('blocks re-open after manual close until the next start reset', async () => {
+  it('allows manual re-open after manual close', async () => {
     const pipWindow = createFakePipWindow();
     const hostWindow = createHostWindow({ pipWindow });
     const controller = createTimerPipController({ hostWindow });
@@ -117,25 +117,11 @@ describe('picture-in-picture controller', () => {
     pipWindow.closed = true;
     pipWindow.dispatchPageHide();
 
-    expect(controller.isDismissedUntilNextStart()).toBe(true);
-    expect(await controller.openFromUserGesture()).toBe(false);
-    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(1);
-
-    pipWindow.closed = false;
-    hostWindow.documentPictureInPicture.window = null;
-
-    expect(
-      await controller.openFromUserGesture({ bypassDismissLock: true })
-    ).toBe(true);
-    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(2);
-
-    controller.resetDismissedForNewStart();
-    controller.close();
     pipWindow.closed = false;
     hostWindow.documentPictureInPicture.window = null;
 
     expect(await controller.openFromUserGesture()).toBe(true);
-    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(3);
+    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(2);
   });
 
   it('keeps window open on paused updates and closes on explicit close', async () => {
@@ -219,7 +205,7 @@ describe('picture-in-picture controller', () => {
 
     pipWindow.closed = false;
     hostWindow.documentPictureInPicture.window = null;
-    await controller.openFromUserGesture({ bypassDismissLock: true });
+    await controller.openFromUserGesture();
     controller.close();
 
     expect(onWindowClosed).toHaveBeenCalledWith('app');
