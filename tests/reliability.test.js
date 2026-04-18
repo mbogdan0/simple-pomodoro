@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createCompletionKey,
+  createFocusMinuteReminderKey,
   selectNotificationChannel,
-  shouldDispatchCompletion
+  shouldDispatchCompletion,
+  shouldDispatchFocusMinuteReminder
 } from '../src/core/alerts.js';
-import { getFocusRepeatProgress, getStepProgress } from '../src/core/progress.js';
+import { getCycleRepeatDots, getFocusRepeatProgress, getStepProgress } from '../src/core/progress.js';
 import { createDefaultSettings } from '../src/core/settings.js';
 import { createInitialSession, startCurrentStep, syncSession } from '../src/core/session.js';
 
@@ -67,6 +69,41 @@ describe('reliability helpers', () => {
     });
   });
 
+  it('builds double-ring repeat states for focus and break progress', () => {
+    const settings = createDefaultSettings();
+    settings.repeatCount = 2;
+    const session = createInitialSession(settings);
+
+    const atFirstFocus = getCycleRepeatDots({
+      ...session,
+      currentStepIndex: 0,
+      status: 'idle'
+    });
+    const atShortBreak = getCycleRepeatDots({
+      ...session,
+      currentStepIndex: 1,
+      status: 'idle'
+    });
+    const atLongBreak = getCycleRepeatDots({
+      ...session,
+      currentStepIndex: 3,
+      status: 'idle'
+    });
+
+    expect(atFirstFocus).toEqual([
+      { breakState: 'pending', focusState: 'active', id: session.scenario[0].id },
+      { breakState: 'pending', focusState: 'pending', id: session.scenario[2].id }
+    ]);
+    expect(atShortBreak).toEqual([
+      { breakState: 'active', focusState: 'done', id: session.scenario[0].id },
+      { breakState: 'pending', focusState: 'pending', id: session.scenario[2].id }
+    ]);
+    expect(atLongBreak).toEqual([
+      { breakState: 'done', focusState: 'done', id: session.scenario[0].id },
+      { breakState: 'active', focusState: 'done', id: session.scenario[2].id }
+    ]);
+  });
+
   it('deduplicates completion alerts by completion key', () => {
     const settings = createDefaultSettings();
     const running = startCurrentStep(createInitialSession(settings), 1_000);
@@ -106,5 +143,54 @@ describe('reliability helpers', () => {
         navigator: {}
       })
     ).toBe('none');
+  });
+
+  it('dispatches one-minute focus reminders once per step run', () => {
+    const settings = createDefaultSettings();
+    const runningFocus = startCurrentStep(createInitialSession(settings), 1_000);
+    const minuteMark = runningFocus.endsAt - 60_000;
+    const reminderKey = createFocusMinuteReminderKey(runningFocus);
+
+    expect(reminderKey).toBeTruthy();
+
+    const firstAttempt = shouldDispatchFocusMinuteReminder({
+      notificationsEnabled: true,
+      now: minuteMark,
+      previousKey: '',
+      session: runningFocus
+    });
+    const duplicateAttempt = shouldDispatchFocusMinuteReminder({
+      notificationsEnabled: true,
+      now: minuteMark + 2_000,
+      previousKey: firstAttempt.key,
+      session: runningFocus
+    });
+    const disabledNotificationsAttempt = shouldDispatchFocusMinuteReminder({
+      notificationsEnabled: false,
+      now: minuteMark,
+      previousKey: '',
+      session: runningFocus
+    });
+    const runningBreak = startCurrentStep(
+      {
+        ...createInitialSession(settings),
+        currentStepIndex: 1
+      },
+      2_000
+    );
+    const breakAttempt = shouldDispatchFocusMinuteReminder({
+      notificationsEnabled: true,
+      now: runningBreak.endsAt - 30_000,
+      previousKey: '',
+      session: runningBreak
+    });
+
+    expect(firstAttempt).toEqual({
+      key: reminderKey,
+      shouldDispatch: true
+    });
+    expect(duplicateAttempt.shouldDispatch).toBe(false);
+    expect(disabledNotificationsAttempt.shouldDispatch).toBe(false);
+    expect(breakAttempt.shouldDispatch).toBe(false);
   });
 });

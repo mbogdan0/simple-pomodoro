@@ -109,6 +109,17 @@ export function startCurrentStep(session, now = Date.now()) {
   };
 }
 
+export function prepareSessionForStepStart(session, settings, now = Date.now()) {
+  let nextSession = session;
+
+  if (nextSession.status === 'completed_waiting_next') {
+    nextSession = goToNextStep(nextSession, now);
+  }
+
+  nextSession = syncIdleSessionWithSettings(nextSession, settings, now);
+  return startCurrentStep(nextSession, now);
+}
+
 export function pauseSession(session, now = Date.now()) {
   if (session.status !== 'running') {
     return session;

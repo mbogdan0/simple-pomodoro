@@ -3,9 +3,9 @@ import { WORKER_TICK_INTERVAL_MS } from './core/constants.js';
 import {
   normalizeSession,
   pauseSession,
+  prepareSessionForStepStart,
   resetSession,
   resumeSession,
-  startCurrentStep,
   syncIdleSessionWithSettings,
   syncSession
 } from './core/session.js';
@@ -170,10 +170,7 @@ self.onmessage = ({ data }) => {
         emit('STATE', session, { reason: 'resume' });
         break;
       case 'START_STEP':
-        if (payload.settings) {
-          session = syncIdleSessionWithSettings(session, payload.settings, now);
-        }
-        session = startCurrentStep(session, now);
+        session = prepareSessionForStepStart(session, payload.settings, now);
         startTicker();
         emit('STATE', session, { reason: 'start' });
         break;

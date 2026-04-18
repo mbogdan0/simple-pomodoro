@@ -7,6 +7,7 @@ import {
   goToNextStep,
   hasNextStep,
   pauseSession,
+  prepareSessionForStepStart,
   resetSession,
   resumeSession,
   startCurrentStep,
@@ -60,6 +61,16 @@ describe('timer session engine', () => {
     expect(completed.status).toBe('completed_waiting_next');
     expect(completed.currentStepIndex).toBe(0);
     expect(hasNextStep(completed)).toBe(true);
+  });
+
+  it('starts the next step after a completed-waiting transition', () => {
+    const running = startCurrentStep(createInitialSession(settings), 1_000);
+    const completed = syncSession(running, running.endsAt + 1_000);
+    const restarted = prepareSessionForStepStart(completed, settings, completed.finishedAt + 200);
+
+    expect(restarted.status).toBe('running');
+    expect(restarted.currentStepIndex).toBe(1);
+    expect(restarted.scenario[restarted.currentStepIndex].type).toBe('shortBreak');
   });
 
   it('moves to next step and wraps to first step at cycle end', () => {

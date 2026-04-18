@@ -119,10 +119,86 @@ button {
   line-height: 0.9;
 }
 
+.cycle-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  width: min(420px, 100%);
+}
+
+.cycle-dot {
+  display: inline-grid;
+  height: 22px;
+  place-items: center;
+  position: relative;
+  width: 22px;
+}
+
+.cycle-dot__outer,
+.cycle-dot__inner {
+  border-radius: 999px;
+  display: block;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.cycle-dot__outer {
+  border: 2px solid #d8d0c4;
+  height: 22px;
+  width: 22px;
+}
+
+.cycle-dot__outer.is-pending {
+  border-color: #d8d0c4;
+}
+
+.cycle-dot__outer.is-active {
+  border-color: var(--accent, var(--accent-work));
+  box-shadow: 0 0 0 4px rgba(31, 38, 35, 0.08);
+}
+
+.cycle-dot__outer.is-done {
+  background: #efe8dd;
+  border-color: var(--accent, var(--accent-work));
+}
+
+.cycle-dot__inner {
+  background: #fff;
+  border: 2px solid #ddd6cc;
+  height: 10px;
+  position: absolute;
+  width: 10px;
+}
+
+.cycle-dot__inner.is-pending {
+  border-color: #ddd6cc;
+}
+
+.cycle-dot__inner.is-active {
+  border-color: var(--accent, var(--accent-work));
+  box-shadow: 0 0 0 2px rgba(31, 38, 35, 0.07);
+}
+
+.cycle-dot__inner.is-done {
+  background: var(--accent, var(--accent-work));
+  border-color: var(--accent, var(--accent-work));
+}
+
 .timer-repeat-meta {
-  color: var(--muted);
-  font-size: 0.95rem;
   margin: 0;
+}
+
+.sr-only {
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .progress-line {

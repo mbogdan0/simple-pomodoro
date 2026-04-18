@@ -14,6 +14,43 @@ function countWorkStepsUpTo(scenario, endIndexInclusive) {
   return count;
 }
 
+function getNormalizedStepIndex(session, scenario) {
+  if (!scenario.length) {
+    return 0;
+  }
+
+  return Math.min(
+    Math.max(Math.floor(Number(session?.currentStepIndex) || 0), 0),
+    scenario.length - 1
+  );
+}
+
+function isBreakStepType(type) {
+  return type === 'shortBreak' || type === 'longBreak';
+}
+
+function resolveDotState(stepIndex, currentStepIndex, status) {
+  if (stepIndex < currentStepIndex) {
+    return 'done';
+  }
+
+  if (stepIndex > currentStepIndex) {
+    return 'pending';
+  }
+
+  return status === 'completed_waiting_next' ? 'done' : 'active';
+}
+
+function findBreakStepIndex(scenario, focusStepIndex, nextFocusStepIndex) {
+  for (let index = focusStepIndex + 1; index < nextFocusStepIndex; index += 1) {
+    if (isBreakStepType(scenario[index]?.type)) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
 export function getStepProgress(session) {
   const scenario = Array.isArray(session?.scenario) ? session.scenario : [];
   const stepTotal = scenario.length;
@@ -25,10 +62,7 @@ export function getStepProgress(session) {
     };
   }
 
-  const normalizedIndex = Math.min(
-    Math.max(Math.floor(Number(session?.currentStepIndex) || 0), 0),
-    stepTotal - 1
-  );
+  const normalizedIndex = getNormalizedStepIndex(session, scenario);
 
   return {
     stepCurrent: normalizedIndex + 1,
@@ -50,10 +84,7 @@ export function getFocusRepeatProgress(session) {
     };
   }
 
-  const normalizedIndex = Math.min(
-    Math.max(Math.floor(Number(session?.currentStepIndex) || 0), 0),
-    scenario.length - 1
-  );
+  const normalizedIndex = getNormalizedStepIndex(session, scenario);
   const currentStep = scenario[normalizedIndex];
   const focusRepeatCurrent = currentStep?.type === 'work'
     ? countWorkStepsUpTo(scenario, normalizedIndex)
@@ -63,4 +94,36 @@ export function getFocusRepeatProgress(session) {
     focusRepeatCurrent: Math.max(0, Math.min(focusRepeatCurrent, focusRepeatTotal)),
     focusRepeatTotal
   };
+}
+
+export function getCycleRepeatDots(session) {
+  const scenario = Array.isArray(session?.scenario) ? session.scenario : [];
+  const focusIndices = [];
+
+  for (let index = 0; index < scenario.length; index += 1) {
+    if (scenario[index]?.type === 'work') {
+      focusIndices.push(index);
+    }
+  }
+
+  if (!focusIndices.length) {
+    return [];
+  }
+
+  const currentStepIndex = getNormalizedStepIndex(session, scenario);
+  const status = session?.status;
+
+  return focusIndices.map((focusStepIndex, repeatIndex) => {
+    const nextFocusStepIndex = focusIndices[repeatIndex + 1] ?? scenario.length;
+    const breakStepIndex = findBreakStepIndex(scenario, focusStepIndex, nextFocusStepIndex);
+
+    return {
+      breakState:
+        breakStepIndex >= 0
+          ? resolveDotState(breakStepIndex, currentStepIndex, status)
+          : 'pending',
+      focusState: resolveDotState(focusStepIndex, currentStepIndex, status),
+      id: scenario[focusStepIndex]?.id ?? `repeat-${repeatIndex}`
+    };
+  });
 }

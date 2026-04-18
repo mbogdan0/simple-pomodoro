@@ -2,7 +2,8 @@ import {
   buildNotificationTag,
   createCompletionKey,
   selectNotificationChannel,
-  shouldDispatchCompletion
+  shouldDispatchCompletion,
+  shouldDispatchFocusMinuteReminder
 } from './core/alerts.js';
 import { APP_NAME, STEP_TYPES, STEP_TYPE_LABELS, TAB_LABELS } from './core/constants.js';
 import { createFaviconModel, renderFaviconDataUrl } from './core/favicon.js';
@@ -15,7 +16,7 @@ import {
   formatStatusLabel,
   parseMinutesValue
 } from './core/format.js';
-import { getFocusRepeatProgress, getStepProgress } from './core/progress.js';
+import { getCycleRepeatDots, getFocusRepeatProgress, getStepProgress } from './core/progress.js';
 import {
   getCurrentStep,
   getProgressRatio,
@@ -24,9 +25,9 @@ import {
   markAlertsDispatched,
   normalizeSession,
   pauseSession,
+  prepareSessionForStepStart,
   resetSession,
   resumeSession,
-  startCurrentStep,
   syncIdleSessionWithSettings,
   syncSession
 } from './core/session.js';
@@ -38,7 +39,7 @@ import {
   saveActiveSession,
   saveSettings
 } from './core/storage.js';
-import { renderTimerPanel } from './ui/timer-panel.js';
+import { renderCycleProgressMarkup, renderTimerPanel } from './ui/timer-panel.js';
 
 const BACKGROUND_UNAVAILABLE_NOTICE = 'Background timer support is currently unavailable.';
 const BACKGROUND_UNSUPPORTED_NOTICE =
@@ -70,6 +71,7 @@ const state = {
   activeSession: null,
   backgroundNotice: '',
   lastCompletionKey: '',
+  lastFocusMinuteReminderKey: '',
   notificationNotice: '',
   settings: loadSettings(),
   serviceWorkerReady: false
@@ -188,9 +190,10 @@ function handleWorkerMessage(event) {
   const normalized = normalizeSession(session, state.settings);
 
   if (type === 'TICK') {
+    const now = Date.now();
     state.activeSession = normalized;
-    updateTimerLiveRegion();
-    updatePageChrome();
+    updateTimerLiveRegion(now);
+    updatePageChrome(now);
     return;
   }
 
@@ -254,9 +257,10 @@ function primeAudioContextOnGesture() {
 
 function startSafetyInterval() {
   setInterval(() => {
+    const now = Date.now();
     reconcileSession();
-    updateTimerLiveRegion();
-    updatePageChrome();
+    updateTimerLiveRegion(now);
+    updatePageChrome(now);
   }, 500);
 }
 
@@ -356,12 +360,11 @@ function handleLocalAction(type, payload) {
       nextSession = resumeSession(state.activeSession, now);
       break;
     case 'START_STEP':
-      nextSession = syncIdleSessionWithSettings(
+      nextSession = prepareSessionForStepStart(
         state.activeSession,
         payload.settings ?? state.settings,
         now
       );
-      nextSession = startCurrentStep(nextSession, now);
       break;
     case 'SYNC_NOW':
       reconcileSession();
@@ -418,8 +421,9 @@ function commitSession(nextSession, options = {}) {
   if (render) {
     renderApp();
   } else {
-    updateTimerLiveRegion();
-    updatePageChrome();
+    const now = Date.now();
+    updateTimerLiveRegion(now);
+    updatePageChrome(now);
   }
 
   if (syncWorker) {
@@ -593,6 +597,27 @@ async function sendNotificationWithFallback(payload) {
   return false;
 }
 
+function maybeDispatchFocusMinuteReminder(now = Date.now()) {
+  const { key, shouldDispatch } = shouldDispatchFocusMinuteReminder({
+    notificationsEnabled: state.settings.alertSettings.notificationsEnabled,
+    now,
+    previousKey: state.lastFocusMinuteReminderKey,
+    session: state.activeSession
+  });
+
+  if (!shouldDispatch) {
+    return;
+  }
+
+  state.lastFocusMinuteReminderKey = key;
+  void sendNotificationWithFallback({
+    body: '1 minute left in this focus session.',
+    silent: true,
+    tag: buildNotificationTag('focus-minute', key),
+    title: 'Focus ending soon'
+  });
+}
+
 function getTimerModel(now = Date.now()) {
   const session = state.activeSession;
   const step = getCurrentStep(session);
@@ -608,6 +633,7 @@ function getTimerModel(now = Date.now()) {
     accent,
     backgroundNotice: state.backgroundNotice,
     clock: formatClock(remainingMs),
+    cycleDots: getCycleRepeatDots(session),
     focusRepeatCurrent,
     focusRepeatTotal,
     primaryAction: running ? 'pause-step' : paused ? 'resume-step' : 'start-step',
@@ -755,9 +781,10 @@ function formatRepeatMeta(timerModel) {
   return `Focus repeat ${timerModel.focusRepeatCurrent}/${timerModel.focusRepeatTotal} · Step ${timerModel.stepCurrent}/${timerModel.stepTotal}`;
 }
 
-function updateTimerLiveRegion() {
-  const timerModel = getTimerModel();
+function updateTimerLiveRegion(now = Date.now()) {
+  const timerModel = getTimerModel(now);
   const clockElement = root.querySelector('[data-live-clock]');
+  const cycleProgressElement = root.querySelector('[data-live-cycle-progress]');
   const statusElement = root.querySelector('[data-live-status]');
   const stepLabelElement = root.querySelector('[data-live-step-label]');
   const repeatMetaElement = root.querySelector('[data-live-repeat-meta]');
@@ -779,9 +806,15 @@ function updateTimerLiveRegion() {
     repeatMetaElement.textContent = formatRepeatMeta(timerModel);
   }
 
+  if (cycleProgressElement) {
+    cycleProgressElement.innerHTML = renderCycleProgressMarkup(timerModel.cycleDots);
+  }
+
   if (progressFillElement) {
     progressFillElement.style.width = `${timerModel.progressPercent}%`;
   }
+
+  maybeDispatchFocusMinuteReminder(now);
 }
 
 function updatePageChrome(now = Date.now()) {
