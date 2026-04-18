@@ -229,12 +229,34 @@ input:focus-visible {
   margin: 0;
 }
 
-.action-row,
 .settings-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
+}
+
+.action-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  width: min(420px, 100%);
+}
+
+.action-row__left,
+.action-row__right {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.action-row__left {
+  flex-wrap: wrap;
+}
+
+.action-row__right {
+  margin-left: auto;
 }
 
 .action-button,
@@ -249,6 +271,34 @@ input:focus-visible {
   background: var(--accent, var(--text));
   border-color: var(--accent, var(--text));
   color: #fff;
+}
+
+.action-button.subtle {
+  background: #f6f4ef;
+  border-color: transparent;
+  color: #6b736d;
+}
+
+.action-button.subtle.action-button--pip {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  color: var(--muted);
+  padding: 6px 2px;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.action-button.subtle.action-button--pip:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.action-button.subtle.action-button--pip:disabled {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: none;
 }
 
 .action-button:disabled,

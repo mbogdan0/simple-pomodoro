@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createCompletionKey,
   createFocusMinuteReminderKey,
+  resolveCompletionNotificationBody,
   selectNotificationChannel,
   shouldDispatchCompletion,
   shouldDispatchFocusMinuteReminder
@@ -113,6 +114,43 @@ describe('reliability helpers', () => {
     expect(completionKey).toBeTruthy();
     expect(shouldDispatchCompletion(completionKey, '')).toBe(true);
     expect(shouldDispatchCompletion(completionKey, completionKey)).toBe(false);
+  });
+
+  it('resolves completion notification body for auto-start and cycle-end states', () => {
+    const settings = createDefaultSettings();
+    const running = startCurrentStep(createInitialSession(settings), 1_000);
+    const completed = syncSession(running, running.endsAt + 1_500);
+
+    expect(
+      resolveCompletionNotificationBody({
+        autoStartNextStep: false,
+        session: completed
+      })
+    ).toBe('The next step is ready. Press Start to continue.');
+
+    expect(
+      resolveCompletionNotificationBody({
+        autoStartNextStep: true,
+        session: completed
+      })
+    ).toBe('The next step started automatically.');
+
+    const base = createInitialSession(settings);
+    const runningLastStep = startCurrentStep(
+      {
+        ...base,
+        currentStepIndex: base.scenario.length - 1
+      },
+      2_000
+    );
+    const completedLastStep = syncSession(runningLastStep, runningLastStep.endsAt + 1_500);
+
+    expect(
+      resolveCompletionNotificationBody({
+        autoStartNextStep: true,
+        session: completedLastStep
+      })
+    ).toBe('Cycle complete. Press Start to begin a new cycle.');
   });
 
   it('selects notification fallback channel using mocked browser APIs', () => {

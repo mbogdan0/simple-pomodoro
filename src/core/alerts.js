@@ -1,4 +1,4 @@
-import { getCurrentStep, getRemainingMs } from './session.js';
+import { getCurrentStep, getRemainingMs, hasNextStep } from './session.js';
 
 export function createCompletionKey(session) {
   const step = getCurrentStep(session);
@@ -12,6 +12,23 @@ export function createCompletionKey(session) {
 
 export function shouldDispatchCompletion(nextKey, previousKey) {
   return Boolean(nextKey) && nextKey !== previousKey;
+}
+
+export function resolveCompletionNotificationBody({
+  autoStartNextStep = false,
+  session
+}) {
+  const hasUpcomingStep = Boolean(session) && hasNextStep(session);
+
+  if (autoStartNextStep && hasUpcomingStep) {
+    return 'The next step started automatically.';
+  }
+
+  if (hasUpcomingStep) {
+    return 'The next step is ready. Press Start to continue.';
+  }
+
+  return 'Cycle complete. Press Start to begin a new cycle.';
 }
 
 export function selectNotificationChannel({

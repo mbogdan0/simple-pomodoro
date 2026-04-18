@@ -6,14 +6,20 @@ function createFakePipWindow() {
   const listeners = new Map();
   const button = {
     _handlers: {},
+    disabled: false,
     addEventListener(type, handler) {
       this._handlers[type] = handler;
     },
     click() {
+      if (this.disabled) {
+        return;
+      }
+
       this._handlers.click?.();
     },
     reset() {
       this._handlers = {};
+      this.disabled = false;
     }
   };
   const body = {
@@ -24,6 +30,8 @@ function createFakePipWindow() {
     set innerHTML(value) {
       this._html = value;
       button.reset();
+      const actionMarkup = value.match(/<button[\s\S]*?data-pip-action[\s\S]*?>/);
+      button.disabled = Boolean(actionMarkup && /\sdisabled(?:\s|>|=)/.test(actionMarkup[0]));
     },
     querySelector(selector) {
       if (selector === '[data-pip-action]') {
@@ -93,6 +101,10 @@ describe('picture-in-picture controller', () => {
 
     expect(opened).toBe(true);
     expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(1);
+    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledWith({
+      height: 124,
+      width: 224
+    });
     expect(controller.isOpen()).toBe(true);
   });
 
@@ -109,12 +121,21 @@ describe('picture-in-picture controller', () => {
     expect(await controller.openFromUserGesture()).toBe(false);
     expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(1);
 
+    pipWindow.closed = false;
+    hostWindow.documentPictureInPicture.window = null;
+
+    expect(
+      await controller.openFromUserGesture({ bypassDismissLock: true })
+    ).toBe(true);
+    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(2);
+
     controller.resetDismissedForNewStart();
+    controller.close();
     pipWindow.closed = false;
     hostWindow.documentPictureInPicture.window = null;
 
     expect(await controller.openFromUserGesture()).toBe(true);
-    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(2);
+    expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(3);
   });
 
   it('keeps window open on paused updates and closes on explicit close', async () => {
@@ -149,6 +170,7 @@ describe('picture-in-picture controller', () => {
       status: 'running',
       stepLabel: 'Focus'
     });
+    expect(pipWindow.button.disabled).toBe(false);
     pipWindow.button.click();
 
     controller.update({
@@ -157,9 +179,49 @@ describe('picture-in-picture controller', () => {
       status: 'paused',
       stepLabel: 'Focus'
     });
+    expect(pipWindow.button.disabled).toBe(false);
     pipWindow.button.click();
 
     expect(onAction).toHaveBeenNthCalledWith(1, 'PAUSE');
     expect(onAction).toHaveBeenNthCalledWith(2, 'RESUME');
+  });
+
+  it('dispatches start action from idle PiP state', async () => {
+    const pipWindow = createFakePipWindow();
+    const hostWindow = createHostWindow({ pipWindow });
+    const onAction = vi.fn();
+    const controller = createTimerPipController({ hostWindow, onAction });
+
+    await controller.openFromUserGesture();
+    controller.update({
+      clock: '25:00',
+      progressPercent: 0,
+      status: 'idle',
+      stepLabel: 'Focus'
+    });
+
+    expect(pipWindow.button.disabled).toBe(false);
+    pipWindow.button.click();
+    expect(onAction).toHaveBeenCalledWith('START');
+  });
+
+  it('reports window close reason to the callback', async () => {
+    const pipWindow = createFakePipWindow();
+    const hostWindow = createHostWindow({ pipWindow });
+    const onWindowClosed = vi.fn();
+    const controller = createTimerPipController({ hostWindow, onWindowClosed });
+
+    await controller.openFromUserGesture();
+    pipWindow.closed = true;
+    pipWindow.dispatchPageHide();
+
+    expect(onWindowClosed).toHaveBeenCalledWith('user');
+
+    pipWindow.closed = false;
+    hostWindow.documentPictureInPicture.window = null;
+    await controller.openFromUserGesture({ bypassDismissLock: true });
+    controller.close();
+
+    expect(onWindowClosed).toHaveBeenCalledWith('app');
   });
 });

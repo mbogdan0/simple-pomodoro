@@ -1,5 +1,5 @@
-const PIP_WINDOW_HEIGHT = 180;
-const PIP_WINDOW_WIDTH = 320;
+const PIP_WINDOW_HEIGHT = 124;
+const PIP_WINDOW_WIDTH = 224;
 
 const PIP_STYLES = `
   :root {
@@ -24,21 +24,22 @@ const PIP_STYLES = `
     font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
     margin: 0;
     min-height: 100vh;
-    padding: 12px;
+    padding: 6px;
   }
 
   .pip-card {
     border: 1px solid var(--pip-border);
-    border-radius: 12px;
+    border-radius: 10px;
     display: grid;
-    gap: 10px;
-    padding: 12px;
+    gap: 6px;
+    padding: 8px;
   }
 
   .pip-step {
     color: var(--pip-muted);
-    font-size: 11px;
-    letter-spacing: 0.08em;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
     margin: 0;
     text-transform: uppercase;
   }
@@ -46,7 +47,7 @@ const PIP_STYLES = `
   .pip-clock {
     font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
-    font-size: 36px;
+    font-size: 26px;
     font-variant-numeric: tabular-nums;
     font-weight: 500;
     line-height: 1;
@@ -56,7 +57,7 @@ const PIP_STYLES = `
   .pip-progress {
     background: var(--pip-progress-track);
     border-radius: 999px;
-    height: 6px;
+    height: 4px;
     overflow: hidden;
     width: 100%;
   }
@@ -75,13 +76,41 @@ const PIP_STYLES = `
     color: var(--pip-button-fg);
     cursor: pointer;
     font: inherit;
-    font-size: 13px;
-    padding: 8px 12px;
+    font-size: 10px;
+    line-height: 1;
+    padding: 3px 7px;
   }
 
   .pip-action:disabled {
     cursor: not-allowed;
     opacity: 0.45;
+  }
+
+  @media (max-height: 116px) {
+    body {
+      padding: 5px;
+    }
+
+    .pip-card {
+      gap: 4px;
+      padding: 6px;
+    }
+
+    .pip-step {
+      display: none;
+    }
+  }
+
+  @media (max-height: 92px) {
+    .pip-action {
+      display: none;
+    }
+  }
+
+  @media (max-width: 210px) {
+    .pip-clock {
+      font-size: 22px;
+    }
   }
 `;
 
@@ -139,8 +168,8 @@ function getActionForStatus(status) {
   }
 
   return {
-    code: '',
-    label: 'Waiting'
+    code: 'START',
+    label: 'Start'
   };
 }
 
@@ -155,6 +184,8 @@ export function isPictureInPictureSupported(targetWindow = globalThis.window) {
 export function createTimerPipController(options = {}) {
   const hostWindow = options.hostWindow ?? globalThis.window;
   const onAction = typeof options.onAction === 'function' ? options.onAction : () => {};
+  const onWindowClosed =
+    typeof options.onWindowClosed === 'function' ? options.onWindowClosed : () => {};
   let closeRequestedByApp = false;
   let dismissedUntilNextStart = false;
   let latestModel = normalizeModel();
@@ -191,6 +222,8 @@ export function createTimerPipController(options = {}) {
       if (wasManualClose) {
         dismissedUntilNextStart = true;
       }
+
+      onWindowClosed(wasManualClose ? 'user' : 'app');
     };
     pipWindow.addEventListener?.('pagehide', pageHideHandler);
   }
@@ -251,8 +284,13 @@ export function createTimerPipController(options = {}) {
     });
   }
 
-  async function openFromUserGesture() {
-    if (!isPictureInPictureSupported(hostWindow) || dismissedUntilNextStart) {
+  async function openFromUserGesture(options = {}) {
+    const bypassDismissLock = Boolean(options.bypassDismissLock);
+
+    if (
+      !isPictureInPictureSupported(hostWindow) ||
+      (!bypassDismissLock && dismissedUntilNextStart)
+    ) {
       return false;
     }
 

@@ -14,6 +14,8 @@ describe('simple timer panel', () => {
       clock: '25:00',
       focusRepeatCurrent: 1,
       focusRepeatTotal: 4,
+      pipToggleDisabled: false,
+      pipToggleLabel: 'Toggle PiP',
       primaryAction: 'start-step',
       primaryActionLabel: 'Start',
       progressPercent: 30,
@@ -35,10 +37,39 @@ describe('simple timer panel', () => {
     expect(html).toContain('Step 1/8');
     expect(html).toContain('Start');
     expect(html).toContain('Reset');
+    expect(html).toContain('Toggle PiP');
+    expect(html).toContain('data-action="toggle-pip-window"');
+    expect(html).toContain('action-row__left');
+    expect(html).toContain('action-row__right');
+    expect(html).toContain('action-button subtle action-button--pip');
     expect(html).not.toContain('Worker');
     expect(html).not.toContain('localStorage');
     expect(html).not.toContain('inline blob');
     expect(html).not.toContain('timer-worker.js');
     expect(html).not.toContain('permission');
+  });
+
+  it('renders disabled PiP control when PiP is unsupported', () => {
+    const html = renderTimerPanel({
+      accent: '#c85a3a',
+      backgroundNotice: '',
+      cycleDots: [],
+      clock: '25:00',
+      focusRepeatCurrent: 1,
+      focusRepeatTotal: 4,
+      pipToggleDisabled: true,
+      pipToggleLabel: 'Toggle PiP',
+      primaryAction: 'start-step',
+      primaryActionLabel: 'Start',
+      progressPercent: 0,
+      statusText: 'Ready',
+      stepCurrent: 1,
+      stepLabel: 'Focus',
+      stepTotal: 8
+    });
+
+    expect(html).toContain('Toggle PiP');
+    expect(html).toContain('data-action="toggle-pip-window"');
+    expect(html).toContain('disabled');
   });
 });

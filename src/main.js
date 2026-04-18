@@ -1,6 +1,7 @@
 import {
   buildNotificationTag,
   createCompletionKey,
+  resolveCompletionNotificationBody,
   selectNotificationChannel,
   shouldDispatchCompletion,
   shouldDispatchFocusMinuteReminder
@@ -66,6 +67,7 @@ const state = {
   backgroundNotice: '',
   lastCompletionKey: '',
   lastFocusMinuteReminderKey: '',
+  manualPipRequested: false,
   notificationNotice: '',
   settings: loadSettings(),
   serviceWorkerReady: false
@@ -79,6 +81,11 @@ let chromeSignature = '';
 let serviceWorkerRegistration = null;
 const pipController = createTimerPipController({
   onAction(action) {
+    if (action === 'START') {
+      postWorkerAction('START_STEP', { settings: state.settings });
+      return;
+    }
+
     if (action === 'PAUSE') {
       postWorkerAction('PAUSE');
       return;
@@ -86,6 +93,12 @@ const pipController = createTimerPipController({
 
     if (action === 'RESUME') {
       postWorkerAction('RESUME');
+    }
+  },
+  onWindowClosed(reason) {
+    if (reason === 'user') {
+      state.manualPipRequested = false;
+      renderApp();
     }
   }
 });
@@ -452,7 +465,10 @@ function dispatchCompletionAlerts(session, completionKey = '') {
 
   if (state.settings.alertSettings.notificationsEnabled) {
     void sendNotificationWithFallback({
-      body: 'The next step is ready. Press Start to continue.',
+      body: resolveCompletionNotificationBody({
+        autoStartNextStep: state.settings.autoStartNextStep,
+        session
+      }),
       silent: !state.settings.alertSettings.soundEnabled,
       tag: notificationTag,
       title: `${stepLabel} completed`
@@ -629,6 +645,7 @@ function getTimerModel(now = Date.now()) {
   const step = getCurrentStep(session);
   const running = session.status === 'running';
   const paused = session.status === 'paused';
+  const pipSupported = pipController.isSupported();
   const remainingMs = getRemainingMs(session, now);
   const progress = getProgressRatio(session, now);
   const accent = STEP_ACCENTS[step?.type ?? 'work'];
@@ -642,6 +659,8 @@ function getTimerModel(now = Date.now()) {
     cycleDots: getCycleRepeatDots(session),
     focusRepeatCurrent,
     focusRepeatTotal,
+    pipToggleDisabled: !pipSupported,
+    pipToggleLabel: 'Toggle PiP',
     primaryAction: running ? 'pause-step' : paused ? 'resume-step' : 'start-step',
     primaryActionLabel: running ? 'Pause' : paused ? 'Resume' : 'Start',
     progressPercent: Math.round(progress * 100),
@@ -752,7 +771,7 @@ function renderSettingsPanel() {
         </div>
 
         <label class="toggle-row">
-          <span>Picture-in-Picture</span>
+          <span>Auto-open PiP on Start</span>
           <input
             ${state.settings.pipEnabled ? 'checked' : ''}
             ${pipSupported ? '' : 'disabled'}
@@ -763,7 +782,7 @@ function renderSettingsPanel() {
         <p class="inline-note">
           ${
             pipSupported
-              ? 'Opens a small always-on-top timer window while the timer is running or paused.'
+              ? 'Automatically opens PiP when you press Start. Manual Open/Close PiP is available on the Timer tab.'
               : 'Picture-in-Picture is unavailable in this browser.'
           }
         </p>
@@ -869,8 +888,8 @@ function updateTimerLiveRegion(now = Date.now()) {
 
 function syncPictureInPicture(timerModel) {
   const status = state.activeSession.status;
-  const shouldKeepOpen =
-    state.settings.pipEnabled && (status === 'running' || status === 'paused');
+  const shouldKeepOpen = state.manualPipRequested ||
+    (state.settings.pipEnabled && (status === 'running' || status === 'paused'));
 
   if (!shouldKeepOpen) {
     pipController.close();
@@ -883,6 +902,29 @@ function syncPictureInPicture(timerModel) {
     status,
     stepLabel: timerModel.stepLabel
   });
+}
+
+async function toggleManualPipWindow() {
+  if (!pipController.isSupported()) {
+    return;
+  }
+
+  if (pipController.isOpen()) {
+    state.manualPipRequested = false;
+    pipController.close();
+    renderApp();
+    return;
+  }
+
+  const opened = await pipController.openFromUserGesture({ bypassDismissLock: true });
+
+  if (!opened) {
+    return;
+  }
+
+  state.manualPipRequested = true;
+  syncPictureInPicture(getTimerModel());
+  renderApp();
 }
 
 function updatePageChrome(now = Date.now()) {
@@ -974,6 +1016,9 @@ function handleRootClick(event) {
       }
       postWorkerAction('START_STEP', { settings: state.settings });
       break;
+    case 'toggle-pip-window':
+      void toggleManualPipWindow();
+      break;
     case 'switch-tab':
       if (tab === 'timer' || tab === 'settings') {
         state.settings.lastOpenTab = tab;
@@ -1049,11 +1094,6 @@ function handleRootChange(event) {
     if (key === 'pipEnabled') {
       state.settings.pipEnabled = target.checked;
       persistSettings();
-
-      if (!target.checked) {
-        pipController.close();
-      }
-
       renderApp();
     }
   }
