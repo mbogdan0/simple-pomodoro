@@ -29,6 +29,25 @@ function getCycleDotVisualState(dot) {
   };
 }
 
+function getCycleDotTitle(dot, index) {
+  const repeatNumber = index + 1;
+  const focusState = dot?.focusState ?? 'pending';
+  const breakState = dot?.breakState ?? 'pending';
+
+  const focusText = focusState === 'done'
+    ? 'completed'
+    : focusState === 'active'
+      ? 'in progress'
+      : 'not completed';
+  const breakText = breakState === 'done'
+    ? 'completed'
+    : breakState === 'active'
+      ? 'in progress'
+      : 'not completed';
+
+  return `Repeat ${repeatNumber}: focus ${focusText}, break ${breakText}`;
+}
+
 function renderFocusTagsMarkup(timerModel) {
   const focusTagOptions = Array.isArray(timerModel.focusTagOptions)
     ? timerModel.focusTagOptions
@@ -66,9 +85,10 @@ export function renderCycleProgressMarkup(cycleDots = []) {
   return cycleDots
     .map((dot, index) => {
       const visual = getCycleDotVisualState(dot);
+      const title = getCycleDotTitle(dot, index);
 
       return `
-        <span class="cycle-dot" data-cycle-dot data-repeat-index="${index}">
+        <span class="cycle-dot" data-cycle-dot data-repeat-index="${index}" title="${title}">
           <span class="cycle-dot__marker ${visual.stateClass} ${visual.isActive ? 'is-active' : ''} ${visual.activeClass}"></span>
         </span>
       `
@@ -77,7 +97,11 @@ export function renderCycleProgressMarkup(cycleDots = []) {
 }
 
 export function renderTimerPanel(timerModel) {
+  const accent = timerModel.accent ?? '#c85a3a';
+  const accentSoft = timerModel.accentSoft ?? '#f3e7e2';
+  const accentOutline = timerModel.accentOutline ?? '#d0afa3';
   const pipToggleLabel = timerModel.pipToggleLabel ?? 'Toggle PiP';
+  const progressTrack = timerModel.progressTrack ?? '#ede7de';
   const showPipToggle = Boolean(timerModel.showPipToggle);
 
   return `
@@ -86,7 +110,7 @@ export function renderTimerPanel(timerModel) {
       id="panel-timer"
       aria-label="Timer panel"
       role="region"
-      style="--accent:${timerModel.accent};"
+      style="--accent:${accent};--accent-soft:${accentSoft};--accent-outline:${accentOutline};--progress-track:${progressTrack};"
     >
       <p class="timer-mode" data-live-step-label>${timerModel.stepLabel}</p>
       <div

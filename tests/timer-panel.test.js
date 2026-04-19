@@ -6,6 +6,8 @@ describe('simple timer panel', () => {
   it('renders timer UI with single-circle cycle dots, tags and accessible repeat metadata', () => {
     const html = renderTimerPanel({
       accent: '#c85a3a',
+      accentOutline: '#d0afa3',
+      accentSoft: '#f3e7e2',
       backgroundNotice: '',
       cycleDots: [
         { breakState: 'pending', focusState: 'active', id: 'focus-1' },
@@ -24,6 +26,7 @@ describe('simple timer panel', () => {
       showPipToggle: true,
       primaryAction: 'start-step',
       primaryActionLabel: 'Start',
+      progressTrack: '#ede7de',
       progressPercent: 30,
       statusText: 'Ready',
       stepCurrent: 1,
@@ -39,6 +42,11 @@ describe('simple timer panel', () => {
     expect(html).toContain('role="status"');
     expect(html).toContain('cycle-dot__marker is-hollow is-active is-focus-active');
     expect(html).toContain('cycle-dot__marker is-outlined');
+    expect(html).toContain('title="Repeat 1: focus in progress, break not completed"');
+    expect(html).toContain('title="Repeat 2: focus completed, break completed"');
+    expect(html).toContain(
+      'style="--accent:#c85a3a;--accent-soft:#f3e7e2;--accent-outline:#d0afa3;--progress-track:#ede7de;"'
+    );
     expect(html).toContain('data-action="set-focus-tag"');
     expect(html).toContain('data-focus-tag="none"');
     expect(html).toContain('data-focus-tag="work"');
@@ -64,6 +72,8 @@ describe('simple timer panel', () => {
   it('does not render PiP control when PiP is unsupported', () => {
     const html = renderTimerPanel({
       accent: '#c85a3a',
+      accentOutline: '#d0afa3',
+      accentSoft: '#f3e7e2',
       backgroundNotice: '',
       cycleDots: [],
       clock: '25:00',
@@ -79,6 +89,7 @@ describe('simple timer panel', () => {
       showPipToggle: false,
       primaryAction: 'start-step',
       primaryActionLabel: 'Start',
+      progressTrack: '#ede7de',
       progressPercent: 0,
       statusText: 'Ready',
       stepCurrent: 1,

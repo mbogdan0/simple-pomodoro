@@ -8,6 +8,26 @@ export const STEP_TYPE_LABELS = {
   longBreak: 'Long Break'
 };
 
+export const STEP_PALETTE = {
+  longBreak: {
+    accent: '#3d69c5',
+    accentOutline: '#a8b7d8',
+    accentSoft: '#e6ebf6'
+  },
+  shortBreak: {
+    accent: '#2f8c73',
+    accentOutline: '#a2beb4',
+    accentSoft: '#e4efe9'
+  },
+  work: {
+    accent: '#c85a3a',
+    accentOutline: '#d0afa3',
+    accentSoft: '#f3e7e2'
+  }
+};
+
+export const PROGRESS_TRACK_COLOR = '#ede7de';
+
 export const TAB_LABELS = {
   timer: 'Timer',
   settings: 'Settings',

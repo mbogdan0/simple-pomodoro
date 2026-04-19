@@ -10,6 +10,8 @@ import {
   APP_NAME,
   FOCUS_TAG_LABELS,
   FOCUS_TAGS,
+  PROGRESS_TRACK_COLOR,
+  STEP_PALETTE,
   STEP_TYPES,
   STEP_TYPE_LABELS,
   STORAGE_KEYS,
@@ -65,12 +67,6 @@ const BACKGROUND_UNSUPPORTED_NOTICE =
   'This browser may throttle timer updates in background tabs.';
 const RESET_CONFIRMATION_MESSAGE = 'Reset timer to the first step?';
 const SERVICE_WORKER_URL = 'service-worker.js';
-
-const STEP_ACCENTS = {
-  longBreak: '#3d69c5',
-  shortBreak: '#2f8c73',
-  work: '#c85a3a'
-};
 
 const root = document.querySelector('#app');
 
@@ -780,17 +776,20 @@ function getNotificationSupportModel() {
 function getTimerModel(now = Date.now()) {
   const session = state.activeSession;
   const step = getCurrentStep(session);
+  const stepType = step?.type ?? 'work';
+  const palette = STEP_PALETTE[stepType] ?? STEP_PALETTE.work;
   const running = session.status === 'running';
   const paused = session.status === 'paused';
   const pipSupported = pipController.isSupported();
   const remainingMs = getRemainingMs(session, now);
   const progress = getProgressRatio(session, now);
-  const accent = STEP_ACCENTS[step?.type ?? 'work'];
   const { focusRepeatCurrent, focusRepeatTotal } = getFocusRepeatProgress(session);
   const { stepCurrent, stepTotal } = getStepProgress(session);
 
   return {
-    accent,
+    accent: palette.accent,
+    accentOutline: palette.accentOutline,
+    accentSoft: palette.accentSoft,
     backgroundNotice: state.backgroundNotice,
     clock: formatClock(remainingMs),
     cycleDots: getCycleRepeatDots(session),
@@ -805,6 +804,7 @@ function getTimerModel(now = Date.now()) {
     showPipToggle: pipSupported,
     primaryAction: running ? 'pause-step' : paused ? 'resume-step' : 'start-step',
     primaryActionLabel: running ? 'Pause' : paused ? 'Resume' : 'Start',
+    progressTrack: PROGRESS_TRACK_COLOR,
     progressPercent: Math.round(progress * 100),
     statusText: formatStatusLabel(session.status),
     step,
@@ -1061,7 +1061,9 @@ function syncPictureInPicture(timerModel, now = Date.now()) {
   });
 
   pipController.update({
+    accent: timerModel.accent,
     clock: pipClock,
+    progressTrack: timerModel.progressTrack,
     progressPercent: timerModel.progressPercent,
     status,
     stepLabel: timerModel.stepLabel

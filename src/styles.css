@@ -8,6 +8,7 @@
   --accent-work: #c85a3a;
   --accent-short: #2f8c73;
   --accent-long: #3d69c5;
+  --progress-track-neutral: #ede7de;
   --shadow: 0 10px 30px rgba(28, 33, 31, 0.06);
   --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
   --font-timer: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono",
@@ -138,6 +139,7 @@ input:focus-visible {
 }
 
 .cycle-dot {
+  cursor: help;
   display: block;
   height: 16px;
   width: 16px;
@@ -147,6 +149,7 @@ input:focus-visible {
   background: #fff;
   border: 1.5px solid #d5cec3;
   border-radius: 999px;
+  cursor: inherit;
   display: block;
   height: 16px;
   transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
@@ -154,13 +157,13 @@ input:focus-visible {
 }
 
 .cycle-dot__marker.is-filled {
-  background: #ece5d9;
-  border-color: #bcb4a8;
+  background: var(--accent-soft, #f3e7e2);
+  border-color: var(--accent-outline, #d0afa3);
 }
 
 .cycle-dot__marker.is-outlined {
-  background: #ece5d9;
-  border-color: #9e9588;
+  background: var(--accent-soft, #f3e7e2);
+  border-color: var(--accent, var(--accent-work));
   box-shadow: inset 0 0 0 2px #fff;
 }
 
@@ -237,7 +240,7 @@ input:focus-visible {
 }
 
 .progress-line {
-  background: #eee7dd;
+  background: var(--progress-track, var(--progress-track-neutral));
   border-radius: 999px;
   height: 8px;
   overflow: hidden;

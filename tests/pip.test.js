@@ -172,6 +172,42 @@ describe('picture-in-picture controller', () => {
     expect(onAction).toHaveBeenNthCalledWith(2, 'RESUME');
   });
 
+  it('applies provided accent and track colors to PiP progress', async () => {
+    const pipWindow = createFakePipWindow();
+    const hostWindow = createHostWindow({ pipWindow });
+    const controller = createTimerPipController({ hostWindow });
+
+    await controller.openFromUserGesture();
+    controller.update({
+      accent: '#3d69c5',
+      clock: '18:00',
+      progressPercent: 28,
+      progressTrack: '#ede7de',
+      status: 'running',
+      stepLabel: 'Short Break'
+    });
+
+    expect(pipWindow.document.body.innerHTML).toContain('--pip-progress-fill:#3d69c5');
+    expect(pipWindow.document.body.innerHTML).toContain('--pip-progress-track:#ede7de');
+  });
+
+  it('uses safe fallback colors when accent values are not provided', async () => {
+    const pipWindow = createFakePipWindow();
+    const hostWindow = createHostWindow({ pipWindow });
+    const controller = createTimerPipController({ hostWindow });
+
+    await controller.openFromUserGesture();
+    controller.update({
+      clock: '25:00',
+      progressPercent: 0,
+      status: 'idle',
+      stepLabel: 'Focus'
+    });
+
+    expect(pipWindow.document.body.innerHTML).toContain('--pip-progress-fill:#2f8c73');
+    expect(pipWindow.document.body.innerHTML).toContain('--pip-progress-track:#ede7de');
+  });
+
   it('dispatches start action from idle PiP state', async () => {
     const pipWindow = createFakePipWindow();
     const hostWindow = createHostWindow({ pipWindow });

@@ -8,7 +8,7 @@ const PIP_STYLES = `
     --pip-fg: #1f2623;
     --pip-muted: #6b736d;
     --pip-border: #ddd6cc;
-    --pip-progress-track: #eee7dd;
+    --pip-progress-track: #ede7de;
     --pip-progress-fill: #2f8c73;
     --pip-button-bg: #1f2623;
     --pip-button-fg: #fff;
@@ -132,6 +132,15 @@ function sanitizeText(value, fallback) {
   return fallback;
 }
 
+function sanitizeColor(value, fallback) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : fallback;
+}
+
 function escapeHtml(value) {
   return value
     .replaceAll('&', '&amp;')
@@ -145,7 +154,9 @@ function normalizeModel(model = {}) {
   const status = ['running', 'paused'].includes(model.status) ? model.status : 'idle';
 
   return {
+    accent: sanitizeColor(model.accent, '#2f8c73'),
     clock: sanitizeText(model.clock, '00:00'),
+    progressTrack: sanitizeColor(model.progressTrack, '#ede7de'),
     progressPercent: clampProgress(model.progressPercent),
     status,
     stepLabel: sanitizeText(model.stepLabel, 'Timer')
@@ -250,7 +261,11 @@ export function createTimerPipController(options = {}) {
     documentRef.title = `${model.clock} · ${model.stepLabel}`;
     documentRef.body.innerHTML = `
       <style>${PIP_STYLES}</style>
-      <main class="pip-card" aria-label="Mini timer window">
+      <main
+        class="pip-card"
+        aria-label="Mini timer window"
+        style="--pip-progress-fill:${escapeHtml(model.accent)};--pip-progress-track:${escapeHtml(model.progressTrack)};"
+      >
         <p class="pip-step">${escapeHtml(model.stepLabel)}</p>
         <p class="pip-clock">${escapeHtml(model.clock)}</p>
         <div class="pip-progress" aria-hidden="true">
