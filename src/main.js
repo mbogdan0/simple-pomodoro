@@ -12,8 +12,6 @@ import {
   FOCUS_TAGS,
   PROGRESS_TRACK_COLOR,
   STEP_PALETTE,
-  STEP_TYPES,
-  STEP_TYPE_LABELS,
   STORAGE_KEYS,
   TAB_LABELS
 } from './core/constants.js';
@@ -26,7 +24,6 @@ import {
 import {
   formatClock,
   formatDocumentTitle,
-  formatMinutesValue,
   formatNotificationPermissionLabel,
   formatPipClock,
   formatStepTypeLabel,
@@ -60,7 +57,10 @@ import {
   saveSettings
 } from './core/storage.js';
 import { renderHistoryPanel } from './ui/history-panel.js';
+import { renderSettingsPanel } from './ui/settings-panel.js';
 import { renderCycleProgressMarkup, renderTimerPanel } from './ui/timer-panel.js';
+import { playCompletionToneOnContext, playUiActionToneOnContext } from './utils/audio.js';
+import { createNtfyTestPayload, sendNtfyPush } from './utils/ntfy.js';
 
 const BACKGROUND_UNAVAILABLE_NOTICE = 'Background timer support is currently unavailable.';
 const BACKGROUND_UNSUPPORTED_NOTICE =
@@ -82,7 +82,9 @@ const state = {
   focusHistory: loadFocusHistory(),
   lastCompletionKey: '',
   lastFocusMinuteReminderKey: '',
+  isNtfyTesting: false,
   manualPipRequested: false,
+  ntfyNotice: '',
   notificationNotice: '',
   settings: loadSettings(),
   serviceWorkerReady: false
@@ -597,35 +599,10 @@ function dispatchCompletionAlerts(session, completionKey = '') {
   }
 
   if (state.settings.ntfyPublishUrl) {
-    void sendNtfyCompletionNotification({
+    void sendNtfyPush({
       payload: completionPayload,
       publishUrl: state.settings.ntfyPublishUrl
     });
-  }
-}
-
-async function sendNtfyCompletionNotification({
-  payload,
-  publishUrl
-}) {
-  if (!publishUrl) {
-    return false;
-  }
-
-  try {
-    const response = await fetch(publishUrl, {
-      body: payload.body,
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        Priority: '4',
-        Title: payload.title
-      },
-      method: 'POST'
-    });
-
-    return response.ok;
-  } catch {
-    return false;
   }
 }
 
@@ -638,54 +615,7 @@ function playCompletionTone() {
     audioContext = new window.AudioContext();
   }
 
-  const startAt = audioContext.currentTime;
-  const baseDuration = 1.05;
-  const totalDuration = 1.4;
-  const envelopeScale = totalDuration / baseDuration;
-  const finishAt = startAt + totalDuration;
-
-  const leadOscillator = audioContext.createOscillator();
-  const harmonyOscillator = audioContext.createOscillator();
-  const leadGain = audioContext.createGain();
-  const harmonyGain = audioContext.createGain();
-  const masterGain = audioContext.createGain();
-
-  leadOscillator.type = 'triangle';
-  leadOscillator.frequency.setValueAtTime(740, startAt);
-  leadOscillator.frequency.linearRampToValueAtTime(980, startAt + 0.18 * envelopeScale);
-  leadOscillator.frequency.linearRampToValueAtTime(840, startAt + 0.48 * envelopeScale);
-  leadOscillator.frequency.linearRampToValueAtTime(1040, startAt + 0.78 * envelopeScale);
-  leadOscillator.frequency.linearRampToValueAtTime(900, finishAt);
-
-  harmonyOscillator.type = 'sine';
-  harmonyOscillator.frequency.setValueAtTime(370, startAt);
-  harmonyOscillator.frequency.linearRampToValueAtTime(430, startAt + 0.24 * envelopeScale);
-  harmonyOscillator.frequency.linearRampToValueAtTime(390, startAt + 0.6 * envelopeScale);
-  harmonyOscillator.frequency.linearRampToValueAtTime(450, finishAt);
-
-  leadGain.gain.setValueAtTime(0.0001, startAt);
-  leadGain.gain.linearRampToValueAtTime(0.24, startAt + 0.05 * envelopeScale);
-  leadGain.gain.linearRampToValueAtTime(0.18, startAt + 0.32 * envelopeScale);
-  leadGain.gain.exponentialRampToValueAtTime(0.0001, finishAt);
-
-  harmonyGain.gain.setValueAtTime(0.0001, startAt);
-  harmonyGain.gain.linearRampToValueAtTime(0.13, startAt + 0.08 * envelopeScale);
-  harmonyGain.gain.linearRampToValueAtTime(0.1, startAt + 0.38 * envelopeScale);
-  harmonyGain.gain.exponentialRampToValueAtTime(0.0001, finishAt);
-
-  masterGain.gain.setValueAtTime(0.9, startAt);
-
-  leadOscillator.connect(leadGain);
-  harmonyOscillator.connect(harmonyGain);
-  leadGain.connect(masterGain);
-  harmonyGain.connect(masterGain);
-  masterGain.connect(audioContext.destination);
-
-  leadOscillator.start(startAt);
-  harmonyOscillator.start(startAt);
-  leadOscillator.stop(finishAt);
-  harmonyOscillator.stop(finishAt);
-  return true;
+  return playCompletionToneOnContext(audioContext);
 }
 
 function playUiActionTone() {
@@ -701,26 +631,7 @@ function playUiActionTone() {
     audioContext.resume().catch(() => {});
   }
 
-  const startAt = audioContext.currentTime;
-  const duration = 0.05;
-  const finishAt = startAt + duration;
-  const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-
-  oscillator.type = 'triangle';
-  oscillator.frequency.setValueAtTime(920, startAt);
-  oscillator.frequency.exponentialRampToValueAtTime(760, finishAt);
-
-  gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.linearRampToValueAtTime(0.07, startAt + 0.008);
-  gain.gain.exponentialRampToValueAtTime(0.0001, finishAt);
-
-  oscillator.connect(gain);
-  gain.connect(audioContext.destination);
-
-  oscillator.start(startAt);
-  oscillator.stop(finishAt + 0.005);
-  return true;
+  return playUiActionToneOnContext(audioContext);
 }
 
 async function ensureServiceWorkerRegistration() {
@@ -886,6 +797,8 @@ function getTimerModel(now = Date.now()) {
 function renderApp() {
   const activeTab = state.settings.lastOpenTab;
   const timerModel = getTimerModel();
+  const notificationSupport = getNotificationSupportModel();
+  const permissionLabel = formatNotificationPermissionLabel(notificationSupport.permissionState);
 
   root.innerHTML = `
     <main class="shell">
@@ -912,7 +825,20 @@ function renderApp() {
 
       <section class="panel-grid">
         ${activeTab === 'timer' ? renderTimerPanel(timerModel) : ''}
-        ${activeTab === 'settings' ? renderSettingsPanel() : ''}
+        ${
+          activeTab === 'settings'
+            ? renderSettingsPanel({
+                isNtfyTesting: state.isNtfyTesting,
+                notificationNotice: state.notificationNotice,
+                notificationPermissionLabel: permissionLabel,
+                notificationSupport,
+                ntfyNotice: state.ntfyNotice,
+                pipSupported: pipController.isSupported(),
+                sessionStatus: state.activeSession.status,
+                settings: state.settings
+              })
+            : ''
+        }
         ${activeTab === 'history' ? renderHistoryPanel(state.focusHistory) : ''}
       </section>
     </main>
@@ -920,171 +846,6 @@ function renderApp() {
 
   updateTimerLiveRegion();
   updatePageChrome();
-}
-
-function renderSettingsPanel() {
-  const sessionLocked = ['running', 'paused'].includes(state.activeSession.status);
-  const notificationSupport = getNotificationSupportModel();
-  const permissionLabel = formatNotificationPermissionLabel(notificationSupport.permissionState);
-  const pipSupported = pipController.isSupported();
-
-  return `
-    <section class="panel settings-layout" id="panel-settings" aria-label="Settings panel" role="region">
-      <div class="panel-section">
-        <div class="panel-heading">
-          <h2>Cycle settings</h2>
-          ${sessionLocked ? '<p class="inline-note">Changes apply after reset or after starting a new cycle.</p>' : ''}
-        </div>
-
-        <div class="template-grid">
-          ${STEP_TYPES.map(
-            (type) => `
-              <label class="template-card">
-                <span>${STEP_TYPE_LABELS[type]}</span>
-                <input
-                  data-template-duration="${type}"
-                  inputmode="numeric"
-                  max="480"
-                  min="1"
-                  type="number"
-                  value="${formatMinutesValue(state.settings.templateDurations[type])}"
-                >
-                <small>minutes</small>
-              </label>
-            `
-          ).join('')}
-          <label class="template-card">
-            <span>Repeats</span>
-            <input
-              data-repeat-count
-              inputmode="numeric"
-              max="24"
-              min="1"
-              type="number"
-              value="${state.settings.repeatCount}"
-            >
-            <small>focus sessions in one cycle</small>
-          </label>
-        </div>
-        <label class="toggle-row">
-          <span>Auto-start next step</span>
-          <input
-            ${state.settings.autoStartNextStep ? 'checked' : ''}
-            data-setting-toggle="autoStartNextStep"
-            type="checkbox"
-          >
-        </label>
-      </div>
-
-      ${
-        pipSupported
-          ? `
-            <div class="panel-section">
-              <div class="panel-heading">
-                <h2>Mini window</h2>
-              </div>
-
-              <label class="toggle-row">
-                <span>PiP clock updates every 10 seconds</span>
-                <input
-                  ${state.settings.pipClockTickEvery10s ? 'checked' : ''}
-                  data-setting-toggle="pipClockTickEvery10s"
-                  type="checkbox"
-                >
-              </label>
-            </div>
-          `
-          : ''
-      }
-
-      <div class="panel-section">
-        <div class="panel-heading">
-          <h2>Alerts</h2>
-        </div>
-
-        <div class="alert-grid">
-          <div class="permission-row">
-            <span>Status</span>
-            <strong>${permissionLabel}</strong>
-          </div>
-          <label class="toggle-row">
-            <span>Sound</span>
-            <input
-              ${state.settings.alertSettings.soundEnabled ? 'checked' : ''}
-              data-alert-setting="soundEnabled"
-              type="checkbox"
-            >
-          </label>
-          <label class="toggle-row">
-            <span>Notifications</span>
-            <input
-              ${state.settings.alertSettings.notificationsEnabled ? 'checked' : ''}
-              data-alert-setting="notificationsEnabled"
-              type="checkbox"
-            >
-          </label>
-          <div class="settings-actions">
-            ${
-              notificationSupport.hasNotificationApi
-                ? `
-                  <button class="ghost-button" data-action="request-notification-permission" type="button">
-                    Allow notifications
-                  </button>
-                `
-                : ''
-            }
-            <button class="ghost-button" data-action="test-sound" type="button">
-              Test sound
-            </button>
-            ${
-              notificationSupport.unsupported
-                ? ''
-                : `
-                  <button class="ghost-button" data-action="test-notification" type="button">
-                    Test notification
-                  </button>
-                `
-            }
-          </div>
-          ${
-            notificationSupport.unsupported
-              ? '<p class="notice-banner subtle">Notifications are not supported in this browser.</p>'
-              : ''
-          }
-          ${
-            state.notificationNotice
-              ? `<p class="inline-note">${state.notificationNotice}</p>`
-              : ''
-          }
-        </div>
-      </div>
-
-      <div class="panel-section">
-        <div class="panel-heading">
-          <h2>ntfy.sh</h2>
-        </div>
-
-        <div class="alert-grid">
-          <label class="template-card">
-            <span>Publish URL</span>
-            <input
-              data-ntfy-publish-url
-              placeholder="https://ntfy.sh/your-topic"
-              type="url"
-              value="${state.settings.ntfyPublishUrl}"
-            >
-            <small>Send HTTP POST on focus/break completion from this browser tab (tab must stay open).</small>
-          </label>
-          <p class="inline-note">
-            Docs:
-            <a href="https://docs.ntfy.sh/publish/" rel="noopener noreferrer" target="_blank">
-              docs.ntfy.sh/publish
-            </a>
-          </p>
-        </div>
-      </div>
-    </section>
-  `;
 }
 
 function formatRepeatMeta(timerModel) {
@@ -1249,6 +1010,36 @@ async function testNotification() {
   renderApp();
 }
 
+async function testNtfy() {
+  if (state.isNtfyTesting) {
+    return;
+  }
+
+  if (!state.settings.ntfyPublishUrl) {
+    state.ntfyNotice = 'Set a valid ntfy publish URL first.';
+    renderApp();
+    return;
+  }
+
+  state.isNtfyTesting = true;
+  renderApp();
+
+  try {
+    const sent = await sendNtfyPush({
+      payload: createNtfyTestPayload(),
+      publishUrl: state.settings.ntfyPublishUrl
+    });
+
+    state.ntfyNotice = sent
+      ? 'ntfy test push was sent.'
+      : 'Unable to send ntfy test push.';
+  } finally {
+    state.isNtfyTesting = false;
+  }
+
+  renderApp();
+}
+
 function handleRootClick(event) {
   const button = event.target.closest('[data-action]');
 
@@ -1320,6 +1111,9 @@ function handleRootClick(event) {
     case 'test-sound':
       testSound();
       break;
+    case 'test-ntfy':
+      void testNtfy();
+      break;
     default:
       break;
   }
@@ -1371,6 +1165,7 @@ function handleRootChange(event) {
     }
 
     state.settings.ntfyPublishUrl = normalizeNtfyPublishUrl(target.value);
+    state.ntfyNotice = '';
     persistSettings();
     renderApp();
     return;

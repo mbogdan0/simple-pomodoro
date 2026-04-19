@@ -381,6 +381,18 @@ input:focus-visible {
   opacity: 0.45;
 }
 
+.inline-spinner {
+  animation: spin 0.85s linear infinite;
+  border: 2px solid rgba(31, 38, 35, 0.2);
+  border-radius: 999px;
+  border-top-color: rgba(31, 38, 35, 0.75);
+  display: inline-block;
+  height: 0.85em;
+  margin-right: 8px;
+  vertical-align: -1px;
+  width: 0.85em;
+}
+
 .notice-banner,
 .inline-note {
   background: #f7f4ee;
@@ -527,6 +539,12 @@ input:focus-visible {
 
 .history-empty {
   margin: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 720px) {
