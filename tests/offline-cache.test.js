@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isAppShellRequest,
   isCacheableRequest,
   isNavigationRequest,
   resolveShellUrls
@@ -42,5 +43,47 @@ describe('offline cache helpers', () => {
       'https://mbogdan0.github.io/simple-pomodoro/assets/icons/icon-512.png',
       'https://mbogdan0.github.io/simple-pomodoro/timer-worker.js'
     ]);
+  });
+
+  it('classifies app-shell requests for a scope', () => {
+    const scope = 'https://mbogdan0.github.io/simple-pomodoro/';
+    const shellUrls = resolveShellUrls(scope);
+
+    shellUrls.forEach((url) => {
+      expect(isAppShellRequest(new Request(url, { method: 'GET' }), scope)).toBe(true);
+    });
+
+    expect(
+      isAppShellRequest(
+        new Request('https://mbogdan0.github.io/simple-pomodoro/index.html?v=2', {
+          method: 'GET'
+        }),
+        scope
+      )
+    ).toBe(true);
+
+    expect(
+      isAppShellRequest(
+        new Request('https://mbogdan0.github.io/simple-pomodoro/service-worker.js', {
+          method: 'GET'
+        }),
+        scope
+      )
+    ).toBe(false);
+    expect(
+      isAppShellRequest(
+        new Request('https://example.com/simple-pomodoro/index.html', { method: 'GET' }),
+        scope
+      )
+    ).toBe(false);
+    expect(
+      isAppShellRequest(
+        new Request('https://mbogdan0.github.io/simple-pomodoro/index.html', {
+          method: 'POST'
+        }),
+        scope
+      )
+    ).toBe(false);
+    expect(isAppShellRequest({ method: 'GET', url: 'not-a-valid-url' }, scope)).toBe(false);
   });
 });

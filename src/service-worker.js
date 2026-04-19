@@ -1,6 +1,7 @@
 import {
   OFFLINE_CACHE_NAME,
   OFFLINE_CACHE_PREFIX,
+  isAppShellRequest,
   isCacheableRequest,
   isNavigationRequest,
   resolveIndexUrl,
@@ -51,12 +52,28 @@ async function showNotificationWithDedup(payload = {}) {
   return { deduped: false, ok: true };
 }
 
+async function fetchFresh(request) {
+  return fetch(request, { cache: 'no-store' });
+}
+
 async function cacheShellResources() {
   const cache = await caches.open(OFFLINE_CACHE_NAME);
   const shellUrls = resolveShellUrls(self.registration.scope);
 
   await Promise.all(
-    shellUrls.map((url) => cache.add(url).catch(() => undefined))
+    shellUrls.map(async (url) => {
+      try {
+        const networkResponse = await fetchFresh(url);
+
+        if (!networkResponse.ok) {
+          return;
+        }
+
+        await cache.put(url, networkResponse.clone());
+      } catch {
+        // Ignore network failures during shell warmup.
+      }
+    })
   );
 }
 
@@ -74,15 +91,21 @@ async function handleNavigationRequest(request) {
   const indexUrl = resolveIndexUrl(self.registration.scope);
 
   try {
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetchFresh(request);
 
     if (networkResponse.ok) {
-      await cache.put(indexUrl, networkResponse.clone());
+      const writes = [cache.put(indexUrl, networkResponse.clone())];
+
+      if (request.url !== indexUrl) {
+        writes.push(cache.put(request, networkResponse.clone()));
+      }
+
+      await Promise.all(writes);
     }
 
     return networkResponse;
   } catch {
-    const cachedResponse = (await cache.match(request)) ?? (await cache.match(indexUrl));
+    const cachedResponse = (await cache.match(indexUrl)) ?? (await cache.match(request));
 
     if (cachedResponse) {
       return cachedResponse;
@@ -93,6 +116,31 @@ async function handleNavigationRequest(request) {
         'content-type': 'text/plain; charset=utf-8'
       },
       status: 503
+    });
+  }
+}
+
+async function handleNetworkFirstRequest(request) {
+  const cache = await caches.open(OFFLINE_CACHE_NAME);
+
+  try {
+    const networkResponse = await fetchFresh(request);
+
+    if (networkResponse.ok) {
+      await cache.put(request, networkResponse.clone());
+    }
+
+    return networkResponse;
+  } catch {
+    const cachedResponse = await cache.match(request);
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    return new Response('', {
+      status: 503,
+      statusText: 'Offline'
     });
   }
 }
@@ -164,6 +212,11 @@ self.addEventListener('fetch', (event) => {
 
   if (isNavigationRequest(request)) {
     event.respondWith(handleNavigationRequest(request));
+    return;
+  }
+
+  if (isAppShellRequest(request, self.registration.scope)) {
+    event.respondWith(handleNetworkFirstRequest(request));
     return;
   }
 

@@ -609,7 +609,9 @@ function playCompletionTone() {
   }
 
   const startAt = audioContext.currentTime;
-  const totalDuration = 1.05;
+  const baseDuration = 1.05;
+  const totalDuration = 1.4;
+  const envelopeScale = totalDuration / baseDuration;
   const finishAt = startAt + totalDuration;
 
   const leadOscillator = audioContext.createOscillator();
@@ -620,25 +622,25 @@ function playCompletionTone() {
 
   leadOscillator.type = 'triangle';
   leadOscillator.frequency.setValueAtTime(740, startAt);
-  leadOscillator.frequency.linearRampToValueAtTime(980, startAt + 0.18);
-  leadOscillator.frequency.linearRampToValueAtTime(840, startAt + 0.48);
-  leadOscillator.frequency.linearRampToValueAtTime(1040, startAt + 0.78);
+  leadOscillator.frequency.linearRampToValueAtTime(980, startAt + 0.18 * envelopeScale);
+  leadOscillator.frequency.linearRampToValueAtTime(840, startAt + 0.48 * envelopeScale);
+  leadOscillator.frequency.linearRampToValueAtTime(1040, startAt + 0.78 * envelopeScale);
   leadOscillator.frequency.linearRampToValueAtTime(900, finishAt);
 
   harmonyOscillator.type = 'sine';
   harmonyOscillator.frequency.setValueAtTime(370, startAt);
-  harmonyOscillator.frequency.linearRampToValueAtTime(430, startAt + 0.24);
-  harmonyOscillator.frequency.linearRampToValueAtTime(390, startAt + 0.6);
+  harmonyOscillator.frequency.linearRampToValueAtTime(430, startAt + 0.24 * envelopeScale);
+  harmonyOscillator.frequency.linearRampToValueAtTime(390, startAt + 0.6 * envelopeScale);
   harmonyOscillator.frequency.linearRampToValueAtTime(450, finishAt);
 
   leadGain.gain.setValueAtTime(0.0001, startAt);
-  leadGain.gain.linearRampToValueAtTime(0.24, startAt + 0.05);
-  leadGain.gain.linearRampToValueAtTime(0.18, startAt + 0.32);
+  leadGain.gain.linearRampToValueAtTime(0.24, startAt + 0.05 * envelopeScale);
+  leadGain.gain.linearRampToValueAtTime(0.18, startAt + 0.32 * envelopeScale);
   leadGain.gain.exponentialRampToValueAtTime(0.0001, finishAt);
 
   harmonyGain.gain.setValueAtTime(0.0001, startAt);
-  harmonyGain.gain.linearRampToValueAtTime(0.13, startAt + 0.08);
-  harmonyGain.gain.linearRampToValueAtTime(0.1, startAt + 0.38);
+  harmonyGain.gain.linearRampToValueAtTime(0.13, startAt + 0.08 * envelopeScale);
+  harmonyGain.gain.linearRampToValueAtTime(0.1, startAt + 0.38 * envelopeScale);
   harmonyGain.gain.exponentialRampToValueAtTime(0.0001, finishAt);
 
   masterGain.gain.setValueAtTime(0.9, startAt);

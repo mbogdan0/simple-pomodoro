@@ -1,5 +1,5 @@
 export const OFFLINE_CACHE_PREFIX = 'timer-offline-';
-export const OFFLINE_CACHE_NAME = `${OFFLINE_CACHE_PREFIX}v1`;
+export const OFFLINE_CACHE_NAME = `${OFFLINE_CACHE_PREFIX}v2`;
 
 const SHELL_PATHS = [
   './',
@@ -34,4 +34,23 @@ export function resolveShellUrls(scope) {
 
 export function resolveIndexUrl(scope) {
   return resolveShellUrls(scope)[1];
+}
+
+export function isAppShellRequest(request, scope) {
+  if (!request || request.method !== 'GET') {
+    return false;
+  }
+
+  try {
+    const requestUrl = new URL(request.url);
+    const shellUrls = resolveShellUrls(scope).map((url) => new URL(url));
+
+    return shellUrls.some(
+      (shellUrl) =>
+        requestUrl.origin === shellUrl.origin &&
+        requestUrl.pathname === shellUrl.pathname
+    );
+  } catch {
+    return false;
+  }
 }
