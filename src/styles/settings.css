@@ -1,0 +1,65 @@
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.panel-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.panel-heading h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.template-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.template-card,
+.toggle-row,
+.permission-row {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.template-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.template-card span {
+  font-weight: 600;
+}
+
+.template-card small,
+.toggle-row span,
+.permission-row span,
+.inline-note {
+  color: var(--muted);
+}
+
+.template-card input {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+.toggle-row,
+.permission-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 16px;
+}

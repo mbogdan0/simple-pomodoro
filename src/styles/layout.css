@@ -1,0 +1,55 @@
+.shell {
+  margin: 0 auto;
+  max-width: 760px;
+  padding: 24px 16px 40px;
+}
+
+.app-header {
+  margin-bottom: 16px;
+}
+
+.tabs {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px;
+}
+
+.tab-button,
+.action-button,
+.ghost-button {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.tab-button {
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 16px;
+}
+
+.tab-button.is-active {
+  background: var(--text);
+  color: #fff;
+}
+
+.panel-grid,
+.settings-layout,
+.history-layout,
+.panel-section,
+.template-grid,
+.alert-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+}

@@ -1,0 +1,16 @@
+:root {
+  --bg: #f7f3ed;
+  --surface: #ffffff;
+  --surface-soft: #fbf8f3;
+  --text: #1f2623;
+  --muted: #6b736d;
+  --border: #e7e0d6;
+  --accent-work: #c85a3a;
+  --accent-short: #2f8c73;
+  --accent-long: #3d69c5;
+  --progress-track-neutral: #ede7de;
+  --shadow: 0 10px 30px rgba(28, 33, 31, 0.06);
+  --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --font-timer: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}

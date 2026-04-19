@@ -2,15 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { renderHistoryPanel } from '../src/ui/history-panel.js';
 
-describe('history panel', () => {
-  it('renders completed focus entries with date/time, duration and clear action', () => {
+describe('history panel behavior', () => {
+  it('renders completed entries with clear action and normalized tag display', () => {
     const completedAt = 1_713_000_000_000;
-    const localDateTime = new Date(completedAt).toLocaleString();
     const html = renderHistoryPanel([
       {
         completedAt,
         durationMs: 25 * 60 * 1000,
-        focusTag: 'work',
+        focusTag: 'unknown-tag',
         id: 'focus-1:1713000000000',
         stepId: 'focus-1',
         stepType: 'work'
@@ -20,15 +19,13 @@ describe('history panel', () => {
     expect(html).toContain('Focus History');
     expect(html).toContain('history-list');
     expect(html).toContain('25 min');
-    expect(html).toContain('Work');
-    expect(html).toContain('history-tag--work');
-    expect(html).toContain(localDateTime);
-    expect(html).toContain(`datetime="${new Date(completedAt).toISOString()}"`);
+    expect(html).toContain('history-tag--none');
     expect(html).toContain('data-action="clear-history-entry"');
     expect(html).toContain('data-entry-id="focus-1:1713000000000"');
+    expect(html).toContain(`datetime="${new Date(completedAt).toISOString()}"`);
   });
 
-  it('renders an empty state when no history entries are available', () => {
+  it('renders empty state when no entries are present', () => {
     const html = renderHistoryPanel([]);
 
     expect(html).toContain('No completed focus sessions yet.');

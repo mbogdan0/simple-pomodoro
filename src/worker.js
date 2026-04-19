@@ -10,6 +10,7 @@ import {
   syncIdleSessionWithSettings,
   syncSession
 } from './core/session.js';
+import { WORKER_ACTIONS, WORKER_MESSAGE_TYPES } from './core/worker-protocol.js';
 
 let session = null;
 let completionWatchdogHandle = null;
@@ -68,7 +69,7 @@ function emitCompletionIfNeeded() {
   }
 
   lastCompletionKey = completionKey;
-  emit('STEP_FINISHED', session, {
+  emit(WORKER_MESSAGE_TYPES.STEP_FINISHED, session, {
     completionKey,
     reason: 'completed'
   });
@@ -95,7 +96,7 @@ function syncAndEmit(now = Date.now(), emitTick = false) {
     stopTimers();
   }
 
-  emit(emitTick ? 'TICK' : 'STATE', session, {
+  emit(emitTick ? WORKER_MESSAGE_TYPES.TICK : WORKER_MESSAGE_TYPES.STATE, session, {
     reason: emitTick ? 'tick' : 'sync'
   });
 }
@@ -132,61 +133,61 @@ function replaceSession(nextSession, reason = 'init') {
     return;
   }
 
-  emit('STATE', session, { reason });
+  emit(WORKER_MESSAGE_TYPES.STATE, session, { reason });
 }
 
 self.onmessage = ({ data }) => {
   const { payload = {}, type } = data ?? {};
 
   try {
-    if (type === 'INIT') {
+    if (type === WORKER_ACTIONS.INIT) {
       replaceSession(payload.session, 'init');
       return;
     }
 
     if (!session) {
-      emit('ERROR', session, { error: 'Worker is not initialized yet.' });
+      emit(WORKER_MESSAGE_TYPES.ERROR, session, { error: 'Worker is not initialized yet.' });
       return;
     }
 
     const now = payload.now ?? Date.now();
 
     switch (type) {
-      case 'PAUSE':
+      case WORKER_ACTIONS.PAUSE:
         session = pauseSession(session, now);
         stopTimers();
-        emit('STATE', session, { reason: 'pause' });
+        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'pause' });
         break;
-      case 'RESET_ALL':
+      case WORKER_ACTIONS.RESET_ALL:
         session = resetSession(session, now);
         if (payload.settings) {
           session = syncIdleSessionWithSettings(session, payload.settings, now);
         }
         stopTimers();
-        emit('STATE', session, { reason: 'reset-all' });
+        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'reset-all' });
         break;
-      case 'RESUME':
+      case WORKER_ACTIONS.RESUME:
         session = resumeSession(session, now);
         startTicker();
-        emit('STATE', session, { reason: 'resume' });
+        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'resume' });
         break;
-      case 'START_STEP':
+      case WORKER_ACTIONS.START_STEP:
         session = prepareSessionForStepStart(session, payload.settings, now);
         startTicker();
-        emit('STATE', session, { reason: 'start' });
+        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'start' });
         break;
-      case 'SET_FOCUS_TAG':
+      case WORKER_ACTIONS.SET_FOCUS_TAG:
         session = setSessionFocusTag(session, payload.focusTag, now);
-        emit('STATE', session, { reason: 'set-focus-tag' });
+        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'set-focus-tag' });
         break;
-      case 'SYNC_NOW':
+      case WORKER_ACTIONS.SYNC_NOW:
         syncAndEmit(now, false);
         break;
       default:
-        emit('ERROR', session, { error: `Unknown worker message: ${type}` });
+        emit(WORKER_MESSAGE_TYPES.ERROR, session, { error: `Unknown worker message: ${type}` });
     }
   } catch (error) {
-    emit('ERROR', session, {
+    emit(WORKER_MESSAGE_TYPES.ERROR, session, {
       error: error instanceof Error ? error.message : String(error)
     });
   }

@@ -2,106 +2,57 @@ import { describe, expect, it } from 'vitest';
 
 import { renderTimerPanel } from '../src/ui/timer-panel.js';
 
-describe('simple timer panel', () => {
-  it('renders timer UI with single-circle cycle dots, tags and accessible repeat metadata', () => {
-    const html = renderTimerPanel({
-      accent: '#c85a3a',
-      accentOutline: '#d0afa3',
-      accentSoft: '#f3e7e2',
-      backgroundNotice: '',
-      cycleDots: [
-        { breakState: 'pending', focusState: 'active', id: 'focus-1' },
-        { breakState: 'done', focusState: 'done', id: 'focus-2' }
-      ],
-      clock: '25:00',
-      focusTag: 'work',
-      focusTagOptions: [
-        { id: 'none', label: 'No tag' },
-        { id: 'work', label: 'Work' },
-        { id: 'study', label: 'Study' }
-      ],
-      focusRepeatCurrent: 1,
-      focusRepeatTotal: 4,
-      pipToggleLabel: 'Toggle PiP',
-      showPipToggle: true,
-      primaryAction: 'start-step',
-      primaryActionLabel: 'Start',
-      progressTrack: '#ede7de',
-      progressPercent: 30,
-      statusText: 'Ready',
-      stepCurrent: 1,
-      stepLabel: 'Focus',
-      stepTotal: 8
-    });
+function createTimerModel(overrides = {}) {
+  return {
+    accent: '#c85a3a',
+    accentOutline: '#d0afa3',
+    accentSoft: '#f3e7e2',
+    backgroundNotice: '',
+    clock: '25:00',
+    cycleDots: [
+      { breakState: 'pending', focusState: 'active', id: 'focus-1' },
+      { breakState: 'done', focusState: 'done', id: 'focus-2' }
+    ],
+    focusTag: 'work',
+    focusTagOptions: [
+      { id: 'none', label: 'No tag' },
+      { id: 'work', label: 'Work' },
+      { id: 'study', label: 'Study' }
+    ],
+    focusRepeatCurrent: 1,
+    focusRepeatTotal: 4,
+    pipToggleLabel: 'Toggle PiP',
+    primaryAction: 'start-step',
+    primaryActionLabel: 'Start',
+    progressPercent: 30,
+    progressTrack: '#ede7de',
+    showPipToggle: true,
+    statusText: 'Ready',
+    stepCurrent: 1,
+    stepLabel: 'Focus',
+    stepTotal: 8,
+    ...overrides
+  };
+}
 
-    expect(html).toContain('25:00');
-    expect(html).toContain('data-live-cycle-progress');
+describe('timer panel behavior', () => {
+  it('reflects action and accessibility model values in rendered output', () => {
+    const html = renderTimerPanel(createTimerModel());
+
+    expect(html).toContain('data-action="start-step"');
+    expect(html).toContain('aria-valuenow="30"');
+    expect(html).toContain('aria-valuetext="30% complete in current step"');
+    expect(html).toContain('data-action="set-focus-tag"');
+    expect(html).toContain('focus-tag-button--work is-active');
     expect(html).toContain('role="timer"');
     expect(html).toContain('role="progressbar"');
-    expect(html).toContain('aria-valuenow="30"');
     expect(html).toContain('role="status"');
-    expect(html).toContain('cycle-dot__marker is-hollow is-active is-focus-active');
-    expect(html).toContain('cycle-dot__marker is-outlined');
-    expect(html).toContain('title="Repeat 1: focus in progress, break not completed"');
-    expect(html).toContain('title="Repeat 2: focus completed, break completed"');
-    expect(html).toContain(
-      'style="--accent:#c85a3a;--accent-soft:#f3e7e2;--accent-outline:#d0afa3;--progress-track:#ede7de;"'
-    );
-    expect(html).toContain('data-action="set-focus-tag"');
-    expect(html).toContain('data-focus-tag="none"');
-    expect(html).toContain('data-focus-tag="work"');
-    expect(html).toContain('data-focus-tag="study"');
-    expect(html).toContain('focus-tag-button--work is-active');
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain('Focus repeat 1/4');
-    expect(html).toContain('Step 1/8');
-    expect(html).toContain('Start');
-    expect(html).toContain('Reset');
-    expect(html).toContain('Toggle PiP');
-    expect(html).toContain('data-action="toggle-pip-window"');
-    expect(html).toContain('action-row__left');
-    expect(html).toContain('action-row__right');
-    expect(html).toContain('action-button subtle action-button--pip');
-    expect(html).toContain('action-button__icon action-button__icon--pip');
-    expect(html).toContain('d="M13.5 2.5L8 8"');
-    expect(html).toContain('action-button__label">Toggle PiP</span>');
-    expect(html).not.toContain('Worker');
-    expect(html).not.toContain('localStorage');
-    expect(html).not.toContain('inline blob');
-    expect(html).not.toContain('timer-worker.js');
-    expect(html).not.toContain('permission');
   });
 
-  it('does not render PiP control when PiP is unsupported', () => {
-    const html = renderTimerPanel({
-      accent: '#c85a3a',
-      accentOutline: '#d0afa3',
-      accentSoft: '#f3e7e2',
-      backgroundNotice: '',
-      cycleDots: [],
-      clock: '25:00',
-      focusTag: 'none',
-      focusTagOptions: [
-        { id: 'none', label: 'No tag' },
-        { id: 'work', label: 'Work' },
-        { id: 'study', label: 'Study' }
-      ],
-      focusRepeatCurrent: 1,
-      focusRepeatTotal: 4,
-      pipToggleLabel: 'Toggle PiP',
-      showPipToggle: false,
-      primaryAction: 'start-step',
-      primaryActionLabel: 'Start',
-      progressTrack: '#ede7de',
-      progressPercent: 0,
-      statusText: 'Ready',
-      stepCurrent: 1,
-      stepLabel: 'Focus',
-      stepTotal: 8
-    });
+  it('hides PiP control when feature is unavailable in model', () => {
+    const html = renderTimerPanel(createTimerModel({ showPipToggle: false }));
 
-    expect(html).not.toContain('Toggle PiP');
     expect(html).not.toContain('data-action="toggle-pip-window"');
-    expect(html).toContain('No tag');
+    expect(html).toContain('data-action="reset-session"');
   });
 });

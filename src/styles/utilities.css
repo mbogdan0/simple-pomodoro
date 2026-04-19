@@ -1,0 +1,30 @@
+.sr-only {
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.inline-spinner {
+  animation: spin 0.85s linear infinite;
+  border: 2px solid rgba(31, 38, 35, 0.2);
+  border-radius: 999px;
+  border-top-color: rgba(31, 38, 35, 0.75);
+  display: inline-block;
+  height: 0.85em;
+  margin-right: 8px;
+  vertical-align: -1px;
+  width: 0.85em;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
