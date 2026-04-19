@@ -1,3 +1,4 @@
+import { STEP_TYPE_LABELS } from './constants.js';
 import { getCurrentStep, getRemainingMs, hasNextStep } from './session.js';
 
 export function createCompletionKey(session) {
@@ -29,6 +30,26 @@ export function resolveCompletionNotificationBody({
   }
 
   return 'Cycle complete. Press Start to begin a new cycle.';
+}
+
+export function resolveCompletionAlertTitle(session) {
+  const stepType = getCurrentStep(session)?.type;
+  const stepLabel = STEP_TYPE_LABELS[stepType] ?? STEP_TYPE_LABELS.work;
+
+  return `${stepLabel} completed`;
+}
+
+export function createCompletionAlertPayload({
+  autoStartNextStep = false,
+  session
+}) {
+  return {
+    body: resolveCompletionNotificationBody({
+      autoStartNextStep,
+      session
+    }),
+    title: resolveCompletionAlertTitle(session)
+  };
 }
 
 export function selectNotificationChannel({

@@ -62,6 +62,7 @@ Simple Pomodoro Timer helps you run focus cycles without setup friction. It is d
 ### Runtime capabilities
 
 - Notifications through the browser Notification API with service worker fallback channeling.
+- Optional ntfy.sh webhook push notifications on focus/break completion via a configured publish URL in Settings.
 - Optional completion sound via Web Audio API.
 - Optional vibration when supported by the platform.
 - Dynamic document title and generated favicon for quick status awareness.

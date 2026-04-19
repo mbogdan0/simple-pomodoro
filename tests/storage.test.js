@@ -16,6 +16,7 @@ import {
 describe('storage layer', () => {
   it('defaults picture-in-picture clock rounding to disabled', () => {
     expect(createDefaultSettings().pipClockTickEvery10s).toBe(false);
+    expect(createDefaultSettings().ntfyPublishUrl).toBe('');
     expect(createDefaultSettings()).not.toHaveProperty('pipEnabled');
   });
 
@@ -49,6 +50,7 @@ describe('storage layer', () => {
     saveSettings(
       {
         lastOpenTab: 'unknown-tab',
+        ntfyPublishUrl: 'ntfy.sh/my-topic',
         pipClockTickEvery10s: 'yes',
         repeatCount: 0,
         autoStartNextStep: 'yes',
@@ -64,6 +66,7 @@ describe('storage layer', () => {
     const loaded = loadSettings(storage);
 
     expect(loaded.lastOpenTab).toBe('timer');
+    expect(loaded.ntfyPublishUrl).toBe('');
     expect(loaded.pipClockTickEvery10s).toBe(false);
     expect(loaded).not.toHaveProperty('pipEnabled');
     expect(loaded.repeatCount).toBeGreaterThanOrEqual(1);
@@ -127,14 +130,30 @@ describe('storage layer', () => {
     const settings = {
       ...createDefaultSettings(),
       autoStartNextStep: true,
+      ntfyPublishUrl: 'https://ntfy.sh/fizjuz-bowFek-kofhi2',
       pipClockTickEvery10s: true
     };
 
     saveSettings(settings, storage);
 
     expect(loadSettings(storage).autoStartNextStep).toBe(true);
+    expect(loadSettings(storage).ntfyPublishUrl).toBe('https://ntfy.sh/fizjuz-bowFek-kofhi2');
     expect(loadSettings(storage).pipClockTickEvery10s).toBe(true);
     expect(loadSettings(storage)).not.toHaveProperty('pipEnabled');
+  });
+
+  it('normalizes unsupported ntfy URL schemes to empty', () => {
+    const storage = createMemoryStorage();
+
+    saveSettings(
+      {
+        ...createDefaultSettings(),
+        ntfyPublishUrl: 'file:///tmp/notify'
+      },
+      storage
+    );
+
+    expect(loadSettings(storage).ntfyPublishUrl).toBe('');
   });
 
   it('falls back to in-memory storage when provided storage throws', () => {

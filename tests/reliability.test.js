@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createCompletionAlertPayload,
   createCompletionKey,
   createFocusMinuteReminderKey,
+  resolveCompletionAlertTitle,
   resolveCompletionNotificationBody,
   selectNotificationChannel,
   shouldDispatchCompletion,
@@ -151,6 +153,49 @@ describe('reliability helpers', () => {
         session: completedLastStep
       })
     ).toBe('Cycle complete. Press Start to begin a new cycle.');
+  });
+
+  it('maps completion titles and payload for focus and break steps', () => {
+    const settings = createDefaultSettings();
+    settings.repeatCount = 2;
+    const session = createInitialSession(settings);
+
+    const focusSession = {
+      ...session,
+      currentStepIndex: 0
+    };
+    const shortBreakSession = {
+      ...session,
+      currentStepIndex: 1
+    };
+    const longBreakSession = {
+      ...session,
+      currentStepIndex: 3
+    };
+
+    expect(resolveCompletionAlertTitle(focusSession)).toBe('Focus completed');
+    expect(resolveCompletionAlertTitle(shortBreakSession)).toBe('Short Break completed');
+    expect(resolveCompletionAlertTitle(longBreakSession)).toBe('Long Break completed');
+
+    expect(
+      createCompletionAlertPayload({
+        autoStartNextStep: false,
+        session: focusSession
+      })
+    ).toEqual({
+      body: 'The next step is ready. Press Start to continue.',
+      title: 'Focus completed'
+    });
+
+    expect(
+      createCompletionAlertPayload({
+        autoStartNextStep: false,
+        session: longBreakSession
+      })
+    ).toEqual({
+      body: 'Cycle complete. Press Start to begin a new cycle.',
+      title: 'Long Break completed'
+    });
   });
 
   it('selects notification fallback channel using mocked browser APIs', () => {

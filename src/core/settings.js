@@ -87,6 +87,30 @@ export function normalizeAlertSettings(rawAlerts = {}) {
   };
 }
 
+export function normalizeNtfyPublishUrl(rawUrl = '') {
+  if (typeof rawUrl !== 'string') {
+    return '';
+  }
+
+  const trimmed = rawUrl.trim();
+
+  if (!trimmed) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return '';
+    }
+
+    return parsed.href;
+  } catch {
+    return '';
+  }
+}
+
 export function normalizeSettings(rawSettings = {}) {
   const templateDurations = normalizeTemplateDurations(rawSettings.templateDurations);
   const repeatCount = sanitizeRepeatCount(rawSettings.repeatCount, DEFAULT_REPEAT_COUNT);
@@ -101,6 +125,7 @@ export function normalizeSettings(rawSettings = {}) {
     lastOpenTab: supportedTabs.includes(rawSettings.lastOpenTab)
       ? rawSettings.lastOpenTab
       : 'timer',
+    ntfyPublishUrl: normalizeNtfyPublishUrl(rawSettings.ntfyPublishUrl),
     pipClockTickEvery10s:
       typeof rawSettings.pipClockTickEvery10s === 'boolean'
         ? rawSettings.pipClockTickEvery10s

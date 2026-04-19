@@ -1,7 +1,7 @@
 import {
   buildNotificationTag,
+  createCompletionAlertPayload,
   createCompletionKey,
-  resolveCompletionNotificationBody,
   selectNotificationChannel,
   shouldDispatchCompletion,
   shouldDispatchFocusMinuteReminder
@@ -50,7 +50,7 @@ import {
   syncIdleSessionWithSettings,
   syncSession
 } from './core/session.js';
-import { sanitizeRepeatCount } from './core/settings.js';
+import { normalizeNtfyPublishUrl, sanitizeRepeatCount } from './core/settings.js';
 import {
   loadActiveSession,
   loadFocusHistory,
@@ -573,8 +573,10 @@ function commitSession(nextSession, options = {}) {
 }
 
 function dispatchCompletionAlerts(session, completionKey = '') {
-  const step = getCurrentStep(session);
-  const stepLabel = step ? formatStepTypeLabel(step.type) : 'Step';
+  const completionPayload = createCompletionAlertPayload({
+    autoStartNextStep: state.settings.autoStartNextStep,
+    session
+  });
   const notificationTag = buildNotificationTag('step-complete', completionKey);
 
   if (navigator.vibrate) {
@@ -587,14 +589,43 @@ function dispatchCompletionAlerts(session, completionKey = '') {
 
   if (state.settings.alertSettings.notificationsEnabled) {
     void sendNotificationWithFallback({
-      body: resolveCompletionNotificationBody({
-        autoStartNextStep: state.settings.autoStartNextStep,
-        session
-      }),
+      body: completionPayload.body,
       silent: !state.settings.alertSettings.soundEnabled,
       tag: notificationTag,
-      title: `${stepLabel} completed`
+      title: completionPayload.title
     });
+  }
+
+  if (state.settings.ntfyPublishUrl) {
+    void sendNtfyCompletionNotification({
+      payload: completionPayload,
+      publishUrl: state.settings.ntfyPublishUrl
+    });
+  }
+}
+
+async function sendNtfyCompletionNotification({
+  payload,
+  publishUrl
+}) {
+  if (!publishUrl) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(publishUrl, {
+      body: payload.body,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        Priority: '4',
+        Title: payload.title
+      },
+      method: 'POST'
+    });
+
+    return response.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -1027,6 +1058,31 @@ function renderSettingsPanel() {
           }
         </div>
       </div>
+
+      <div class="panel-section">
+        <div class="panel-heading">
+          <h2>ntfy.sh</h2>
+        </div>
+
+        <div class="alert-grid">
+          <label class="template-card">
+            <span>Publish URL</span>
+            <input
+              data-ntfy-publish-url
+              placeholder="https://ntfy.sh/your-topic"
+              type="url"
+              value="${state.settings.ntfyPublishUrl}"
+            >
+            <small>Send HTTP POST on focus/break completion from this browser tab (tab must stay open).</small>
+          </label>
+          <p class="inline-note">
+            Docs:
+            <a href="https://docs.ntfy.sh/publish/" rel="noopener noreferrer" target="_blank">
+              docs.ntfy.sh/publish
+            </a>
+          </p>
+        </div>
+      </div>
     </section>
   `;
 }
@@ -1304,6 +1360,17 @@ function handleRootChange(event) {
     }
 
     state.settings.alertSettings[key] = target.checked;
+    persistSettings();
+    renderApp();
+    return;
+  }
+
+  if (target.matches('[data-ntfy-publish-url]')) {
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    state.settings.ntfyPublishUrl = normalizeNtfyPublishUrl(target.value);
     persistSettings();
     renderApp();
     return;
