@@ -71,8 +71,8 @@ describe('notification service contracts', () => {
 
     expect(state.notificationNotice).toBe('Test notification was sent.');
     expect(sent).toHaveLength(1);
-    expect(sent[0].title).toBe('Notification test');
-    expect(sent[0].options.body).toBe('Notification channel check finished.');
+    expect(sent[0].title).toBe('Notification test 🧪');
+    expect(sent[0].options.body).toBe('Notification check finished.');
   });
 
   it('falls back to service worker channel when Notification API is unavailable', async () => {

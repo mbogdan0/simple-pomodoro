@@ -1,5 +1,5 @@
 {
-  "name": "my-timer",
+  "name": "simple-pomodoro",
   "version": "1.0.9",
   "private": true,
   "type": "module",

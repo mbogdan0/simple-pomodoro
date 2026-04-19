@@ -1,4 +1,4 @@
-export const APP_NAME = 'Timer';
+export const APP_NAME = 'Simple Pomodoro Timer';
 
 export const STEP_TYPES = ['work', 'shortBreak', 'longBreak'];
 

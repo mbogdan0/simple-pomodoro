@@ -37,3 +37,7 @@ export function getProgressRatio(session, now = Date.now()) {
 export function hasNextStep(session) {
   return session.currentStepIndex < session.scenario.length - 1;
 }
+
+export function canResetSession(session) {
+  return session.status !== 'idle' || session.currentStepIndex !== 0;
+}

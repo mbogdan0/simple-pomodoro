@@ -24,7 +24,7 @@ async function showNotificationWithDedup(payload = {}) {
     body = '',
     silent = false,
     tag = 'timer-update',
-    title = 'Timer'
+    title = 'Simple Pomodoro Timer'
   } = payload;
   const now = Date.now();
 

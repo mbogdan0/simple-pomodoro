@@ -25,6 +25,15 @@ describe('ntfy utils', () => {
     });
   });
 
+  it('sanitizes non-header-safe title characters before sending', () => {
+    const options = createNtfyRequestOptions({
+      body: 'Body text',
+      title: 'Focus done ✅'
+    });
+
+    expect(options.headers.Title).toBe('Focus done');
+  });
+
   it('sends ntfy push and returns boolean result', async () => {
     const okFetch = vi.fn(async () => ({ ok: true }));
     const failFetch = vi.fn(async () => ({ ok: false }));
@@ -33,8 +42,8 @@ describe('ntfy utils', () => {
     });
 
     const payload = {
-      body: 'Manual ntfy test from Timer.',
-      title: 'Timer ntfy test'
+      body: 'Manual ntfy test from Simple Pomodoro Timer.',
+      title: 'Simple Pomodoro Timer ntfy test 📡'
     };
 
     await expect(
@@ -65,8 +74,8 @@ describe('ntfy utils', () => {
 
   it('returns a stable dedicated test payload', () => {
     expect(createNtfyTestPayload()).toEqual({
-      body: 'Manual ntfy test from Timer.',
-      title: 'Timer ntfy test'
+      body: 'Manual ntfy test from Simple Pomodoro Timer.',
+      title: 'Simple Pomodoro Timer ntfy test 📡'
     });
   });
 });

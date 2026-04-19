@@ -1,5 +1,6 @@
 export { createInitialSession, normalizeSession, syncIdleSessionWithSettings } from './session/normalize.js';
 export {
+  canResetSession,
   getCurrentStep,
   getCurrentStepDurationMs,
   getProgressRatio,

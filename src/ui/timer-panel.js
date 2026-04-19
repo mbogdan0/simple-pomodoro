@@ -163,7 +163,14 @@ export function renderTimerPanel(timerModel) {
           <button class="action-button primary" data-action="${timerModel.primaryAction}" type="button">
             ${timerModel.primaryActionLabel}
           </button>
-          <button class="action-button" data-action="reset-session" type="button">Reset</button>
+          <button
+            class="action-button"
+            data-action="reset-session"
+            type="button"
+            ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
+          >
+            Reset
+          </button>
         </div>
         ${
           showPipToggle

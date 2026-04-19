@@ -15,7 +15,7 @@ import {
   formatStatusLabel
 } from '../../core/format.js';
 import { getCycleRepeatDots, getFocusRepeatProgress, getStepProgress } from '../../core/progress.js';
-import { getCurrentStep, getProgressRatio, getRemainingMs } from '../../core/session.js';
+import { canResetSession, getCurrentStep, getProgressRatio, getRemainingMs } from '../../core/session.js';
 import { renderHistoryPanel } from '../../ui/history-panel.js';
 import { renderSettingsPanel } from '../../ui/settings-panel.js';
 import { renderCycleProgressMarkup, renderTimerPanel } from '../../ui/timer-panel.js';
@@ -82,6 +82,7 @@ export function createAppRenderer({
       primaryActionLabel: running ? 'Pause' : paused ? 'Resume' : 'Start',
       progressTrack: PROGRESS_TRACK_COLOR,
       progressPercent: Math.round(progress * 100),
+      resetDisabled: !canResetSession(session),
       statusText: formatStatusLabel(session.status),
       step,
       stepCurrent,

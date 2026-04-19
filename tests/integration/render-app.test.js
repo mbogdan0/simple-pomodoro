@@ -139,6 +139,7 @@ describe('render app integration', () => {
 
     expect(root.innerHTML).toContain('class="shell"');
     expect(root.innerHTML).toContain('data-action="switch-tab"');
+    expect(root.innerHTML).toMatch(/data-action="reset-session"(?![^>]*disabled)/);
     expect(liveElements['[data-live-clock]'].textContent).toMatch(/\d{2}:\d{2}/);
     expect(liveElements['[data-live-status]'].textContent).toBe('Running');
     expect(liveElements['[data-live-progress]'].attrs['aria-valuenow']).toBeDefined();
@@ -146,5 +147,45 @@ describe('render app integration', () => {
     expect(documentStub.title).toContain('Focus');
     expect(syncPictureInPicture).toHaveBeenCalled();
     expect(maybeDispatchFocusMinuteReminder).toHaveBeenCalled();
+  });
+
+  it('renders disabled reset button for initial idle step', () => {
+    const documentStub = createDocumentStub();
+    setDocument(documentStub);
+
+    const root = {
+      innerHTML: '',
+      querySelector() {
+        return null;
+      }
+    };
+    const settings = createDefaultSettings();
+    const state = {
+      activeSession: createInitialSession(settings),
+      backgroundNotice: '',
+      focusHistory: [],
+      isNtfyTesting: false,
+      manualPipRequested: false,
+      notificationNotice: '',
+      ntfyNotice: '',
+      settings
+    };
+    const renderer = createAppRenderer({
+      getNotificationSupportModel: () => ({
+        hasNotificationApi: true,
+        hasServiceWorker: true,
+        permissionState: 'granted',
+        unsupported: false
+      }),
+      pipController: {
+        isSupported: vi.fn(() => true)
+      },
+      root,
+      state
+    });
+
+    renderer.renderApp();
+
+    expect(root.innerHTML).toMatch(/data-action="reset-session"[^>]*disabled/);
   });
 });

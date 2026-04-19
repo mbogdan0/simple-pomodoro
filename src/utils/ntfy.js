@@ -1,6 +1,22 @@
 export const NTFY_PRIORITY = '4';
-export const NTFY_TEST_TITLE = 'Timer ntfy test';
-export const NTFY_TEST_BODY = 'Manual ntfy test from Timer.';
+export const NTFY_TEST_TITLE = 'Simple Pomodoro Timer ntfy test 📡';
+export const NTFY_TEST_BODY = 'Manual ntfy test from Simple Pomodoro Timer.';
+
+function toHeaderSafeValue(value = '') {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 0x20 && code <= 0xff;
+    })
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export function createNtfyTestPayload() {
   return {
@@ -15,7 +31,7 @@ export function createNtfyRequestOptions(payload = {}) {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
       Priority: NTFY_PRIORITY,
-      Title: typeof payload.title === 'string' ? payload.title : ''
+      Title: toHeaderSafeValue(payload.title)
     },
     method: 'POST'
   };

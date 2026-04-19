@@ -26,6 +26,7 @@ function createTimerModel(overrides = {}) {
     primaryActionLabel: 'Start',
     progressPercent: 30,
     progressTrack: '#ede7de',
+    resetDisabled: false,
     showPipToggle: true,
     statusText: 'Ready',
     stepCurrent: 1,
@@ -54,5 +55,11 @@ describe('timer panel behavior', () => {
 
     expect(html).not.toContain('data-action="toggle-pip-window"');
     expect(html).toContain('data-action="reset-session"');
+  });
+
+  it('disables reset action when no reset is available', () => {
+    const html = renderTimerPanel(createTimerModel({ resetDisabled: true }));
+
+    expect(html).toMatch(/data-action="reset-session"[^>]*disabled/);
   });
 });

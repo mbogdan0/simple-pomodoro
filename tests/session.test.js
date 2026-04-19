@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultSettings } from '../src/core/settings.js';
 import {
   advanceAfterCompletion,
+  canResetSession,
   createInitialSession,
   getRemainingMs,
   goToNextStep,
@@ -274,5 +275,19 @@ describe('timer session engine', () => {
     );
 
     expect(normalized.focusTag).toBe('none');
+  });
+
+  it('allows reset only when session is not at initial idle state', () => {
+    const initial = createInitialSession(settings);
+    const running = startCurrentStep(initial, 1_000);
+    const idleOnNextStep = advanceAfterCompletion(
+      syncSession(running, running.endsAt + 1_000),
+      settings,
+      running.endsAt + 1_050
+    );
+
+    expect(canResetSession(initial)).toBe(false);
+    expect(canResetSession(running)).toBe(true);
+    expect(canResetSession(idleOnNextStep)).toBe(true);
   });
 });

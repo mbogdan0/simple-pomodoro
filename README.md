@@ -5,112 +5,90 @@
 </p>
 
 <p align="center">
-  A resilient browser-based focus timer for structured work cycles, mindful breaks, and clear progress tracking.
+  A resilient browser timer for focused work, structured breaks, and reliable session continuity.
 </p>
 
-## Live Demo
+**Live demo:** [https://mbogdan0.github.io/simple-pomodoro/](https://mbogdan0.github.io/simple-pomodoro/)
 
-**Try it now:** [https://mbogdan0.github.io/simple-pomodoro/](https://mbogdan0.github.io/simple-pomodoro/)
-
-## Product Guide
+## Product Snapshot
 
 ### Why this app exists
 
-Simple Pomodoro Timer helps you run focus cycles without setup friction. It is designed for people who want a clear workflow, predictable timing behavior, and enough flexibility to adapt sessions to real workdays.
+Simple Pomodoro Timer is for people who want predictable focus workflow without account setup or desktop installs. It keeps the interaction model simple while still letting you adapt cycle length, repeat count, and alerts to real workdays.
 
-### What users get
+### User outcomes
 
-- **Plan sessions faster:** Configure work, short break, and long break durations plus repeat count in minutes.
-- **Stay in flow:** Start, pause, resume, and reset quickly from one primary control area.
-- **Track momentum visually:** See per-step progress, repeat indicators, and current cycle position at a glance.
-- **Keep context across reloads:** Restore active session state and settings automatically from local storage.
-- **Reduce tab-switch overhead:** Use Picture-in-Picture mode for a compact always-on-top timer view.
-- **Get timely nudges:** Receive completion notifications and a one-minute reminder before work steps end.
-- **Review focus patterns:** Save finished focus sessions in history with per-entry removal controls.
+- **Plan sessions quickly:** Set work, short break, and long break durations plus repeat count in minutes.
+- **Stay in flow with minimal friction:** Control the cycle using start, pause, resume, and reset from a single action area.
+- **Keep context at a glance:** Follow step label, live clock, progress, repeat dots, and focus tag state in one view.
+- **Carry progress across refreshes:** Restore settings, active session, and focus history from browser storage automatically.
+- **Reduce context switching:** Open a Picture-in-Picture mini window that remains visible while you work in other tabs or apps.
+- **Receive timely nudges:** Get step completion alerts, a one-minute focus reminder, optional sound/vibration, and optional ntfy push.
 
-### Feature highlights
+### Best-fit scenarios
 
-- **Cycle-aware workflow:** Repeated work sessions are separated by short breaks, then followed by a long break.
-- **Actionable status language:** Step label, timer label, and control labels reflect current session state.
-- **Accessible progress cues:** Repeat dots expose focus/break state and descriptive tooltip metadata.
-- **Calm visual rhythm:** Step-specific color accents keep work and break phases easy to distinguish.
-- **Low-friction settings:** Changes apply immediately when idle and safely defer while a session is active.
+- Solo deep-work blocks where consistent timing and low UI noise matter.
+- Study sessions that need explicit focus/break cadence and quick interruption recovery.
+- Browser-first environments where installing native timer software is not preferred.
 
-### Best-fit use cases
+### Practical limits
 
-- Solo deep-work sessions with predictable breaks.
-- Lightweight team co-working blocks where everyone follows the same cycle template.
-- Browser-only environments where installing a native timer app is not preferred.
+- Offline mode works only after at least one successful online load in the same browser profile.
+- ntfy push is sent by the active browser context, so the tab/browser must remain available for delivery attempts.
+- Browser capabilities vary; notification behavior, vibration, and PiP support depend on platform and permissions.
 
-## Technical Guide
+## Technical Overview
 
-### Architecture overview
+### Stack and module design
 
-- Vanilla JavaScript ES modules with no UI framework.
-- Single-page browser app with modularized `core` logic and `ui` rendering.
-- Worker-based ticking and reconciliation loops for resilient time progression.
-- Service Worker + app-shell caching for repeat offline visits.
+- Vanilla JavaScript ES modules, no UI framework.
+- `src/app`: runtime orchestration (bootstrap, event wiring, worker bridge, lifecycle sync, render pipeline).
+- `src/core`: domain logic for session transitions, settings normalization, alerts, storage, progress, PiP, and offline helpers.
+- `src/ui`: deterministic markup renderers for timer, settings, and history panels.
+- `src/worker.js`: dedicated timer runtime for high-frequency ticking and completion detection.
+- `src/service-worker.js`: app-shell caching, stale cache cleanup, and notification relay fallback.
 
 ### Reliability model
 
-- **Primary ticker:** Web Worker loop runs at `250ms` cadence.
-- **Completion watchdog:** Worker detects exact step completion boundaries.
-- **Main-thread guard:** `500ms` reconciliation loop protects against missed updates.
-- **Lifecycle recovery:** Visibility/focus/page lifecycle resync restores freshness after throttling.
-- **Fresh-state arbitration:** Timestamp-driven synchronization keeps the newest state (`updatedAt`).
+- **Primary timing loop:** worker tick runs every `250ms` (`WORKER_TICK_INTERVAL_MS`).
+- **Completion watchdog:** worker schedules a precise timeout near `endsAt` to avoid missed boundaries.
+- **Main-thread safety reconcile:** app runs a `500ms` guard interval to resync clock and chrome state.
+- **Lifecycle recovery:** visibility/focus/pageshow/pagehide/storage events trigger session restoration and worker sync.
+- **Freshness arbitration:** `updatedAt` timestamps decide whether in-memory or stored session state wins.
+- **Degradation path:** if worker setup/runtime fails, actions fall back to local session control with user notice.
 
 ### Runtime capabilities
 
-- Notifications through the browser Notification API with service worker fallback channeling.
-- Optional ntfy.sh webhook push notifications on focus/break completion via a configured publish URL in Settings.
-- Optional completion sound via Web Audio API.
-- Optional vibration when supported by the platform.
-- Dynamic document title and generated favicon for quick status awareness.
-- Optional PiP clock rounding to 10-second updates while running, with edge-window precision.
+- Notifications via `Notification` API when permission is granted, with service worker message-channel fallback.
+- Optional ntfy.sh publish URL support for completion events and a dedicated connection test action.
+- Web Audio completion tone and lightweight UI action tone, primed by user gesture for autoplay compatibility.
+- Vibration on completion where `navigator.vibrate` is supported.
+- Dynamic document title and generated favicon that mirror timer state and remaining time.
+- Manual PiP toggle with action forwarding (`start/pause/resume`) and optional 10-second clock quantization.
+- Persistent local data for settings, active session snapshot, and focus history.
 
 ### Offline and PWA behavior
 
-- Offline support activates after at least one successful online load.
-- App-shell assets are cached and refreshed through service worker versioning logic.
-- Web App Manifest metadata is included for installability.
-- Fresh offline use in brand-new profiles/incognito without prior online load is not supported.
+- Web App Manifest and installable metadata are included (`src/manifest.webmanifest`).
+- Service worker caches the app shell and applies cache version cleanup (`timer-offline-v2` strategy).
+- Navigation uses network-first with cached fallback; shell resources prefer fresh responses; static resources use cache-first with background refresh.
+- Fresh offline usage in brand-new/incognito profiles without prior online load is intentionally unsupported.
 
-Quick verification with Chrome DevTools:
-
-1. Open the live URL online and wait for a full load.
-2. In DevTools `Network`, set throttling to `Offline`.
-3. Reload and verify that the app shell and timer controls still work.
-4. Reopen the same URL while offline in the same profile.
-5. Return online and reload once to refresh caches.
-
-### Development
-
-Quick start:
+### Development workflow
 
 ```bash
 npm ci
+npm run test
+npm run build
 npm run check
 ```
 
-Build production assets:
+- `npm run test`: runs Vitest suite.
+- `npm run build`: bundles production assets into `dist/` via `build.mjs`.
+- `npm run check`: release gate (`test` then `build`).
 
-```bash
-npm run build
-```
+### Quality and deployment
 
-Scripts:
-
-- `npm run test` - run unit tests with Vitest.
-- `npm run build` - bundle production assets into `dist/`.
-- `npm run check` - run tests and then build.
-
-### Testing and release quality
-
-- Unit tests cover timer state transitions, PiP behavior, UI rendering, storage, history, worker flows, and offline caching behavior.
-- The recommended release gate is `npm run check` before version bump/tag publication.
-
-### Deployment
-
-GitHub Pages deployment runs via GitHub Actions (`.github/workflows/deploy-pages.yml`).
-
-Live URL: [https://mbogdan0.github.io/simple-pomodoro/](https://mbogdan0.github.io/simple-pomodoro/)
+- Current baseline: `22` test files, `94` tests passing.
+- Coverage includes session transitions, worker/runtime behavior, lifecycle sync, notifications, PiP runtime, offline cache helpers, storage normalization, and UI contracts.
+- GitHub Pages deployment is automated via `.github/workflows/deploy-pages.yml` (builds and publishes `dist` on `main` pushes).

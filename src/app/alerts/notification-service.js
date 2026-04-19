@@ -136,10 +136,10 @@ export function createNotificationService({
 
     state.lastFocusMinuteReminderKey = key;
     void sendNotificationWithFallback({
-      body: '1 minute left in this focus session.',
+      body: '1 minute left in this focus step.',
       silent: true,
       tag: buildNotificationTag('focus-minute', key),
-      title: 'Focus ending soon'
+      title: 'Focus ends soon ⏳'
     });
   }
 
@@ -168,10 +168,10 @@ export function createNotificationService({
     }
 
     const sent = await sendNotificationWithFallback({
-      body: 'Notification channel check finished.',
+      body: 'Notification check finished.',
       silent: !state.settings.alertSettings.soundEnabled,
       tag: buildNotificationTag('test-notification', String(Date.now())),
-      title: 'Notification test'
+      title: 'Notification test 🧪'
     });
 
     state.notificationNotice = sent

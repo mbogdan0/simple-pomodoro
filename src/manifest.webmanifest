@@ -1,6 +1,6 @@
 {
   "name": "Simple Pomodoro Timer",
-  "short_name": "Timer",
+  "short_name": "Simple Pomodoro Timer",
   "description": "Pomodoro timer with focus and break sessions, offline support, and notifications.",
   "start_url": "./",
   "scope": "./",

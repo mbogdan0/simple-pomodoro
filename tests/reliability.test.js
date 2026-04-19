@@ -128,14 +128,14 @@ describe('reliability helpers', () => {
         autoStartNextStep: false,
         session: completed
       })
-    ).toBe('The next step is ready. Press Start to continue.');
+    ).toBe('Next step is ready. Press Start to continue.');
 
     expect(
       resolveCompletionNotificationBody({
         autoStartNextStep: true,
         session: completed
       })
-    ).toBe('The next step started automatically.');
+    ).toBe('Next step started automatically.');
 
     const base = createInitialSession(settings);
     const runningLastStep = startCurrentStep(
@@ -152,7 +152,7 @@ describe('reliability helpers', () => {
         autoStartNextStep: true,
         session: completedLastStep
       })
-    ).toBe('Cycle complete. Press Start to begin a new cycle.');
+    ).toBe('Cycle finished. Press Start to begin a new cycle.');
   });
 
   it('maps completion titles and payload for focus and break steps', () => {
@@ -173,9 +173,9 @@ describe('reliability helpers', () => {
       currentStepIndex: 3
     };
 
-    expect(resolveCompletionAlertTitle(focusSession)).toBe('Focus completed');
-    expect(resolveCompletionAlertTitle(shortBreakSession)).toBe('Short Break completed');
-    expect(resolveCompletionAlertTitle(longBreakSession)).toBe('Long Break completed');
+    expect(resolveCompletionAlertTitle(focusSession)).toBe('Focus done ✅');
+    expect(resolveCompletionAlertTitle(shortBreakSession)).toBe('Short Break done ✅');
+    expect(resolveCompletionAlertTitle(longBreakSession)).toBe('Long Break done ✅');
 
     expect(
       createCompletionAlertPayload({
@@ -183,8 +183,8 @@ describe('reliability helpers', () => {
         session: focusSession
       })
     ).toEqual({
-      body: 'The next step is ready. Press Start to continue.',
-      title: 'Focus completed'
+      body: 'Next step is ready. Press Start to continue.',
+      title: 'Focus done ✅'
     });
 
     expect(
@@ -193,8 +193,8 @@ describe('reliability helpers', () => {
         session: longBreakSession
       })
     ).toEqual({
-      body: 'Cycle complete. Press Start to begin a new cycle.',
-      title: 'Long Break completed'
+      body: 'Cycle finished. Press Start to begin a new cycle.',
+      title: 'Long Break done ✅'
     });
   });
 

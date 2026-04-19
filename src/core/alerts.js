@@ -22,21 +22,21 @@ export function resolveCompletionNotificationBody({
   const hasUpcomingStep = Boolean(session) && hasNextStep(session);
 
   if (autoStartNextStep && hasUpcomingStep) {
-    return 'The next step started automatically.';
+    return 'Next step started automatically.';
   }
 
   if (hasUpcomingStep) {
-    return 'The next step is ready. Press Start to continue.';
+    return 'Next step is ready. Press Start to continue.';
   }
 
-  return 'Cycle complete. Press Start to begin a new cycle.';
+  return 'Cycle finished. Press Start to begin a new cycle.';
 }
 
 export function resolveCompletionAlertTitle(session) {
   const stepType = getCurrentStep(session)?.type;
   const stepLabel = STEP_TYPE_LABELS[stepType] ?? STEP_TYPE_LABELS.work;
 
-  return `${stepLabel} completed`;
+  return `${stepLabel} done ✅`;
 }
 
 export function createCompletionAlertPayload({
