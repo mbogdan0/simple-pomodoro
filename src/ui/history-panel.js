@@ -1,3 +1,5 @@
+import { FOCUS_TAG_LABELS } from '../core/constants.js';
+
 function formatFocusDuration(durationMs) {
   const minutes = Math.max(1, Math.round(durationMs / 60_000));
   return `${minutes} min`;
@@ -9,12 +11,18 @@ function formatCompletedAt(completedAt) {
 
 function renderHistoryItem(entry) {
   const date = new Date(entry.completedAt);
+  const requestedTag = typeof entry.focusTag === 'string' ? entry.focusTag : 'none';
+  const focusTag = FOCUS_TAG_LABELS[requestedTag] ? requestedTag : 'none';
+  const focusTagLabel = FOCUS_TAG_LABELS[focusTag];
 
   return `
     <li class="history-item">
       <div class="history-item-meta">
         <time class="history-item-date" datetime="${date.toISOString()}">${formatCompletedAt(entry.completedAt)}</time>
-        <p class="history-item-duration">${formatFocusDuration(entry.durationMs)}</p>
+        <div class="history-item-details">
+          <p class="history-item-duration">${formatFocusDuration(entry.durationMs)}</p>
+          <span class="history-tag history-tag--${focusTag}">${focusTagLabel}</span>
+        </div>
       </div>
       <button
         class="ghost-button"

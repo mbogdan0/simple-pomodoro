@@ -21,6 +21,14 @@ export const STATUS_LABELS = {
   completed_waiting_next: 'Step complete'
 };
 
+export const FOCUS_TAGS = ['none', 'work', 'study'];
+
+export const FOCUS_TAG_LABELS = {
+  none: 'No tag',
+  study: 'Study',
+  work: 'Work'
+};
+
 export const DEFAULT_TEMPLATE_DURATIONS_MS = {
   work: 25 * 60 * 1000,
   shortBreak: 5 * 60 * 1000,

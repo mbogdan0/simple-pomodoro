@@ -7,10 +7,12 @@ import {
   getRemainingMs,
   goToNextStep,
   hasNextStep,
+  normalizeSession,
   pauseSession,
   prepareSessionForStepStart,
   resetSession,
   resumeSession,
+  setSessionFocusTag,
   startCurrentStep,
   syncSession
 } from '../src/core/session.js';
@@ -32,6 +34,12 @@ describe('timer session engine', () => {
     expect(session.scenario[0].durationMs).toBe(10 * 60 * 1000);
     expect(session.scenario[1].durationMs).toBe(3 * 60 * 1000);
     expect(session.scenario[3].durationMs).toBe(12 * 60 * 1000);
+  });
+
+  it('defaults focus tag to none', () => {
+    const session = createInitialSession(settings);
+
+    expect(session.focusTag).toBe('none');
   });
 
   it('starts a step using absolute timestamps', () => {
@@ -239,5 +247,32 @@ describe('timer session engine', () => {
     expect(reset.status).toBe('idle');
     expect(reset.currentStepIndex).toBe(0);
     expect(reset.endsAt).toBeNull();
+  });
+
+  it('updates and persists focus tag through step transitions', () => {
+    const initial = createInitialSession(settings);
+    const tagged = setSessionFocusTag(initial, 'work', 1_500);
+    const running = startCurrentStep(tagged, 2_000);
+    const completed = syncSession(running, running.endsAt + 200);
+    const next = advanceAfterCompletion(completed, settings, completed.finishedAt + 50);
+    const reset = resetSession(next, completed.finishedAt + 100);
+
+    expect(tagged.focusTag).toBe('work');
+    expect(tagged.updatedAt).toBe(1_500);
+    expect(next.focusTag).toBe('work');
+    expect(reset.focusTag).toBe('work');
+  });
+
+  it('normalizes unsupported focus tags to none', () => {
+    const normalized = normalizeSession(
+      {
+        currentStepIndex: 0,
+        focusTag: 'deep',
+        status: 'idle'
+      },
+      settings
+    );
+
+    expect(normalized.focusTag).toBe('none');
   });
 });

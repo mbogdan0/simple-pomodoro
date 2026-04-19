@@ -6,6 +6,7 @@ import {
   prepareSessionForStepStart,
   resetSession,
   resumeSession,
+  setSessionFocusTag,
   syncIdleSessionWithSettings,
   syncSession
 } from './core/session.js';
@@ -173,6 +174,10 @@ self.onmessage = ({ data }) => {
         session = prepareSessionForStepStart(session, payload.settings, now);
         startTicker();
         emit('STATE', session, { reason: 'start' });
+        break;
+      case 'SET_FOCUS_TAG':
+        session = setSessionFocusTag(session, payload.focusTag, now);
+        emit('STATE', session, { reason: 'set-focus-tag' });
         break;
       case 'SYNC_NOW':
         syncAndEmit(now, false);

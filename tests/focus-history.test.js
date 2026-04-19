@@ -4,10 +4,16 @@ import { MAX_FOCUS_HISTORY_ENTRIES } from '../src/core/constants.js';
 import {
   appendFocusHistoryEntry,
   createFocusHistoryEntry,
+  normalizeFocusHistoryEntry,
   removeFocusHistoryEntry
 } from '../src/core/focus-history.js';
 import { createDefaultSettings } from '../src/core/settings.js';
-import { createInitialSession, startCurrentStep, syncSession } from '../src/core/session.js';
+import {
+  createInitialSession,
+  setSessionFocusTag,
+  startCurrentStep,
+  syncSession
+} from '../src/core/session.js';
 
 function completeCurrentStep(session, startedAt = 1_000) {
   const running = startCurrentStep(session, startedAt);
@@ -17,12 +23,14 @@ function completeCurrentStep(session, startedAt = 1_000) {
 describe('focus history helpers', () => {
   it('creates a history entry for completed focus steps', () => {
     const settings = createDefaultSettings();
-    const completedFocus = completeCurrentStep(createInitialSession(settings));
+    const taggedSession = setSessionFocusTag(createInitialSession(settings), 'study', 1_050);
+    const completedFocus = completeCurrentStep(taggedSession);
 
     const entry = createFocusHistoryEntry(completedFocus);
 
     expect(entry).toMatchObject({
       durationMs: 25 * 60 * 1000,
+      focusTag: 'study',
       stepType: 'work'
     });
     expect(entry?.id).toBeTruthy();
@@ -70,6 +78,7 @@ describe('focus history helpers', () => {
       const next = {
         completedAt: 1_710_000_000_000 + index,
         durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
         id: `step-${index}`,
         stepId: `step-${index}`,
         stepType: 'work'
@@ -80,6 +89,7 @@ describe('focus history helpers', () => {
     const appended = appendFocusHistoryEntry(history, {
       completedAt: 1_720_000_000_000,
       durationMs: 25 * 60 * 1000,
+      focusTag: 'study',
       id: 'latest-step',
       stepId: 'latest-step',
       stepType: 'work'
@@ -87,5 +97,28 @@ describe('focus history helpers', () => {
 
     expect(appended).toHaveLength(MAX_FOCUS_HISTORY_ENTRIES);
     expect(appended[0].id).toBe('latest-step');
+  });
+
+  it('defaults missing or invalid history tag values to none', () => {
+    expect(
+      normalizeFocusHistoryEntry({
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        id: 'missing-tag',
+        stepId: 'step-id',
+        stepType: 'work'
+      })?.focusTag
+    ).toBe('none');
+
+    expect(
+      normalizeFocusHistoryEntry({
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'deep',
+        id: 'bad-tag',
+        stepId: 'step-id',
+        stepType: 'work'
+      })?.focusTag
+    ).toBe('none');
   });
 });

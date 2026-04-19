@@ -1,4 +1,4 @@
-import { BACKGROUND_COMPLETION_THRESHOLD_MS } from './constants.js';
+import { BACKGROUND_COMPLETION_THRESHOLD_MS, FOCUS_TAGS } from './constants.js';
 import { createDefaultScenario, normalizeScenarioStep } from './settings.js';
 import { clamp } from './utils.js';
 
@@ -6,6 +6,10 @@ const VALID_SESSION_STATUSES = ['idle', 'running', 'paused', 'completed_waiting_
 
 function normalizeTimestamp(value) {
   return Number.isFinite(value) ? value : null;
+}
+
+function normalizeFocusTag(value) {
+  return FOCUS_TAGS.includes(value) ? value : 'none';
 }
 
 function ensureScenarioSnapshot(rawScenario, settings) {
@@ -27,6 +31,7 @@ export function normalizeSession(rawSession = {}, settings) {
     currentStepIndex,
     endsAt: normalizeTimestamp(rawSession.endsAt),
     finishedAt: normalizeTimestamp(rawSession.finishedAt),
+    focusTag: normalizeFocusTag(rawSession.focusTag),
     remainingMsAtPause: normalizeTimestamp(rawSession.remainingMsAtPause),
     scenario,
     status,
@@ -242,6 +247,20 @@ export function syncSession(session, now = Date.now()) {
   };
 }
 
+export function setSessionFocusTag(session, focusTag, now = Date.now()) {
+  const normalizedFocusTag = normalizeFocusTag(focusTag);
+
+  if (session.focusTag === normalizedFocusTag) {
+    return session;
+  }
+
+  return {
+    ...session,
+    focusTag: normalizedFocusTag,
+    updatedAt: now
+  };
+}
+
 export function markAlertsDispatched(session) {
   return {
     ...session,
@@ -260,6 +279,7 @@ export function syncIdleSessionWithSettings(session, settings, now = Date.now())
   return normalizeSession(
     {
       currentStepIndex,
+      focusTag: session.focusTag,
       scenario,
       status: 'idle',
       updatedAt: now

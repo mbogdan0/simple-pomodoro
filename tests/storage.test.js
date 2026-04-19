@@ -27,6 +27,7 @@ describe('storage layer', () => {
       {
         completedAt: 1_710_000_000_000,
         durationMs: 25 * 60 * 1000,
+        focusTag: 'study',
         id: 'step-1:1710000000000',
         stepId: 'step-1',
         stepType: 'work'
@@ -89,6 +90,7 @@ describe('storage layer', () => {
         {
           completedAt: 1_710_000_000_000,
           durationMs: 25 * 60 * 1000,
+          focusTag: 'work',
           id: 'step-1:1710000000000',
           stepId: 'step-1',
           stepType: 'work'
@@ -112,6 +114,7 @@ describe('storage layer', () => {
       {
         completedAt: 1_710_000_000_000,
         durationMs: 25 * 60 * 1000,
+        focusTag: 'work',
         id: 'step-1:1710000000000',
         stepId: 'step-1',
         stepType: 'work'

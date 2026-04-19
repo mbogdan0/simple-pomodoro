@@ -1,5 +1,5 @@
 import { createCompletionKey } from './alerts.js';
-import { MAX_FOCUS_HISTORY_ENTRIES, STEP_TYPES } from './constants.js';
+import { FOCUS_TAGS, MAX_FOCUS_HISTORY_ENTRIES, STEP_TYPES } from './constants.js';
 import { getCurrentStep } from './session.js';
 
 function normalizeHistoryId(value) {
@@ -22,6 +22,10 @@ function normalizeStepType(value) {
   return STEP_TYPES.includes(value) ? value : 'work';
 }
 
+function normalizeFocusTag(value) {
+  return FOCUS_TAGS.includes(value) ? value : 'none';
+}
+
 export function normalizeFocusHistoryEntry(rawEntry) {
   if (!rawEntry || typeof rawEntry !== 'object') {
     return null;
@@ -30,6 +34,7 @@ export function normalizeFocusHistoryEntry(rawEntry) {
   const id = normalizeHistoryId(rawEntry.id);
   const completedAt = normalizeTimestamp(rawEntry.completedAt);
   const durationMs = normalizeDurationMs(rawEntry.durationMs);
+  const focusTag = normalizeFocusTag(rawEntry.focusTag);
   const stepId = normalizeHistoryId(rawEntry.stepId);
 
   if (!id || !stepId || !Number.isFinite(completedAt) || !Number.isFinite(durationMs)) {
@@ -39,6 +44,7 @@ export function normalizeFocusHistoryEntry(rawEntry) {
   return {
     completedAt,
     durationMs,
+    focusTag,
     id,
     stepId,
     stepType: normalizeStepType(rawEntry.stepType)
@@ -79,6 +85,7 @@ export function createFocusHistoryEntry(session, completionKeyHint = '') {
   return {
     completedAt,
     durationMs,
+    focusTag: normalizeFocusTag(session.focusTag),
     id,
     stepId,
     stepType: 'work'

@@ -10,6 +10,7 @@ describe('history panel', () => {
       {
         completedAt,
         durationMs: 25 * 60 * 1000,
+        focusTag: 'work',
         id: 'focus-1:1713000000000',
         stepId: 'focus-1',
         stepType: 'work'
@@ -19,6 +20,8 @@ describe('history panel', () => {
     expect(html).toContain('Focus History');
     expect(html).toContain('history-list');
     expect(html).toContain('25 min');
+    expect(html).toContain('Work');
+    expect(html).toContain('history-tag--work');
     expect(html).toContain(localDateTime);
     expect(html).toContain(`datetime="${new Date(completedAt).toISOString()}"`);
     expect(html).toContain('data-action="clear-history-entry"');

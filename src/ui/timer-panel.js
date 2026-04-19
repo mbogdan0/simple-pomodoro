@@ -1,29 +1,72 @@
-const DOT_STATE_CLASSES = {
-  active: 'is-active',
-  done: 'is-done',
-  pending: 'is-pending'
-};
+function getCycleDotVisualState(dot) {
+  const focusDone = dot?.focusState === 'done';
+  const breakDone = dot?.breakState === 'done';
+  const isActive = dot?.focusState === 'active' || dot?.breakState === 'active';
 
-function getDotStateClass(state) {
-  return DOT_STATE_CLASSES[state] ?? DOT_STATE_CLASSES.pending;
+  if (!focusDone) {
+    return {
+      isActive,
+      stateClass: 'is-hollow'
+    };
+  }
+
+  if (breakDone) {
+    return {
+      isActive,
+      stateClass: 'is-outlined'
+    };
+  }
+
+  return {
+    isActive,
+    stateClass: 'is-filled'
+  };
+}
+
+function renderFocusTagsMarkup(timerModel) {
+  const focusTagOptions = Array.isArray(timerModel.focusTagOptions)
+    ? timerModel.focusTagOptions
+    : [];
+  const activeTag = timerModel.focusTag ?? 'none';
+
+  if (!focusTagOptions.length) {
+    return '';
+  }
+
+  return `
+    <div class="focus-tags" aria-label="Focus tag" role="group">
+      ${focusTagOptions
+        .map((option) => {
+          const isActive = option.id === activeTag;
+
+          return `
+            <button
+              class="focus-tag-button focus-tag-button--${option.id} ${isActive ? 'is-active' : ''}"
+              data-action="set-focus-tag"
+              data-focus-tag="${option.id}"
+              aria-pressed="${isActive ? 'true' : 'false'}"
+              type="button"
+            >
+              ${option.label}
+            </button>
+          `;
+        })
+        .join('')}
+    </div>
+  `;
 }
 
 export function renderCycleProgressMarkup(cycleDots = []) {
   return cycleDots
-    .map(
-      (dot, index) => `
+    .map((dot, index) => {
+      const visual = getCycleDotVisualState(dot);
+
+      return `
         <span class="cycle-dot" data-cycle-dot data-repeat-index="${index}">
-          <span
-            class="cycle-dot__outer ${getDotStateClass(dot.focusState)}"
-            data-cycle-focus
-          ></span>
-          <span
-            class="cycle-dot__inner ${getDotStateClass(dot.breakState)}"
-            data-cycle-break
-          ></span>
+          <span class="cycle-dot__marker ${visual.stateClass} ${visual.isActive ? 'is-active' : ''}"></span>
         </span>
       `
-    )
+    })
     .join('');
 }
 
@@ -52,6 +95,7 @@ export function renderTimerPanel(timerModel) {
       <div class="cycle-progress" data-live-cycle-progress aria-hidden="true">
         ${renderCycleProgressMarkup(timerModel.cycleDots)}
       </div>
+      ${renderFocusTagsMarkup(timerModel)}
       <p class="timer-repeat-meta sr-only" data-live-repeat-meta>
         Focus repeat ${timerModel.focusRepeatCurrent}/${timerModel.focusRepeatTotal} ·
         Step ${timerModel.stepCurrent}/${timerModel.stepTotal}

@@ -6,7 +6,15 @@ import {
   shouldDispatchCompletion,
   shouldDispatchFocusMinuteReminder
 } from './core/alerts.js';
-import { APP_NAME, STEP_TYPES, STEP_TYPE_LABELS, STORAGE_KEYS, TAB_LABELS } from './core/constants.js';
+import {
+  APP_NAME,
+  FOCUS_TAG_LABELS,
+  FOCUS_TAGS,
+  STEP_TYPES,
+  STEP_TYPE_LABELS,
+  STORAGE_KEYS,
+  TAB_LABELS
+} from './core/constants.js';
 import { createFaviconModel, renderFaviconDataUrl } from './core/favicon.js';
 import {
   appendFocusHistoryEntry,
@@ -36,6 +44,7 @@ import {
   prepareSessionForStepStart,
   resetSession,
   resumeSession,
+  setSessionFocusTag,
   syncIdleSessionWithSettings,
   syncSession
 } from './core/session.js';
@@ -495,6 +504,9 @@ function handleLocalAction(type, payload) {
         now
       );
       break;
+    case 'SET_FOCUS_TAG':
+      nextSession = setSessionFocusTag(state.activeSession, payload.focusTag, now);
+      break;
     case 'SYNC_NOW':
       reconcileSession();
       return;
@@ -780,6 +792,11 @@ function getTimerModel(now = Date.now()) {
     backgroundNotice: state.backgroundNotice,
     clock: formatClock(remainingMs),
     cycleDots: getCycleRepeatDots(session),
+    focusTag: session.focusTag,
+    focusTagOptions: FOCUS_TAGS.map((tag) => ({
+      id: tag,
+      label: FOCUS_TAG_LABELS[tag]
+    })),
     focusRepeatCurrent,
     focusRepeatTotal,
     pipToggleLabel: 'Toggle PiP',
@@ -1161,6 +1178,16 @@ function handleRootClick(event) {
     case 'start-step':
       postWorkerAction('START_STEP', { settings: state.settings });
       break;
+    case 'set-focus-tag': {
+      const focusTag = button.dataset.focusTag;
+
+      if (!focusTag) {
+        return;
+      }
+
+      postWorkerAction('SET_FOCUS_TAG', { focusTag });
+      break;
+    }
     case 'toggle-pip-window':
       void toggleManualPipWindow();
       break;

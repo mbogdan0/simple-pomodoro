@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { renderTimerPanel } from '../src/ui/timer-panel.js';
 
 describe('simple timer panel', () => {
-  it('renders timer UI with double-ring cycle dots and accessible repeat metadata', () => {
+  it('renders timer UI with single-circle cycle dots, tags and accessible repeat metadata', () => {
     const html = renderTimerPanel({
       accent: '#c85a3a',
       backgroundNotice: '',
@@ -12,6 +12,12 @@ describe('simple timer panel', () => {
         { breakState: 'done', focusState: 'done', id: 'focus-2' }
       ],
       clock: '25:00',
+      focusTag: 'work',
+      focusTagOptions: [
+        { id: 'none', label: 'No tag' },
+        { id: 'work', label: 'Work' },
+        { id: 'study', label: 'Study' }
+      ],
       focusRepeatCurrent: 1,
       focusRepeatTotal: 4,
       pipToggleLabel: 'Toggle PiP',
@@ -31,8 +37,14 @@ describe('simple timer panel', () => {
     expect(html).toContain('role="progressbar"');
     expect(html).toContain('aria-valuenow="30"');
     expect(html).toContain('role="status"');
-    expect(html).toContain('cycle-dot__outer is-active');
-    expect(html).toContain('cycle-dot__inner is-done');
+    expect(html).toContain('cycle-dot__marker is-hollow is-active');
+    expect(html).toContain('cycle-dot__marker is-outlined');
+    expect(html).toContain('data-action="set-focus-tag"');
+    expect(html).toContain('data-focus-tag="none"');
+    expect(html).toContain('data-focus-tag="work"');
+    expect(html).toContain('data-focus-tag="study"');
+    expect(html).toContain('focus-tag-button--work is-active');
+    expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('Focus repeat 1/4');
     expect(html).toContain('Step 1/8');
     expect(html).toContain('Start');
@@ -55,6 +67,12 @@ describe('simple timer panel', () => {
       backgroundNotice: '',
       cycleDots: [],
       clock: '25:00',
+      focusTag: 'none',
+      focusTagOptions: [
+        { id: 'none', label: 'No tag' },
+        { id: 'work', label: 'Work' },
+        { id: 'study', label: 'Study' }
+      ],
       focusRepeatCurrent: 1,
       focusRepeatTotal: 4,
       pipToggleLabel: 'Toggle PiP',
@@ -70,5 +88,6 @@ describe('simple timer panel', () => {
 
     expect(html).not.toContain('Toggle PiP');
     expect(html).not.toContain('data-action="toggle-pip-window"');
+    expect(html).toContain('No tag');
   });
 });
