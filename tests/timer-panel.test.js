@@ -37,7 +37,7 @@ describe('simple timer panel', () => {
     expect(html).toContain('role="progressbar"');
     expect(html).toContain('aria-valuenow="30"');
     expect(html).toContain('role="status"');
-    expect(html).toContain('cycle-dot__marker is-hollow is-active');
+    expect(html).toContain('cycle-dot__marker is-hollow is-active is-focus-active');
     expect(html).toContain('cycle-dot__marker is-outlined');
     expect(html).toContain('data-action="set-focus-tag"');
     expect(html).toContain('data-focus-tag="none"');

@@ -1,10 +1,14 @@
 function getCycleDotVisualState(dot) {
   const focusDone = dot?.focusState === 'done';
   const breakDone = dot?.breakState === 'done';
-  const isActive = dot?.focusState === 'active' || dot?.breakState === 'active';
+  const focusActive = dot?.focusState === 'active';
+  const breakActive = dot?.breakState === 'active';
+  const isActive = focusActive || breakActive;
+  const activeClass = focusActive ? 'is-focus-active' : breakActive ? 'is-break-active' : '';
 
   if (!focusDone) {
     return {
+      activeClass,
       isActive,
       stateClass: 'is-hollow'
     };
@@ -12,12 +16,14 @@ function getCycleDotVisualState(dot) {
 
   if (breakDone) {
     return {
+      activeClass,
       isActive,
       stateClass: 'is-outlined'
     };
   }
 
   return {
+    activeClass,
     isActive,
     stateClass: 'is-filled'
   };
@@ -63,7 +69,7 @@ export function renderCycleProgressMarkup(cycleDots = []) {
 
       return `
         <span class="cycle-dot" data-cycle-dot data-repeat-index="${index}">
-          <span class="cycle-dot__marker ${visual.stateClass} ${visual.isActive ? 'is-active' : ''}"></span>
+          <span class="cycle-dot__marker ${visual.stateClass} ${visual.isActive ? 'is-active' : ''} ${visual.activeClass}"></span>
         </span>
       `
     })
