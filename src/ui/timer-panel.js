@@ -174,7 +174,14 @@ export function renderTimerPanel(timerModel) {
                   data-action="toggle-pip-window"
                   type="button"
                 >
-                  ${pipToggleLabel}
+                  <span class="action-button__icon action-button__icon--pip" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" focusable="false">
+                      <rect x="2.5" y="5.5" width="8" height="8" rx="1.5"></rect>
+                      <path d="M9.5 2.5h4v4"></path>
+                      <path d="M13.5 2.5L8 8"></path>
+                    </svg>
+                  </span>
+                  <span class="action-button__label">${pipToggleLabel}</span>
                 </button>
               </div>
             `

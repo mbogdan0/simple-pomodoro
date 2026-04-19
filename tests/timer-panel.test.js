@@ -62,6 +62,9 @@ describe('simple timer panel', () => {
     expect(html).toContain('action-row__left');
     expect(html).toContain('action-row__right');
     expect(html).toContain('action-button subtle action-button--pip');
+    expect(html).toContain('action-button__icon action-button__icon--pip');
+    expect(html).toContain('d="M13.5 2.5L8 8"');
+    expect(html).toContain('action-button__label">Toggle PiP</span>');
     expect(html).not.toContain('Worker');
     expect(html).not.toContain('localStorage');
     expect(html).not.toContain('inline blob');

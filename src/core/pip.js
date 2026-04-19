@@ -1,5 +1,5 @@
-const PIP_WINDOW_HEIGHT = 124;
-const PIP_WINDOW_WIDTH = 224;
+const PIP_WINDOW_HEIGHT = 112;
+const PIP_WINDOW_WIDTH = 212;
 
 const PIP_STYLES = `
   :root {
@@ -35,23 +35,41 @@ const PIP_STYLES = `
     padding: 8px;
   }
 
+  .pip-header {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    min-width: 0;
+  }
+
   .pip-step {
     color: var(--pip-muted);
     font-size: 9px;
     letter-spacing: 0.06em;
-    line-height: 1.2;
+    line-height: 1;
     margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     text-transform: uppercase;
+  }
+
+  .pip-divider {
+    color: var(--pip-muted);
+    font-size: 10px;
+    line-height: 1;
   }
 
   .pip-clock {
     font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
-    font-size: 26px;
+    font-size: 22px;
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1;
-    margin: 0;
+    margin: 0 0 0 auto;
   }
 
   .pip-progress {
@@ -78,7 +96,9 @@ const PIP_STYLES = `
     font: inherit;
     font-size: 10px;
     line-height: 1;
-    padding: 3px 7px;
+    justify-self: start;
+    margin-top: 8px;
+    padding: 6px 12px;
   }
 
   .pip-action:disabled {
@@ -86,18 +106,18 @@ const PIP_STYLES = `
     opacity: 0.45;
   }
 
-  @media (max-height: 116px) {
+  @media (max-height: 104px) {
     body {
       padding: 5px;
     }
 
     .pip-card {
-      gap: 4px;
-      padding: 6px;
+      gap: 5px;
+      padding: 7px;
     }
 
-    .pip-step {
-      display: none;
+    .pip-clock {
+      font-size: 20px;
     }
   }
 
@@ -107,9 +127,13 @@ const PIP_STYLES = `
     }
   }
 
-  @media (max-width: 210px) {
+  @media (max-width: 200px) {
+    .pip-step {
+      font-size: 8.5px;
+    }
+
     .pip-clock {
-      font-size: 22px;
+      font-size: 20px;
     }
   }
 `;
@@ -266,8 +290,11 @@ export function createTimerPipController(options = {}) {
         aria-label="Mini timer window"
         style="--pip-progress-fill:${escapeHtml(model.accent)};--pip-progress-track:${escapeHtml(model.progressTrack)};"
       >
-        <p class="pip-step">${escapeHtml(model.stepLabel)}</p>
-        <p class="pip-clock">${escapeHtml(model.clock)}</p>
+        <p class="pip-header">
+          <span class="pip-step">${escapeHtml(model.stepLabel)}</span>
+          <span class="pip-divider" aria-hidden="true">·</span>
+          <span class="pip-clock">${escapeHtml(model.clock)}</span>
+        </p>
         <div class="pip-progress" aria-hidden="true">
           <span class="pip-progress__fill" style="width:${model.progressPercent}%"></span>
         </div>

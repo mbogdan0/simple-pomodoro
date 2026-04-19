@@ -97,16 +97,19 @@ let serviceWorkerRegistration = null;
 const pipController = createTimerPipController({
   onAction(action) {
     if (action === 'START') {
+      playUiActionTone();
       postWorkerAction('START_STEP', { settings: state.settings });
       return;
     }
 
     if (action === 'PAUSE') {
+      playUiActionTone();
       postWorkerAction('PAUSE');
       return;
     }
 
     if (action === 'RESUME') {
+      playUiActionTone();
       postWorkerAction('RESUME');
     }
   },
@@ -654,6 +657,41 @@ function playCompletionTone() {
   return true;
 }
 
+function playUiActionTone() {
+  if (!state.settings.alertSettings.soundEnabled || typeof window.AudioContext === 'undefined') {
+    return false;
+  }
+
+  if (!audioContext) {
+    audioContext = new window.AudioContext();
+  }
+
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().catch(() => {});
+  }
+
+  const startAt = audioContext.currentTime;
+  const duration = 0.05;
+  const finishAt = startAt + duration;
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+
+  oscillator.type = 'triangle';
+  oscillator.frequency.setValueAtTime(920, startAt);
+  oscillator.frequency.exponentialRampToValueAtTime(760, finishAt);
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.linearRampToValueAtTime(0.07, startAt + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, finishAt);
+
+  oscillator.connect(gain);
+  gain.connect(audioContext.destination);
+
+  oscillator.start(startAt);
+  oscillator.stop(finishAt + 0.005);
+  return true;
+}
+
 async function ensureServiceWorkerRegistration() {
   if (serviceWorkerRegistration) {
     return serviceWorkerRegistration;
@@ -1166,6 +1204,7 @@ function handleRootClick(event) {
 
   switch (action) {
     case 'pause-step':
+      playUiActionTone();
       postWorkerAction('PAUSE');
       break;
     case 'request-notification-permission':
@@ -1173,13 +1212,16 @@ function handleRootClick(event) {
       break;
     case 'reset-session':
       if (window.confirm(RESET_CONFIRMATION_MESSAGE)) {
+        playUiActionTone();
         postWorkerAction('RESET_ALL', { settings: state.settings });
       }
       break;
     case 'resume-step':
+      playUiActionTone();
       postWorkerAction('RESUME');
       break;
     case 'start-step':
+      playUiActionTone();
       postWorkerAction('START_STEP', { settings: state.settings });
       break;
     case 'set-focus-tag': {
@@ -1189,10 +1231,12 @@ function handleRootClick(event) {
         return;
       }
 
+      playUiActionTone();
       postWorkerAction('SET_FOCUS_TAG', { focusTag });
       break;
     }
     case 'toggle-pip-window':
+      playUiActionTone();
       void toggleManualPipWindow();
       break;
     case 'switch-tab':

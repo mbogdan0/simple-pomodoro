@@ -102,9 +102,11 @@ describe('picture-in-picture controller', () => {
     expect(opened).toBe(true);
     expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(1);
     expect(hostWindow.documentPictureInPicture.requestWindow).toHaveBeenCalledWith({
-      height: 124,
-      width: 224
+      height: 112,
+      width: 212
     });
+    expect(pipWindow.document.body.innerHTML).toContain('class="pip-header"');
+    expect(pipWindow.document.body.innerHTML).toContain('class="pip-divider"');
     expect(controller.isOpen()).toBe(true);
   });
 
@@ -156,6 +158,8 @@ describe('picture-in-picture controller', () => {
       status: 'running',
       stepLabel: 'Focus'
     });
+    expect(pipWindow.document.body.innerHTML).toContain('<span class="pip-step">Focus</span>');
+    expect(pipWindow.document.body.innerHTML).toContain('<span class="pip-clock">20:00</span>');
     expect(pipWindow.button.disabled).toBe(false);
     pipWindow.button.click();
 
