@@ -4,7 +4,12 @@ import {
   selectNotificationChannel,
   shouldDispatchFocusMinuteReminder
 } from '../../core/alerts.js';
-import { createNtfyTestPayload, sendNtfyPush } from '../../utils/ntfy.js';
+import { getCurrentStep } from '../../core/session.js';
+import {
+  createNtfyCompletionPayload,
+  createNtfyTestPayload,
+  sendNtfyPush
+} from '../../utils/ntfy.js';
 
 export function createNotificationService({
   state,
@@ -115,8 +120,13 @@ export function createNotificationService({
     }
 
     if (state.settings.ntfyPublishUrl) {
+      const ntfyPayload = createNtfyCompletionPayload({
+        body: completionPayload.body,
+        stepType: getCurrentStep(session)?.type
+      });
+
       void sendNtfyPush({
-        payload: completionPayload,
+        payload: ntfyPayload,
         publishUrl: state.settings.ntfyPublishUrl
       });
     }

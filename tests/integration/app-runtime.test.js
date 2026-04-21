@@ -326,4 +326,54 @@ describe('app runtime integration', () => {
 
     expect(openMenu.open).toBe(false);
   });
+
+  it('plays UI action tone when overflow button is clicked', () => {
+    const playUiActionTone = vi.fn();
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory: vi.fn(),
+      persistSettings: vi.fn(),
+      postWorkerAction: vi.fn(),
+      renderApp: vi.fn(),
+      root: {
+        addEventListener: vi.fn(),
+        querySelectorAll() {
+          return [];
+        }
+      },
+      state: createSessionHarness().state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '.overflow-actions') {
+            return {};
+          }
+
+          if (selector === '.action-button--overflow') {
+            return {};
+          }
+
+          if (selector === '[data-action]') {
+            return null;
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(playUiActionTone).toHaveBeenCalledTimes(1);
+  });
 });

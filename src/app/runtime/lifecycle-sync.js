@@ -53,6 +53,14 @@ export function createLifecycleSync({
       reconcileSession();
       syncWorkerNow();
     };
+    const maybeConfirmBeforeUnload = (event) => {
+      if (!event || (state.activeSession.status !== 'running' && state.activeSession.status !== 'paused')) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
@@ -73,6 +81,7 @@ export function createLifecycleSync({
       syncWorkerNow();
     });
 
+    window.addEventListener('beforeunload', maybeConfirmBeforeUnload);
     window.addEventListener('storage', handleStorageSyncEvent);
   }
 

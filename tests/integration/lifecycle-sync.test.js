@@ -184,6 +184,14 @@ describe('lifecycle sync integration', () => {
     windowHub.fire('pagehide');
     expect(persistSession).toHaveBeenCalledTimes(2);
 
+    const runningUnloadEvent = {
+      preventDefault: vi.fn(),
+      returnValue: undefined
+    };
+    windowHub.fire('beforeunload', runningUnloadEvent);
+    expect(runningUnloadEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(runningUnloadEvent.returnValue).toBe('');
+
     windowHub.fire('storage', {
       key: STORAGE_KEYS.activeSession
     });
@@ -193,5 +201,48 @@ describe('lifecycle sync integration', () => {
     expect(syncWorkerNow).toHaveBeenCalledTimes(6);
     expect(commitSession).not.toHaveBeenCalled();
     expect(renderApp).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger beforeunload confirmation for idle or completed_waiting_next', () => {
+    const documentHub = createEventHub();
+    const windowHub = createEventHub();
+    setDocument(documentHub);
+    setWindow(windowHub);
+
+    const state = {
+      activeSession: createInitialSession(createDefaultSettings()),
+      settings: createDefaultSettings()
+    };
+    const lifecycle = createLifecycleSync({
+      commitSession: vi.fn(),
+      persistSession: vi.fn(),
+      reconcileSession: vi.fn(),
+      renderApp: vi.fn(),
+      restoreSessionFromStorage: vi.fn(),
+      state,
+      syncWorkerNow: vi.fn(),
+      updatePageChrome: vi.fn()
+    });
+    lifecycle.bindGlobalEvents();
+
+    const idleEvent = {
+      preventDefault: vi.fn(),
+      returnValue: undefined
+    };
+    windowHub.fire('beforeunload', idleEvent);
+    expect(idleEvent.preventDefault).not.toHaveBeenCalled();
+    expect(idleEvent.returnValue).toBeUndefined();
+
+    state.activeSession = {
+      ...state.activeSession,
+      status: 'completed_waiting_next'
+    };
+    const completedEvent = {
+      preventDefault: vi.fn(),
+      returnValue: undefined
+    };
+    windowHub.fire('beforeunload', completedEvent);
+    expect(completedEvent.preventDefault).not.toHaveBeenCalled();
+    expect(completedEvent.returnValue).toBeUndefined();
   });
 });

@@ -164,6 +164,7 @@ describe('bootstrap startup integration', () => {
     expect(rootListeners.change).toBeTypeOf('function');
     expect(documentStub.handlers.visibilitychange).toBeTypeOf('function');
     expect(windowStub.handlers.focus).toBeTypeOf('function');
+    expect(windowStub.handlers.beforeunload).toBeTypeOf('function');
     expect(windowStub.handlers.pageshow).toBeTypeOf('function');
     expect(windowStub.handlers.pagehide).toBeTypeOf('function');
     expect(windowStub.handlers.storage).toBeTypeOf('function');

@@ -96,6 +96,10 @@ export function createRootEvents({
       closeAllOverflowActionsMenus();
     }
 
+    if (target?.closest?.('.action-button--overflow')) {
+      playUiActionTone();
+    }
+
     const button = target?.closest?.('[data-action]');
 
     if (!button) {

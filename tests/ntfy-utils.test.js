@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   NTFY_PRIORITY,
+  NTFY_TEST_TITLE,
+  createNtfyCompletionPayload,
   createNtfyRequestOptions,
   createNtfyTestPayload,
+  resolveNtfyCompletionTitle,
   sendNtfyPush
 } from '../src/utils/ntfy.js';
 
@@ -25,13 +28,31 @@ describe('ntfy utils', () => {
     });
   });
 
-  it('sanitizes non-header-safe title characters before sending', () => {
+  it('encodes non-ascii title values as RFC2047', () => {
     const options = createNtfyRequestOptions({
       body: 'Body text',
-      title: 'Focus done ✅'
+      title: '🎯 Focus done'
     });
 
-    expect(options.headers.Title).toBe('Focus done');
+    expect(options.headers.Title).toBe('=?UTF-8?B?8J+OryBGb2N1cyBkb25l?=');
+  });
+
+  it('maps completion titles to one emoji by step type', () => {
+    expect(resolveNtfyCompletionTitle('work')).toBe('🎯 Focus done');
+    expect(resolveNtfyCompletionTitle('shortBreak')).toBe('☕ Short Break done');
+    expect(resolveNtfyCompletionTitle('longBreak')).toBe('🌴 Long Break done');
+  });
+
+  it('builds completion payload with body and mapped title', () => {
+    expect(
+      createNtfyCompletionPayload({
+        body: 'Next step is ready. Press Start to continue.',
+        stepType: 'shortBreak'
+      })
+    ).toEqual({
+      body: 'Next step is ready. Press Start to continue.',
+      title: '☕ Short Break done'
+    });
   });
 
   it('sends ntfy push and returns boolean result', async () => {
@@ -43,7 +64,7 @@ describe('ntfy utils', () => {
 
     const payload = {
       body: 'Manual ntfy test from Simple Pomodoro Timer.',
-      title: 'Simple Pomodoro Timer ntfy test 📡'
+      title: '🧪 Simple Pomodoro Timer ntfy test'
     };
 
     await expect(
@@ -75,7 +96,7 @@ describe('ntfy utils', () => {
   it('returns a stable dedicated test payload', () => {
     expect(createNtfyTestPayload()).toEqual({
       body: 'Manual ntfy test from Simple Pomodoro Timer.',
-      title: 'Simple Pomodoro Timer ntfy test 📡'
+      title: NTFY_TEST_TITLE
     });
   });
 });
