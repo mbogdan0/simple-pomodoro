@@ -5,6 +5,7 @@ import {
   advanceAfterCompletion,
   canResetSession,
   createInitialSession,
+  forceCompleteCurrentStep,
   getRemainingMs,
   goToNextStep,
   hasNextStep,
@@ -71,6 +72,28 @@ describe('timer session engine', () => {
     expect(getRemainingMs(paused, 100_000)).toBe(settings.templateDurations.work - 60_000);
     expect(resumed.status).toBe('running');
     expect(resumed.endsAt).toBe(100_000 + settings.templateDurations.work - 60_000);
+  });
+
+  it('completes a running step early and stores remaining snapshot', () => {
+    const running = startCurrentStep(createInitialSession(settings), 10_000);
+    const earlyCompleted = forceCompleteCurrentStep(running, 70_000);
+
+    expect(earlyCompleted.status).toBe('completed_waiting_next');
+    expect(earlyCompleted.finishedAt).toBe(70_000);
+    expect(earlyCompleted.endsAt).toBe(running.endsAt);
+    expect(earlyCompleted.remainingMsAtPause).toBe(settings.templateDurations.work - 60_000);
+    expect(earlyCompleted.completedInBackground).toBe(false);
+  });
+
+  it('completes a paused step early using paused remaining time', () => {
+    const running = startCurrentStep(createInitialSession(settings), 10_000);
+    const paused = pauseSession(running, 70_000);
+    const earlyCompleted = forceCompleteCurrentStep(paused, 90_000);
+
+    expect(earlyCompleted.status).toBe('completed_waiting_next');
+    expect(earlyCompleted.finishedAt).toBe(90_000);
+    expect(earlyCompleted.remainingMsAtPause).toBe(paused.remainingMsAtPause);
+    expect(earlyCompleted.completedInBackground).toBe(false);
   });
 
   it('marks step as completed and waits for explicit start of next step', () => {

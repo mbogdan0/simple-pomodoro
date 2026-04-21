@@ -139,7 +139,9 @@ describe('render app integration', () => {
 
     expect(root.innerHTML).toContain('class="shell"');
     expect(root.innerHTML).toContain('data-action="switch-tab"');
+    expect(root.innerHTML).toContain('class="overflow-actions"');
     expect(root.innerHTML).toMatch(/data-action="reset-session"(?![^>]*disabled)/);
+    expect(root.innerHTML).toMatch(/data-action="end-step-early"(?![^>]*disabled)/);
     expect(liveElements['[data-live-clock]'].textContent).toMatch(/\d{2}:\d{2}/);
     expect(liveElements['[data-live-status]'].textContent).toBe('Running');
     expect(liveElements['[data-live-progress]'].attrs['aria-valuenow']).toBeDefined();
@@ -187,5 +189,6 @@ describe('render app integration', () => {
     renderer.renderApp();
 
     expect(root.innerHTML).toMatch(/data-action="reset-session"[^>]*disabled/);
+    expect(root.innerHTML).toMatch(/data-action="end-step-early"[^>]*disabled/);
   });
 });

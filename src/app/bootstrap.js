@@ -124,9 +124,10 @@ export function startApp(root) {
   const workerBridge = createWorkerBridge({
     handleLocalAction: sessionController.handleLocalAction,
     onWorkerMissing: renderer.renderApp,
-    onWorkerState({ completionKey, session, type }) {
+    onWorkerState({ completionKey, reason, session, type }) {
       sessionController.commitSession(session, {
         completionKeyHint: completionKey,
+        completionReason: reason,
         dispatchAlerts: true,
         persist: true,
         render: true,

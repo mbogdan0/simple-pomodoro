@@ -26,6 +26,22 @@ function normalizeFocusTag(value) {
   return FOCUS_TAGS.includes(value) ? value : 'none';
 }
 
+function resolveCompletedFocusDurationMs(session, step) {
+  const stepDurationMs = normalizeDurationMs(step?.durationMs);
+
+  if (!Number.isFinite(stepDurationMs)) {
+    return null;
+  }
+
+  const remainingMs = normalizeDurationMs(session?.remainingMsAtPause);
+
+  if (!Number.isFinite(remainingMs)) {
+    return stepDurationMs;
+  }
+
+  return normalizeDurationMs(stepDurationMs - remainingMs);
+}
+
 export function normalizeFocusHistoryEntry(rawEntry) {
   if (!rawEntry || typeof rawEntry !== 'object') {
     return null;
@@ -75,7 +91,7 @@ export function createFocusHistoryEntry(session, completionKeyHint = '') {
 
   const id = normalizeHistoryId(completionKeyHint || createCompletionKey(session));
   const completedAt = normalizeTimestamp(session.finishedAt);
-  const durationMs = normalizeDurationMs(step.durationMs);
+  const durationMs = resolveCompletedFocusDurationMs(session, step);
   const stepId = normalizeHistoryId(step.id);
 
   if (!id || !stepId || !Number.isFinite(completedAt) || !Number.isFinite(durationMs)) {

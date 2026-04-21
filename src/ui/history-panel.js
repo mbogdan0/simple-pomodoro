@@ -1,8 +1,8 @@
 import { FOCUS_TAG_LABELS } from '../core/constants.js';
+import { formatClock } from '../core/format.js';
 
 function formatFocusDuration(durationMs) {
-  const minutes = Math.max(1, Math.round(durationMs / 60_000));
-  return `${minutes} min`;
+  return formatClock(durationMs);
 }
 
 function formatCompletedAt(completedAt) {

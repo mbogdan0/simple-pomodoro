@@ -26,6 +26,7 @@ button {
 .tab-button:focus-visible,
 .action-button:focus-visible,
 .focus-tag-button:focus-visible,
+.overflow-actions__item:focus-visible,
 .ghost-button:focus-visible,
 input:focus-visible {
   outline: 3px solid rgba(47, 140, 115, 0.45);

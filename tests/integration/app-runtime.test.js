@@ -16,6 +16,7 @@ const originalLocalStorage = globalThis.localStorage;
 const originalHTMLElement = globalThis.HTMLElement;
 const originalHTMLInputElement = globalThis.HTMLInputElement;
 const originalWindow = globalThis.window;
+const originalDocument = globalThis.document;
 
 function createSessionHarness(stateOverrides = {}) {
   const settings = createDefaultSettings();
@@ -71,10 +72,11 @@ describe('app runtime integration', () => {
     globalThis.HTMLElement = originalHTMLElement;
     globalThis.HTMLInputElement = originalHTMLInputElement;
     globalThis.window = originalWindow;
+    globalThis.document = originalDocument;
     vi.restoreAllMocks();
   });
 
-  it('runs start/pause/resume/reset flow through worker bridge local fallback', () => {
+  it('runs start/pause/resume/end-early/reset flow through worker bridge local fallback', () => {
     const { sessionController, state } = createSessionHarness();
     const workerBridge = createWorkerBridge({
       handleLocalAction: sessionController.handleLocalAction,
@@ -92,6 +94,10 @@ describe('app runtime integration', () => {
 
     workerBridge.postWorkerAction(WORKER_ACTIONS.RESUME);
     expect(state.activeSession.status).toBe('running');
+
+    workerBridge.postWorkerAction(WORKER_ACTIONS.END_STEP_EARLY, { now: 2_000 });
+    expect(state.activeSession.status).toBe('idle');
+    expect(state.activeSession.currentStepIndex).toBe(1);
 
     workerBridge.postWorkerAction(WORKER_ACTIONS.RESET_ALL, { settings: state.settings });
     expect(state.activeSession.status).toBe('idle');
@@ -185,5 +191,139 @@ describe('app runtime integration', () => {
     expect(state.settings.repeatCount).toBe(sanitizeRepeatCount('6', 4));
     expect(persistSettings).toHaveBeenCalled();
     expect(commitSession).toHaveBeenCalled();
+  });
+
+  it('confirms end-step-early action and dispatches worker command', () => {
+    const postWorkerAction = vi.fn();
+    const confirmSpy = vi.fn(() => true);
+    globalThis.window.confirm = confirmSpy;
+
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone: vi.fn()
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory: vi.fn(),
+      persistSettings: vi.fn(),
+      postWorkerAction,
+      renderApp: vi.fn(),
+      root: {
+        addEventListener: vi.fn()
+      },
+      state: createSessionHarness().state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    const menu = { open: true };
+    const actionButton = {
+      dataset: {
+        action: 'end-step-early'
+      },
+      closest(selector) {
+        return selector === 'details' ? menu : null;
+      }
+    };
+
+    rootEvents.handleRootClick({
+      target: {
+        closest() {
+          return actionButton;
+        }
+      }
+    });
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(postWorkerAction).toHaveBeenCalledWith(WORKER_ACTIONS.END_STEP_EARLY);
+    expect(menu.open).toBe(false);
+  });
+
+  it('closes open overflow menu on click outside actions area', () => {
+    const openMenu = { open: true };
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone: vi.fn()
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory: vi.fn(),
+      persistSettings: vi.fn(),
+      postWorkerAction: vi.fn(),
+      renderApp: vi.fn(),
+      root: {
+        addEventListener: vi.fn(),
+        querySelectorAll() {
+          return [openMenu];
+        }
+      },
+      state: createSessionHarness().state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    rootEvents.handleRootClick({
+      target: {
+        closest() {
+          return null;
+        }
+      }
+    });
+
+    expect(openMenu.open).toBe(false);
+  });
+
+  it('closes open overflow menu on document body click', () => {
+    const openMenu = { open: true };
+    const documentHandlers = {};
+    globalThis.document = {
+      addEventListener(type, handler) {
+        documentHandlers[type] = handler;
+      }
+    };
+
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone: vi.fn()
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory: vi.fn(),
+      persistSettings: vi.fn(),
+      postWorkerAction: vi.fn(),
+      renderApp: vi.fn(),
+      root: {
+        addEventListener: vi.fn(),
+        querySelectorAll() {
+          return [openMenu];
+        }
+      },
+      state: createSessionHarness().state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    rootEvents.bindRootEvents();
+    documentHandlers.click({
+      target: {
+        closest() {
+          return null;
+        }
+      }
+    });
+
+    expect(openMenu.open).toBe(false);
   });
 });

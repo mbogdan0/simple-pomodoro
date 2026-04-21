@@ -13,6 +13,7 @@ function createTimerModel(overrides = {}) {
       { breakState: 'pending', focusState: 'active', id: 'focus-1' },
       { breakState: 'done', focusState: 'done', id: 'focus-2' }
     ],
+    endStepEarlyDisabled: false,
     focusTag: 'work',
     focusTagOptions: [
       { id: 'none', label: 'No tag' },
@@ -45,6 +46,8 @@ describe('timer panel behavior', () => {
     expect(html).toContain('aria-valuetext="30% complete in current step"');
     expect(html).toContain('data-action="set-focus-tag"');
     expect(html).toContain('focus-tag-button--work is-active');
+    expect(html).toContain('class="overflow-actions"');
+    expect(html).toContain('data-action="end-step-early"');
     expect(html).toContain('role="timer"');
     expect(html).toContain('role="progressbar"');
     expect(html).toContain('role="status"');
@@ -61,5 +64,11 @@ describe('timer panel behavior', () => {
     const html = renderTimerPanel(createTimerModel({ resetDisabled: true }));
 
     expect(html).toMatch(/data-action="reset-session"[^>]*disabled/);
+  });
+
+  it('disables end-step-early action when model marks it unavailable', () => {
+    const html = renderTimerPanel(createTimerModel({ endStepEarlyDisabled: true }));
+
+    expect(html).toMatch(/data-action="end-step-early"[^>]*disabled/);
   });
 });

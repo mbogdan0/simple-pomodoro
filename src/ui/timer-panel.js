@@ -100,6 +100,7 @@ export function renderTimerPanel(timerModel) {
   const accent = timerModel.accent ?? '#c85a3a';
   const accentSoft = timerModel.accentSoft ?? '#f3e7e2';
   const accentOutline = timerModel.accentOutline ?? '#d0afa3';
+  const endStepEarlyDisabled = Boolean(timerModel.endStepEarlyDisabled);
   const pipToggleLabel = timerModel.pipToggleLabel ?? 'Toggle PiP';
   const progressTrack = timerModel.progressTrack ?? '#ede7de';
   const showPipToggle = Boolean(timerModel.showPipToggle);
@@ -163,19 +164,47 @@ export function renderTimerPanel(timerModel) {
           <button class="action-button primary" data-action="${timerModel.primaryAction}" type="button">
             ${timerModel.primaryActionLabel}
           </button>
-          <button
-            class="action-button"
-            data-action="reset-session"
-            type="button"
-            ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
-          >
-            Reset
-          </button>
+          <details class="overflow-actions">
+            <summary
+              class="action-button subtle action-button--overflow"
+              aria-label="More actions"
+              title="More actions"
+            >
+              <span class="action-button__icon action-button__icon--kebab" aria-hidden="true">
+                <svg viewBox="0 0 16 16" focusable="false">
+                  <circle cx="8" cy="3.5" r="1.3"></circle>
+                  <circle cx="8" cy="8" r="1.3"></circle>
+                  <circle cx="8" cy="12.5" r="1.3"></circle>
+                </svg>
+              </span>
+              <span class="sr-only">More actions</span>
+            </summary>
+            <div class="overflow-actions__menu" aria-label="Timer actions" role="menu">
+              <button
+                class="overflow-actions__item"
+                data-action="reset-session"
+                role="menuitem"
+                type="button"
+                ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
+              >
+                Reset all steps
+              </button>
+              <button
+                class="overflow-actions__item"
+                data-action="end-step-early"
+                role="menuitem"
+                type="button"
+                ${endStepEarlyDisabled ? 'disabled aria-disabled="true"' : ''}
+              >
+                End step early
+              </button>
+            </div>
+          </details>
         </div>
-        ${
-          showPipToggle
-            ? `
-              <div class="action-row__right">
+        <div class="action-row__right">
+          ${
+            showPipToggle
+              ? `
                 <button
                   class="action-button subtle action-button--pip"
                   data-action="toggle-pip-window"
@@ -190,10 +219,10 @@ export function renderTimerPanel(timerModel) {
                   </span>
                   <span class="action-button__label">${pipToggleLabel}</span>
                 </button>
-              </div>
-            `
-            : ''
-        }
+              `
+              : ''
+          }
+        </div>
       </div>
 
       ${

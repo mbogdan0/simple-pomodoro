@@ -1,6 +1,7 @@
 import { createCompletionKey } from './core/alerts.js';
 import { WORKER_TICK_INTERVAL_MS } from './core/constants.js';
 import {
+  forceCompleteCurrentStep,
   normalizeSession,
   pauseSession,
   prepareSessionForStepStart,
@@ -57,7 +58,7 @@ function scheduleCompletionWatchdog() {
   }, delay);
 }
 
-function emitCompletionIfNeeded() {
+function emitCompletionIfNeeded(completionReason = 'completed') {
   if (!session || session.status !== 'completed_waiting_next') {
     return false;
   }
@@ -71,7 +72,7 @@ function emitCompletionIfNeeded() {
   lastCompletionKey = completionKey;
   emit(WORKER_MESSAGE_TYPES.STEP_FINISHED, session, {
     completionKey,
-    reason: 'completed'
+    reason: completionReason
   });
   return true;
 }
@@ -153,6 +154,14 @@ self.onmessage = ({ data }) => {
     const now = payload.now ?? Date.now();
 
     switch (type) {
+      case WORKER_ACTIONS.END_STEP_EARLY:
+        session = forceCompleteCurrentStep(session, now);
+        stopTimers();
+        if (emitCompletionIfNeeded('manual_early')) {
+          break;
+        }
+        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'end-step-early' });
+        break;
       case WORKER_ACTIONS.PAUSE:
         session = pauseSession(session, now);
         stopTimers();

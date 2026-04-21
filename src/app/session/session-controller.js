@@ -8,6 +8,7 @@ import {
 } from '../../core/focus-history.js';
 import {
   advanceAfterCompletion,
+  forceCompleteCurrentStep,
   markAlertsDispatched,
   normalizeSession,
   pauseSession,
@@ -51,6 +52,7 @@ export function createSessionController({
   function commitSession(nextSession, options = {}) {
     const {
       completionKeyHint = '',
+      completionReason = '',
       dispatchAlerts = false,
       persist = false,
       render = true,
@@ -61,13 +63,14 @@ export function createSessionController({
 
     if (session.status === 'completed_waiting_next') {
       const completionKey = completionKeyHint || createCompletionKey(session);
+      const shouldSuppressCompletionAlerts = completionReason === 'manual_early';
       maybeTrackCompletedFocus(session, completionKey);
       const mayDispatchByKey = completionKey
         ? shouldDispatchCompletion(completionKey, state.lastCompletionKey)
         : !session.alertsDispatched;
 
       if (!completionKey || mayDispatchByKey) {
-        if (dispatchAlerts) {
+        if (dispatchAlerts && !shouldSuppressCompletionAlerts) {
           dispatchCompletionAlerts(session, completionKey);
         }
         session = markAlertsDispatched(session);
@@ -146,8 +149,13 @@ export function createSessionController({
   function handleLocalAction(type, payload = {}) {
     const now = payload.now ?? Date.now();
     let nextSession = state.activeSession;
+    let completionReason = '';
 
     switch (type) {
+      case WORKER_ACTIONS.END_STEP_EARLY:
+        nextSession = forceCompleteCurrentStep(state.activeSession, now);
+        completionReason = 'manual_early';
+        break;
       case WORKER_ACTIONS.PAUSE:
         nextSession = pauseSession(state.activeSession, now);
         break;
@@ -179,7 +187,8 @@ export function createSessionController({
       dispatchAlerts: true,
       persist: true,
       render: true,
-      syncWorker: false
+      syncWorker: false,
+      completionReason
     });
   }
 

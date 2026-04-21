@@ -10,6 +10,7 @@ export {
 export { syncSession } from './session/sync.js';
 export {
   advanceAfterCompletion,
+  forceCompleteCurrentStep,
   goToNextStep,
   goToStep,
   markAlertsDispatched,

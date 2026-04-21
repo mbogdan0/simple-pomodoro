@@ -4,7 +4,8 @@ import { syncIdleSessionWithSettings } from '../../core/session.js';
 import { normalizeNtfyPublishUrl, sanitizeRepeatCount } from '../../core/settings.js';
 import { WORKER_ACTIONS } from '../../core/worker-protocol.js';
 
-const RESET_CONFIRMATION_MESSAGE = 'Reset timer to the first step?';
+const RESET_CONFIRMATION_MESSAGE = 'Reset all steps and return to the first step?';
+const END_STEP_EARLY_CONFIRMATION_MESSAGE = 'End the current step now?';
 
 export function createRootEvents({
   state,
@@ -69,8 +70,33 @@ export function createRootEvents({
     renderApp();
   }
 
+  function closeOverflowActionsMenu(button) {
+    const parentDetails = button.closest('details');
+
+    if (parentDetails && typeof parentDetails === 'object' && 'open' in parentDetails) {
+      parentDetails.open = false;
+    }
+  }
+
+  function closeAllOverflowActionsMenus() {
+    if (typeof root.querySelectorAll !== 'function') {
+      return;
+    }
+
+    root.querySelectorAll('.overflow-actions[open]').forEach((menu) => {
+      menu.open = false;
+    });
+  }
+
   function handleRootClick(event) {
-    const button = event.target.closest('[data-action]');
+    const target = event?.target;
+    const clickedInsideOverflowMenu = Boolean(target?.closest?.('.overflow-actions'));
+
+    if (!clickedInsideOverflowMenu) {
+      closeAllOverflowActionsMenus();
+    }
+
+    const button = target?.closest?.('[data-action]');
 
     if (!button) {
       return;
@@ -89,9 +115,17 @@ export function createRootEvents({
         });
         break;
       case 'reset-session':
+        closeOverflowActionsMenu(button);
         if (window.confirm(RESET_CONFIRMATION_MESSAGE)) {
           playUiActionTone();
           postWorkerAction(WORKER_ACTIONS.RESET_ALL, { settings: state.settings });
+        }
+        break;
+      case 'end-step-early':
+        closeOverflowActionsMenu(button);
+        if (window.confirm(END_STEP_EARLY_CONFIRMATION_MESSAGE)) {
+          playUiActionTone();
+          postWorkerAction(WORKER_ACTIONS.END_STEP_EARLY);
         }
         break;
       case 'resume-step':
@@ -150,6 +184,16 @@ export function createRootEvents({
       default:
         break;
     }
+  }
+
+  function handleDocumentClick(event) {
+    const target = event?.target;
+
+    if (target?.closest?.('.overflow-actions')) {
+      return;
+    }
+
+    closeAllOverflowActionsMenus();
   }
 
   function handleRootChange(event) {
@@ -229,6 +273,7 @@ export function createRootEvents({
   function bindRootEvents() {
     root.addEventListener('click', handleRootClick);
     root.addEventListener('change', handleRootChange);
+    document.addEventListener('click', handleDocumentClick);
   }
 
   return {

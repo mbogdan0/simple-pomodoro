@@ -69,6 +69,7 @@ export function createAppRenderer({
       backgroundNotice: state.backgroundNotice,
       clock: formatClock(remainingMs),
       cycleDots: getCycleRepeatDots(session),
+      endStepEarlyDisabled: !(running || paused),
       focusTag: session.focusTag,
       focusTagOptions: FOCUS_TAGS.map((tag) => ({
         id: tag,

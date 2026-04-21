@@ -7,6 +7,7 @@ import {
   startCurrentStep,
   syncSession
 } from '../../src/core/session.js';
+import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
 function createControllerHarness(stateOverrides = {}) {
   const state = {
@@ -92,5 +93,23 @@ describe('session advancement contracts', () => {
 
     expect(harness.state.focusHistory).toHaveLength(1);
     expect(harness.persistFocusHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('suppresses completion alerts for manual early completion action', () => {
+    const settings = createDefaultSettings();
+    const running = startCurrentStep(createInitialSession(settings), 10_000);
+    const harness = createControllerHarness({
+      activeSession: running,
+      settings
+    });
+
+    harness.controller.handleLocalAction(WORKER_ACTIONS.END_STEP_EARLY, {
+      now: 70_000
+    });
+
+    expect(harness.dispatchCompletionAlerts).not.toHaveBeenCalled();
+    expect(harness.state.focusHistory).toHaveLength(1);
+    expect(harness.state.focusHistory[0]?.durationMs).toBe(60_000);
+    expect(harness.state.activeSession.status).toBe('idle');
   });
 });

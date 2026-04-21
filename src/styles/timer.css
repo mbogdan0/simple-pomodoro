@@ -183,6 +183,24 @@
   margin-left: auto;
 }
 
+.overflow-actions {
+  position: relative;
+}
+
+.overflow-actions > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.overflow-actions > summary::marker {
+  content: '';
+}
+
+.overflow-actions > summary::-webkit-details-marker {
+  display: none;
+}
+
 .action-button,
 .ghost-button {
   background: var(--surface-soft);
@@ -201,6 +219,27 @@
   background: #f6f4ef;
   border-color: transparent;
   color: #6b736d;
+}
+
+.action-button.subtle.action-button--overflow {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 46px;
+  min-height: 46px;
+  padding: 12px 14px;
+  text-decoration: none;
+}
+
+.action-button.subtle.action-button--overflow:hover {
+  background: #ece7dd;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.action-button.subtle.action-button--overflow:active {
+  transform: translateY(0.5px);
 }
 
 .action-button.subtle.action-button--pip {
@@ -236,6 +275,16 @@
   stroke-width: 1.4;
 }
 
+.action-button__icon--kebab svg {
+  display: block;
+  height: 15px;
+  width: 15px;
+}
+
+.action-button__icon--kebab circle {
+  fill: currentColor;
+}
+
 .action-button.subtle.action-button--pip:hover {
   background: transparent;
   border-color: transparent;
@@ -250,6 +299,44 @@
 
 .action-button:disabled,
 .ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.overflow-actions__menu {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 4px;
+  min-width: 210px;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+}
+
+.overflow-actions:not([open]) .overflow-actions__menu {
+  display: none;
+}
+
+.overflow-actions__item {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+  min-height: 40px;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.overflow-actions__item:hover {
+  background: #f6f4ef;
+}
+
+.overflow-actions__item:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }

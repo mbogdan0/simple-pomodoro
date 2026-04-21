@@ -10,6 +10,7 @@ import {
 import { createDefaultSettings } from '../src/core/settings.js';
 import {
   createInitialSession,
+  forceCompleteCurrentStep,
   setSessionFocusTag,
   startCurrentStep,
   syncSession
@@ -52,6 +53,29 @@ describe('focus history helpers', () => {
 
     expect(completedShortBreak.scenario[completedShortBreak.currentStepIndex].type).toBe('shortBreak');
     expect(createFocusHistoryEntry(completedShortBreak)).toBe(null);
+  });
+
+  it('stores actual elapsed duration for early-ended focus steps', () => {
+    const settings = createDefaultSettings();
+    const running = startCurrentStep(createInitialSession(settings), 10_000);
+    const earlyCompleted = forceCompleteCurrentStep(running, 70_000);
+
+    const entry = createFocusHistoryEntry(earlyCompleted);
+
+    expect(entry).toMatchObject({
+      durationMs: 60_000,
+      stepType: 'work'
+    });
+  });
+
+  it('keeps full planned duration for naturally completed focus steps', () => {
+    const settings = createDefaultSettings();
+    const running = startCurrentStep(createInitialSession(settings), 10_000);
+    const completed = syncSession(running, running.endsAt + 500);
+
+    const entry = createFocusHistoryEntry(completed);
+
+    expect(entry?.durationMs).toBe(settings.templateDurations.work);
   });
 
   it('deduplicates entries by id and supports removing single entries', () => {

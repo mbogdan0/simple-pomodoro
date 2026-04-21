@@ -86,6 +86,29 @@ export function resumeSession(session, now = Date.now()) {
   };
 }
 
+export function forceCompleteCurrentStep(session, now = Date.now()) {
+  if (!session || (session.status !== 'running' && session.status !== 'paused')) {
+    return session;
+  }
+
+  const remainingMs = getRemainingMs(session, now);
+
+  if (session.status === 'running' && remainingMs <= 0) {
+    return syncSession(session, now);
+  }
+
+  return {
+    ...session,
+    alertsDispatched: false,
+    completedInBackground: false,
+    endsAt: session.endsAt,
+    finishedAt: now,
+    remainingMsAtPause: remainingMs,
+    status: 'completed_waiting_next',
+    updatedAt: now
+  };
+}
+
 export function resetCurrentStep(session, now = Date.now()) {
   return {
     ...session,

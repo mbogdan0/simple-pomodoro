@@ -31,4 +31,28 @@
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .action-row {
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .action-row__left,
+  .action-row__right {
+    width: auto;
+  }
+
+  .action-row__left {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+  }
+
+  .action-row__left .action-button.primary {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  .action-row__right {
+    margin-left: auto;
+  }
 }

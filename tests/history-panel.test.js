@@ -18,7 +18,7 @@ describe('history panel behavior', () => {
 
     expect(html).toContain('Focus History');
     expect(html).toContain('history-list');
-    expect(html).toContain('25 min');
+    expect(html).toContain('25:00');
     expect(html).toContain('history-tag--none');
     expect(html).toContain('data-action="clear-history-entry"');
     expect(html).toContain('data-entry-id="focus-1:1713000000000"');
