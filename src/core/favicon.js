@@ -1,25 +1,21 @@
-import { getCurrentStep, getProgressRatio, getRemainingMs } from './session.js';
+import { getCurrentStep, getProgressRatio } from './session.js';
 
 const PALETTES = {
   completed: {
     background: '#f4efe7',
-    ring: '#2f7a54',
-    text: '#183127'
+    ring: '#2f7a54'
   },
   longBreak: {
     background: '#edf2ff',
-    ring: '#3d69c5',
-    text: '#183061'
+    ring: '#3d69c5'
   },
   shortBreak: {
     background: '#e8f5f1',
-    ring: '#2f8c73',
-    text: '#16483b'
+    ring: '#2f8c73'
   },
   work: {
     background: '#fff1eb',
-    ring: '#c85a3a',
-    text: '#552112'
+    ring: '#c85a3a'
   }
 };
 
@@ -30,28 +26,18 @@ export function createFaviconModel(session, now = Date.now()) {
     return {
       background: PALETTES.work.background,
       progress: 0,
-      ring: PALETTES.work.ring,
-      text: 'T',
-      textColor: PALETTES.work.text
+      ring: PALETTES.work.ring
     };
   }
 
   const palette = session.status === 'completed_waiting_next'
     ? PALETTES.completed
     : PALETTES[step.type];
-  const remainingMs = getRemainingMs(session, now);
-  const badgeText = session.status === 'completed_waiting_next'
-    ? '✓'
-    : session.status === 'paused'
-      ? 'II'
-      : String(Math.max(1, Math.ceil(remainingMs / 60000))).slice(0, 2);
 
   return {
     background: palette.background,
     progress: getProgressRatio(session, now),
-    ring: palette.ring,
-    text: badgeText,
-    textColor: palette.text
+    ring: palette.ring
   };
 }
 
@@ -84,13 +70,6 @@ export function renderFaviconDataUrl(model, documentObject = document) {
   context.beginPath();
   context.arc(32, 32, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * model.progress);
   context.stroke();
-
-  context.fillStyle = model.textColor;
-  context.font =
-    '500 18px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(model.text, 32, 34);
 
   return canvas.toDataURL('image/png');
 }

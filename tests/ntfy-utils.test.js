@@ -31,27 +31,27 @@ describe('ntfy utils', () => {
   it('encodes non-ascii title values as RFC2047', () => {
     const options = createNtfyRequestOptions({
       body: 'Body text',
-      title: '🎯 Focus done'
+      title: '🎯 Focus'
     });
 
-    expect(options.headers.Title).toBe('=?UTF-8?B?8J+OryBGb2N1cyBkb25l?=');
+    expect(options.headers.Title).toBe('=?UTF-8?B?8J+OryBGb2N1cw==?=');
   });
 
   it('maps completion titles to one emoji by step type', () => {
-    expect(resolveNtfyCompletionTitle('work')).toBe('🎯 Focus done');
-    expect(resolveNtfyCompletionTitle('shortBreak')).toBe('☕ Short Break done');
-    expect(resolveNtfyCompletionTitle('longBreak')).toBe('🌴 Long Break done');
+    expect(resolveNtfyCompletionTitle('work')).toBe('🎯 Focus');
+    expect(resolveNtfyCompletionTitle('shortBreak')).toBe('☕ Short Break');
+    expect(resolveNtfyCompletionTitle('longBreak')).toBe('🌴 Long Break');
   });
 
-  it('builds completion payload with body and mapped title', () => {
+  it('builds completion payload with shortened body and mapped title', () => {
     expect(
       createNtfyCompletionPayload({
         body: 'Next step is ready. Press Start to continue.',
         stepType: 'shortBreak'
       })
     ).toEqual({
-      body: 'Next step is ready. Press Start to continue.',
-      title: '☕ Short Break done'
+      body: 'Next step ready. Press Start.',
+      title: '☕ Short Break'
     });
   });
 
@@ -63,8 +63,8 @@ describe('ntfy utils', () => {
     });
 
     const payload = {
-      body: 'Manual ntfy test from Simple Pomodoro Timer.',
-      title: '🧪 Simple Pomodoro Timer ntfy test'
+      body: 'Manual ntfy test.',
+      title: '🧪 ntfy test'
     };
 
     await expect(
@@ -95,7 +95,7 @@ describe('ntfy utils', () => {
 
   it('returns a stable dedicated test payload', () => {
     expect(createNtfyTestPayload()).toEqual({
-      body: 'Manual ntfy test from Simple Pomodoro Timer.',
+      body: 'Manual ntfy test.',
       title: NTFY_TEST_TITLE
     });
   });

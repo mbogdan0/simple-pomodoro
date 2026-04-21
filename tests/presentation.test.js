@@ -125,9 +125,10 @@ describe('presentation helpers', () => {
     const completed = syncSession(running, running.endsAt + 2_000);
     const completedModel = createFaviconModel(completed, completed.finishedAt);
 
-    expect(runningModel.text).toBe('25');
-    expect(pausedModel.text).toBe('II');
-    expect(completedModel.text).toBe('✓');
+    expect(runningModel.text).toBeUndefined();
+    expect(pausedModel.text).toBeUndefined();
+    expect(completedModel.text).toBeUndefined();
+    expect(pausedModel.progress).toBeGreaterThan(runningModel.progress);
     expect(completedModel.progress).toBe(1);
   });
 
@@ -163,9 +164,7 @@ describe('presentation helpers', () => {
       {
         background: '#fff',
         progress: 0.5,
-        ring: '#000',
-        text: '12',
-        textColor: '#111'
+        ring: '#000'
       },
       fakeDocument
     );

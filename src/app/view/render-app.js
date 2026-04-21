@@ -195,7 +195,7 @@ export function createAppRenderer({
   function updatePageChrome(now = Date.now()) {
     const title = formatDocumentTitle(state.activeSession, now, APP_NAME);
     const faviconModel = createFaviconModel(state.activeSession, now);
-    const signature = `${title}|${faviconModel.text}|${state.activeSession.status}|${Math.ceil(
+    const signature = `${title}|${state.activeSession.status}|${Math.ceil(
       getRemainingMs(state.activeSession, now) / 1000
     )}`;
 

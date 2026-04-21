@@ -1,6 +1,6 @@
 export const NTFY_PRIORITY = '4';
-export const NTFY_TEST_TITLE = '🧪 Simple Pomodoro Timer ntfy test';
-export const NTFY_TEST_BODY = 'Manual ntfy test from Simple Pomodoro Timer.';
+export const NTFY_TEST_TITLE = '🧪 ntfy test';
+export const NTFY_TEST_BODY = 'Manual ntfy test.';
 
 const NTFY_TITLE_EMOJI_BY_STEP_TYPE = {
   longBreak: '🌴',
@@ -12,6 +12,12 @@ const NTFY_STEP_TITLE_LABELS = {
   longBreak: 'Long Break',
   shortBreak: 'Short Break',
   work: 'Focus'
+};
+
+const NTFY_COMPLETION_BODY_SHORTENINGS = {
+  'Cycle finished. Press Start to begin a new cycle.': 'Cycle finished. Press Start.',
+  'Next step is ready. Press Start to continue.': 'Next step ready. Press Start.',
+  'Next step started automatically.': 'Next step auto-started.'
 };
 
 function normalizeHeaderValue(value = '') {
@@ -65,7 +71,15 @@ export function resolveNtfyCompletionTitle(stepType = 'work') {
   const emoji = NTFY_TITLE_EMOJI_BY_STEP_TYPE[normalizedStepType];
   const label = NTFY_STEP_TITLE_LABELS[normalizedStepType];
 
-  return `${emoji} ${label} done`;
+  return `${emoji} ${label}`;
+}
+
+function shortenNtfyCompletionBody(body = '') {
+  if (typeof body !== 'string') {
+    return '';
+  }
+
+  return NTFY_COMPLETION_BODY_SHORTENINGS[body] ?? body;
 }
 
 export function createNtfyCompletionPayload({
@@ -73,7 +87,7 @@ export function createNtfyCompletionPayload({
   stepType = 'work'
 } = {}) {
   return {
-    body: typeof body === 'string' ? body : '',
+    body: shortenNtfyCompletionBody(body),
     title: resolveNtfyCompletionTitle(stepType)
   };
 }
