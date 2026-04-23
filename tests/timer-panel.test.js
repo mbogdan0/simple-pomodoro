@@ -16,7 +16,7 @@ function createTimerModel(overrides = {}) {
     endStepEarlyDisabled: false,
     focusTag: 'work',
     focusTagOptions: [
-      { id: 'none', label: 'No tag' },
+      { id: 'none', label: 'Other' },
       { id: 'work', label: 'Work' },
       { id: 'study', label: 'Study' }
     ],

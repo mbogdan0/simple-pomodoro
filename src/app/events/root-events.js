@@ -1,4 +1,7 @@
-import { removeFocusHistoryEntry } from '../../core/focus-history.js';
+import {
+  removeFocusHistoryEntry,
+  updateFocusHistoryEntryFocusTag
+} from '../../core/focus-history.js';
 import { parseMinutesValue } from '../../core/format.js';
 import { syncIdleSessionWithSettings } from '../../core/session.js';
 import { normalizeNtfyPublishUrl, sanitizeRepeatCount } from '../../core/settings.js';
@@ -157,6 +160,7 @@ export function createRootEvents({
         break;
       case 'switch-tab':
         if (tab === 'timer' || tab === 'settings' || tab === 'history') {
+          playUiActionTone();
           state.settings.lastOpenTab = tab;
           persistSettings(state);
           renderApp();
@@ -170,6 +174,34 @@ export function createRootEvents({
         }
 
         state.focusHistory = removeFocusHistoryEntry(state.focusHistory, entryId);
+        if (state.historyTagEditEntryId === entryId) {
+          state.historyTagEditEntryId = '';
+        }
+        persistFocusHistory(state);
+        renderApp();
+        break;
+      }
+      case 'toggle-history-entry-tag-edit': {
+        const entryId = button.dataset.entryId;
+
+        if (!entryId) {
+          return;
+        }
+
+        state.historyTagEditEntryId = state.historyTagEditEntryId === entryId ? '' : entryId;
+        renderApp();
+        break;
+      }
+      case 'set-history-entry-focus-tag': {
+        const entryId = button.dataset.entryId;
+        const focusTag = button.dataset.focusTag;
+
+        if (!entryId || !focusTag) {
+          return;
+        }
+
+        state.focusHistory = updateFocusHistoryEntryFocusTag(state.focusHistory, entryId, focusTag);
+        state.historyTagEditEntryId = '';
         persistFocusHistory(state);
         renderApp();
         break;

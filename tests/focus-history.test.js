@@ -5,7 +5,8 @@ import {
   appendFocusHistoryEntry,
   createFocusHistoryEntry,
   normalizeFocusHistoryEntry,
-  removeFocusHistoryEntry
+  removeFocusHistoryEntry,
+  updateFocusHistoryEntryFocusTag
 } from '../src/core/focus-history.js';
 import { createDefaultSettings } from '../src/core/settings.js';
 import {
@@ -144,5 +145,48 @@ describe('focus history helpers', () => {
         stepType: 'work'
       })?.focusTag
     ).toBe('none');
+  });
+
+  it('updates only selected history entry tag', () => {
+    const history = [
+      {
+        completedAt: 1_720_000_000_100,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: 'focus-1',
+        stepId: 'focus-1',
+        stepType: 'work'
+      },
+      {
+        completedAt: 1_720_000_000_200,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'work',
+        id: 'focus-2',
+        stepId: 'focus-2',
+        stepType: 'work'
+      }
+    ];
+
+    const updated = updateFocusHistoryEntryFocusTag(history, 'focus-2', 'study');
+
+    expect(updated).toHaveLength(2);
+    expect(updated[0]).toMatchObject({ id: 'focus-1', focusTag: 'none' });
+    expect(updated[1]).toMatchObject({ id: 'focus-2', focusTag: 'study' });
+  });
+
+  it('does not update history tag for unknown entry id or invalid tag', () => {
+    const history = [
+      {
+        completedAt: 1_720_000_000_100,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: 'focus-1',
+        stepId: 'focus-1',
+        stepType: 'work'
+      }
+    ];
+
+    expect(updateFocusHistoryEntryFocusTag(history, 'missing', 'study')).toEqual(history);
+    expect(updateFocusHistoryEntryFocusTag(history, 'focus-1', 'deep')).toEqual(history);
   });
 });

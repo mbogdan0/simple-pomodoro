@@ -137,7 +137,11 @@ export function createAppRenderer({
                 })
               : ''
           }
-          ${activeTab === 'history' ? renderHistoryPanel(state.focusHistory) : ''}
+          ${
+            activeTab === 'history'
+              ? renderHistoryPanel(state.focusHistory, state.historyTagEditEntryId)
+              : ''
+          }
         </section>
       </main>
     `;

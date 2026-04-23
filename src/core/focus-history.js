@@ -132,3 +132,33 @@ export function removeFocusHistoryEntry(history = [], entryId) {
 
   return normalizeFocusHistory(history).filter((entry) => entry.id !== normalizedId);
 }
+
+export function updateFocusHistoryEntryFocusTag(history = [], entryId, focusTag) {
+  const normalizedHistory = normalizeFocusHistory(history);
+  const normalizedId = normalizeHistoryId(entryId);
+  const hasSupportedTag = typeof focusTag === 'string' && FOCUS_TAGS.includes(focusTag);
+
+  if (!normalizedId || !hasSupportedTag) {
+    return normalizedHistory;
+  }
+
+  let matched = false;
+  const nextHistory = normalizedHistory.map((entry) => {
+    if (entry.id !== normalizedId) {
+      return entry;
+    }
+
+    matched = true;
+
+    if (entry.focusTag === focusTag) {
+      return entry;
+    }
+
+    return {
+      ...entry,
+      focusTag
+    };
+  });
+
+  return matched ? nextHistory : normalizedHistory;
+}

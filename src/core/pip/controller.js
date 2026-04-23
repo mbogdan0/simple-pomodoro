@@ -21,6 +21,27 @@ export function createTimerPipController(options = {}) {
   let pageHideHandler = null;
   let pipWindow = null;
 
+  function scheduleHostWindowFocus() {
+    const schedule = hostWindow?.setTimeout ?? globalThis.setTimeout;
+
+    if (typeof schedule !== 'function') {
+      return;
+    }
+
+    schedule(() => {
+      try {
+        hostWindow?.focus?.();
+      } catch {
+        // Ignore focus errors (browser controls focus behavior).
+      }
+    }, 1_000);
+  }
+
+  function handlePipAction(actionCode) {
+    onAction(actionCode);
+    scheduleHostWindowFocus();
+  }
+
   function detachWindow() {
     if (pipWindow && pageHideHandler) {
       pipWindow.removeEventListener?.('pagehide', pageHideHandler);
@@ -75,7 +96,7 @@ export function createTimerPipController(options = {}) {
     const currentWindow = resolveWindow();
 
     if (currentWindow) {
-      renderInWindow(currentWindow, latestModel, onAction);
+      renderInWindow(currentWindow, latestModel, handlePipAction);
       return true;
     }
 
@@ -96,7 +117,7 @@ export function createTimerPipController(options = {}) {
           return false;
         }
 
-        renderInWindow(active, latestModel, onAction);
+        renderInWindow(active, latestModel, handlePipAction);
         return true;
       })
       .catch(() => false)
@@ -133,7 +154,7 @@ export function createTimerPipController(options = {}) {
       return false;
     }
 
-    renderInWindow(currentWindow, latestModel, onAction);
+    renderInWindow(currentWindow, latestModel, handlePipAction);
     return true;
   }
 

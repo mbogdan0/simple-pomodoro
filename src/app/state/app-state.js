@@ -13,6 +13,7 @@ export function createAppState() {
     activeSession: null,
     backgroundNotice: '',
     focusHistory: loadFocusHistory(),
+    historyTagEditEntryId: '',
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',

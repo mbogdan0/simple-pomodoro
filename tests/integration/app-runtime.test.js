@@ -24,6 +24,7 @@ function createSessionHarness(stateOverrides = {}) {
     activeSession: createInitialSession(settings),
     backgroundNotice: '',
     focusHistory: [],
+    historyTagEditEntryId: '',
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
@@ -145,10 +146,11 @@ describe('app runtime integration', () => {
     const { state } = createSessionHarness();
     const commitSession = vi.fn();
     const persistSettings = vi.fn();
+    const playUiActionTone = vi.fn();
     const rootEvents = createRootEvents({
       audioService: {
         playCompletionTone: vi.fn(() => true),
-        playUiActionTone: vi.fn()
+        playUiActionTone
       },
       commitSession,
       notificationService: {
@@ -169,17 +171,22 @@ describe('app runtime integration', () => {
 
     rootEvents.handleRootClick({
       target: {
-        closest() {
-          return {
-            dataset: {
-              action: 'switch-tab',
-              tab: 'history'
-            }
-          };
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'switch-tab',
+                tab: 'history'
+              }
+            };
+          }
+
+          return null;
         }
       }
     });
     expect(state.settings.lastOpenTab).toBe('history');
+    expect(playUiActionTone).toHaveBeenCalledTimes(1);
 
     const repeatInput = new FakeHTMLElement();
     repeatInput.matches = (selector) => selector === '[data-repeat-count]';
@@ -375,5 +382,90 @@ describe('app runtime integration', () => {
     });
 
     expect(playUiActionTone).toHaveBeenCalledTimes(1);
+  });
+
+  it('toggles and applies inline history tag edit actions', () => {
+    const persistFocusHistory = vi.fn();
+    const renderApp = vi.fn();
+    const { state } = createSessionHarness({
+      focusHistory: [
+        {
+          completedAt: 1_720_000_000_000,
+          durationMs: 25 * 60 * 1000,
+          focusTag: 'none',
+          id: 'focus-1',
+          stepId: 'focus-1',
+          stepType: 'work'
+        }
+      ]
+    });
+
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone: vi.fn()
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory,
+      persistSettings: vi.fn(),
+      postWorkerAction: vi.fn(),
+      renderApp,
+      root: {
+        addEventListener: vi.fn(),
+        querySelectorAll() {
+          return [];
+        }
+      },
+      state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'toggle-history-entry-tag-edit',
+                entryId: 'focus-1'
+              }
+            };
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyTagEditEntryId).toBe('focus-1');
+    expect(persistFocusHistory).not.toHaveBeenCalled();
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'set-history-entry-focus-tag',
+                entryId: 'focus-1',
+                focusTag: 'study'
+              }
+            };
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.focusHistory[0].focusTag).toBe('study');
+    expect(state.historyTagEditEntryId).toBe('');
+    expect(persistFocusHistory).toHaveBeenCalledTimes(1);
+    expect(renderApp).toHaveBeenCalledTimes(2);
   });
 });

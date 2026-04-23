@@ -48,8 +48,10 @@ describe('history panel behavior', () => {
     expect(html).toContain('history-tag--none');
     expect(html).toContain('history-tag--study');
     expect(html).toContain('history-tag--work');
+    expect(html).toContain('Other');
     expect((html.match(/class="history-day-group"/g) ?? []).length).toBe(2);
     expect((html.match(/data-action="clear-history-entry"/g) ?? []).length).toBe(3);
+    expect((html.match(/data-action="toggle-history-entry-tag-edit"/g) ?? []).length).toBe(3);
     expect(html).toContain('data-entry-id="focus-1"');
     expect(html).toContain('data-entry-id="focus-2"');
     expect(html).toContain('data-entry-id="focus-3"');
@@ -63,5 +65,28 @@ describe('history panel behavior', () => {
 
     expect(html).toContain('No completed focus sessions yet.');
     expect(html).not.toContain('history-list');
+  });
+
+  it('renders inline history tag choices for selected editing entry', () => {
+    const completedAt = new Date(2026, 3, 20, 18, 30, 0).getTime();
+    const html = renderHistoryPanel(
+      [
+        {
+          completedAt,
+          durationMs: 40 * 60 * 1000,
+          focusTag: 'work',
+          id: 'focus-1',
+          stepId: 'focus-1',
+          stepType: 'work'
+        }
+      ],
+      'focus-1'
+    );
+
+    expect((html.match(/data-action="set-history-entry-focus-tag"/g) ?? []).length).toBe(3);
+    expect(html).toContain('data-focus-tag="none"');
+    expect(html).toContain('data-focus-tag="work"');
+    expect(html).toContain('data-focus-tag="study"');
+    expect(html).not.toContain('data-action="toggle-history-entry-tag-edit"');
   });
 });

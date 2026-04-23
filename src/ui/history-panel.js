@@ -1,4 +1,4 @@
-import { FOCUS_TAG_LABELS } from '../core/constants.js';
+import { FOCUS_TAG_LABELS, FOCUS_TAGS } from '../core/constants.js';
 import { formatClock } from '../core/format.js';
 
 const HISTORY_DAY_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -70,11 +70,53 @@ function groupHistoryEntriesByDay(historyEntries = []) {
   return groups;
 }
 
-function renderHistoryItem(entry) {
+function resolveFocusTag(value) {
+  return FOCUS_TAG_LABELS[value] ? value : 'none';
+}
+
+function renderHistoryTagOptions(entryId, activeTag) {
+  return `
+    <div class="history-tag-editor history-tag-editor--editing" aria-label="Edit focus tag" role="group">
+      ${FOCUS_TAGS.map((tag) => {
+        const isActive = tag === activeTag;
+
+        return `
+          <button
+            class="history-tag history-tag--${tag} history-tag-option ${isActive ? 'is-active' : ''}"
+            data-action="set-history-entry-focus-tag"
+            data-entry-id="${entryId}"
+            data-focus-tag="${tag}"
+            aria-pressed="${isActive ? 'true' : 'false'}"
+            type="button"
+          >
+            ${FOCUS_TAG_LABELS[tag]}
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderHistoryTagReadOnly(entryId, focusTag) {
+  return `
+    <div class="history-tag-editor">
+      <span class="history-tag history-tag--${focusTag}">${FOCUS_TAG_LABELS[focusTag]}</span>
+      <button
+        class="history-tag-edit-button"
+        data-action="toggle-history-entry-tag-edit"
+        data-entry-id="${entryId}"
+        type="button"
+      >
+        Edit
+      </button>
+    </div>
+  `;
+}
+
+function renderHistoryItem(entry, historyTagEditEntryId = '') {
   const date = new Date(entry.completedAt);
-  const requestedTag = typeof entry.focusTag === 'string' ? entry.focusTag : 'none';
-  const focusTag = FOCUS_TAG_LABELS[requestedTag] ? requestedTag : 'none';
-  const focusTagLabel = FOCUS_TAG_LABELS[focusTag];
+  const focusTag = resolveFocusTag(entry.focusTag);
+  const isEditingTag = entry.id === historyTagEditEntryId;
 
   return `
     <li class="history-item">
@@ -82,7 +124,11 @@ function renderHistoryItem(entry) {
         <time class="history-item-date" datetime="${date.toISOString()}">${formatCompletedAt(entry.completedAt)}</time>
         <div class="history-item-details">
           <p class="history-item-duration">${formatFocusDuration(entry.durationMs)}</p>
-          <span class="history-tag history-tag--${focusTag}">${focusTagLabel}</span>
+          ${
+            isEditingTag
+              ? renderHistoryTagOptions(entry.id, focusTag)
+              : renderHistoryTagReadOnly(entry.id, focusTag)
+          }
         </div>
       </div>
       <button
@@ -97,7 +143,7 @@ function renderHistoryItem(entry) {
   `;
 }
 
-function renderHistoryDayGroup(group) {
+function renderHistoryDayGroup(group, historyTagEditEntryId = '') {
   return `
     <li class="history-day-group">
       <header class="history-day-header">
@@ -105,13 +151,13 @@ function renderHistoryDayGroup(group) {
         <p class="history-day-total">${formatDailyFocusTotal(group.totalDurationMs)}</p>
       </header>
       <ul class="history-day-list">
-        ${group.entries.map((entry) => renderHistoryItem(entry)).join('')}
+        ${group.entries.map((entry) => renderHistoryItem(entry, historyTagEditEntryId)).join('')}
       </ul>
     </li>
   `;
 }
 
-export function renderHistoryPanel(historyEntries = []) {
+export function renderHistoryPanel(historyEntries = [], historyTagEditEntryId = '') {
   if (!historyEntries.length) {
     return `
       <section class="panel history-layout" id="panel-history" aria-label="History panel" role="region">
@@ -129,7 +175,11 @@ export function renderHistoryPanel(historyEntries = []) {
         <h2>Focus History</h2>
       </div>
       <ul class="history-list">
-        ${groupHistoryEntriesByDay(historyEntries).map((group) => renderHistoryDayGroup(group)).join('')}
+        ${
+          groupHistoryEntriesByDay(historyEntries)
+            .map((group) => renderHistoryDayGroup(group, historyTagEditEntryId))
+            .join('')
+        }
       </ul>
     </section>
   `;

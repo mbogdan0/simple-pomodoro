@@ -44,7 +44,7 @@ export const STATUS_LABELS = {
 export const FOCUS_TAGS = ['none', 'work', 'study'];
 
 export const FOCUS_TAG_LABELS = {
-  none: 'No tag',
+  none: 'Other',
   study: 'Study',
   work: 'Work'
 };

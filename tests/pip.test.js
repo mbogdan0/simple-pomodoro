@@ -176,6 +176,39 @@ describe('picture-in-picture controller', () => {
     expect(onAction).toHaveBeenNthCalledWith(2, 'RESUME');
   });
 
+  it('refocuses host window 1 second after PiP action click', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const pipWindow = createFakePipWindow();
+      const hostWindow = createHostWindow({ pipWindow });
+      hostWindow.focus = vi.fn();
+      const onAction = vi.fn();
+      const controller = createTimerPipController({ hostWindow, onAction });
+
+      await controller.openFromUserGesture();
+      controller.update({
+        clock: '20:00',
+        progressPercent: 10,
+        status: 'running',
+        stepLabel: 'Focus'
+      });
+
+      pipWindow.button.click();
+
+      expect(onAction).toHaveBeenCalledWith('PAUSE');
+      expect(hostWindow.focus).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(999);
+      expect(hostWindow.focus).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(hostWindow.focus).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('applies provided accent and track colors to PiP progress', async () => {
     const pipWindow = createFakePipWindow();
     const hostWindow = createHostWindow({ pipWindow });
