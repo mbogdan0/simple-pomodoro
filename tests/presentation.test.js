@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createFaviconModel, renderFaviconDataUrl } from '../src/core/favicon.js';
 import {
   formatClock,
+  formatCompactElapsed,
   formatDocumentTitle,
   formatNotificationPermissionLabel,
   formatPipClock
@@ -25,6 +26,12 @@ describe('presentation helpers', () => {
     expect(formatNotificationPermissionLabel('granted')).toBe('Allowed');
     expect(formatNotificationPermissionLabel('default')).toBe('Not allowed');
     expect(formatNotificationPermissionLabel('unsupported')).toBe('Unavailable');
+  });
+
+  it('formats compact elapsed idle delay text', () => {
+    expect(formatCompactElapsed(5_000)).toBe('0m 05s');
+    expect(formatCompactElapsed(70_000)).toBe('1m 10s');
+    expect(formatCompactElapsed(3_661_000)).toBe('1h 01m 01s');
   });
 
   it('keeps PiP clock format unchanged when 10-second ticking is disabled', () => {

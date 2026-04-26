@@ -156,7 +156,16 @@ export function renderTimerPanel(timerModel) {
         aria-live="polite"
         role="status"
       >
-        ${timerModel.statusText}
+        <span data-live-status-text>${timerModel.statusText}</span>
+        ${
+          timerModel.statusDetailText
+            ? `
+              <span class="status-detail" aria-live="off">
+                <span data-live-status-detail>${timerModel.statusDetailText}</span>
+              </span>
+            `
+            : ''
+        }
       </p>
 
       <div class="action-row">

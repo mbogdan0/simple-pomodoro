@@ -9,6 +9,7 @@ export function createLifecycleSync({
   reconcileSession,
   renderApp,
   restoreSessionFromStorage,
+  syncIdleReminder = () => {},
   syncWorkerNow,
   updatePageChrome
 }) {
@@ -19,6 +20,7 @@ export function createLifecycleSync({
 
     if (event.key === STORAGE_KEYS.settings) {
       state.settings = loadSettings();
+      syncIdleReminder();
 
       if (state.activeSession.status === 'idle' && state.activeSession.currentStepIndex === 0) {
         const syncedIdleSession = syncIdleSessionWithSettings(

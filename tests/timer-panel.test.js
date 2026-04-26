@@ -29,6 +29,7 @@ function createTimerModel(overrides = {}) {
     progressTrack: '#ede7de',
     resetDisabled: false,
     showPipToggle: true,
+    statusDetailText: '',
     statusText: 'Ready',
     stepCurrent: 1,
     stepLabel: 'Focus',
@@ -70,5 +71,19 @@ describe('timer panel behavior', () => {
     const html = renderTimerPanel(createTimerModel({ endStepEarlyDisabled: true }));
 
     expect(html).toMatch(/data-action="end-step-early"[^>]*disabled/);
+  });
+
+  it('renders status detail only when the model provides it', () => {
+    expect(renderTimerPanel(createTimerModel())).not.toContain('data-live-status-detail');
+
+    const html = renderTimerPanel(
+      createTimerModel({
+        statusDetailText: '1m 10s'
+      })
+    );
+
+    expect(html).toContain('data-live-status-detail');
+    expect(html).toContain('data-live-status-text');
+    expect(html).toContain('1m 10s');
   });
 });

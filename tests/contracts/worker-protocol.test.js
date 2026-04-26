@@ -43,11 +43,13 @@ describe('worker protocol contracts', () => {
       'RESET_ALL',
       'RESUME',
       'SET_FOCUS_TAG',
+      'SET_IDLE_REMINDER',
       'START_STEP',
       'SYNC_NOW'
     ]);
     expect(Object.values(WORKER_MESSAGE_TYPES)).toEqual([
       'ERROR',
+      'IDLE_REMINDER',
       'STATE',
       'STEP_FINISHED',
       'TICK'

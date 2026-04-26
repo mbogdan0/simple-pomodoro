@@ -63,6 +63,7 @@ export function startApp(root) {
   const notificationService = createNotificationService({
     ensureServiceWorkerRegistration,
     playCompletionTone: () => audioService.playCompletionTone(),
+    playUiActionTone: (soundEnabled) => audioService.playUiActionTone(soundEnabled),
     state
   });
   let postWorkerAction = () => {};
@@ -123,6 +124,7 @@ export function startApp(root) {
   });
   const workerBridge = createWorkerBridge({
     handleLocalAction: sessionController.handleLocalAction,
+    onIdleReminder: (now) => notificationService.dispatchIdleReminder(now),
     onWorkerMissing: renderer.renderApp,
     onWorkerState({ completionKey, reason, session, type }) {
       sessionController.commitSession(session, {
@@ -163,6 +165,11 @@ export function startApp(root) {
     renderApp: renderer.renderApp,
     restoreSessionFromStorage: sessionController.restoreSessionFromStorage,
     state,
+    syncIdleReminder: () => {
+      workerBridge.postWorkerAction(WORKER_ACTIONS.SET_IDLE_REMINDER, {
+        enabled: state.settings.idleReminderEnabled
+      });
+    },
     syncWorkerNow: workerBridge.syncWorkerNow,
     updatePageChrome: renderer.updatePageChrome
   });
@@ -185,6 +192,7 @@ export function startApp(root) {
       sessionController.reconcileSession();
       renderer.updateTimerLiveRegion(now);
       renderer.updatePageChrome(now);
+      notificationService.maybeDispatchIdleReminder(now);
     }, 500);
   }
 
@@ -199,6 +207,9 @@ export function startApp(root) {
   audioService.primeOnGesture();
   void registerServiceWorker();
   workerBridge.setupWorker();
+  workerBridge.postWorkerAction(WORKER_ACTIONS.SET_IDLE_REMINDER, {
+    enabled: state.settings.idleReminderEnabled
+  });
   startSafetyInterval();
   lifecycleSync.bindGlobalEvents();
   rootEvents.bindRootEvents();

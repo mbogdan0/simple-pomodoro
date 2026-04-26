@@ -1,6 +1,7 @@
 import {
   DEFAULT_ALERT_SETTINGS,
   DEFAULT_AUTO_START_NEXT_STEP,
+  DEFAULT_IDLE_REMINDER_ENABLED,
   DEFAULT_PIP_CLOCK_TICK_EVERY_10S,
   DEFAULT_REPEAT_COUNT,
   DEFAULT_TEMPLATE_DURATIONS_MS,
@@ -122,6 +123,10 @@ export function normalizeSettings(rawSettings = {}) {
       typeof rawSettings.autoStartNextStep === 'boolean'
         ? rawSettings.autoStartNextStep
         : DEFAULT_AUTO_START_NEXT_STEP,
+    idleReminderEnabled:
+      typeof rawSettings.idleReminderEnabled === 'boolean'
+        ? rawSettings.idleReminderEnabled
+        : DEFAULT_IDLE_REMINDER_ENABLED,
     lastOpenTab: supportedTabs.includes(rawSettings.lastOpenTab)
       ? rawSettings.lastOpenTab
       : 'timer',

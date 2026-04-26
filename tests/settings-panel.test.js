@@ -29,6 +29,36 @@ describe('settings panel behavior', () => {
     expect(html).toContain('data-repeat-count');
   });
 
+  it('hides notification permission action when notifications are already allowed', () => {
+    const html = renderSettingsPanel(
+      createModel({
+        notificationSupport: {
+          hasNotificationApi: true,
+          permissionState: 'granted',
+          unsupported: false
+        }
+      })
+    );
+
+    expect(html).not.toContain('data-action="request-notification-permission"');
+    expect(html).not.toContain('Allow notifications');
+  });
+
+  it('shows notification permission action when notifications are not allowed yet', () => {
+    const html = renderSettingsPanel(
+      createModel({
+        notificationSupport: {
+          hasNotificationApi: true,
+          permissionState: 'default',
+          unsupported: false
+        }
+      })
+    );
+
+    expect(html).toContain('data-action="request-notification-permission"');
+    expect(html).toContain('Allow notifications');
+  });
+
   it('disables ntfy test action when publish URL is missing', () => {
     const html = renderSettingsPanel(
       createModel({

@@ -156,8 +156,19 @@
 }
 
 .timer-status {
+  align-items: baseline;
   color: var(--muted);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
   margin: 0;
+}
+
+.status-detail {
+  color: #9aa39e;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .action-row {

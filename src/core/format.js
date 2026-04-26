@@ -15,6 +15,21 @@ export function formatClock(totalMs) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+export function formatCompactElapsed(totalMs) {
+  const totalSeconds = Math.max(0, Math.floor(totalMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const minuteText = hours > 0 ? String(minutes).padStart(2, '0') : String(minutes);
+  const secondText = String(seconds).padStart(2, '0');
+
+  if (hours > 0) {
+    return `${hours}h ${minuteText}m ${secondText}s`;
+  }
+
+  return `${minuteText}m ${secondText}s`;
+}
+
 function toWholeSeconds(valueMs) {
   const parsed = Number(valueMs);
   return Number.isFinite(parsed) ? Math.max(0, Math.ceil(parsed / 1000)) : null;

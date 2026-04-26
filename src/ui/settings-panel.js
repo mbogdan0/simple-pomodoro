@@ -13,8 +13,12 @@ export function renderSettingsPanel({
 }) {
   const resolvedNotificationSupport = {
     hasNotificationApi: Boolean(notificationSupport.hasNotificationApi),
+    permissionState: notificationSupport.permissionState,
     unsupported: Boolean(notificationSupport.unsupported)
   };
+  const canRequestNotificationPermission =
+    resolvedNotificationSupport.hasNotificationApi &&
+    resolvedNotificationSupport.permissionState !== 'granted';
   const sessionLocked = ['running', 'paused'].includes(sessionStatus);
   const hasNtfyPublishUrl = Boolean(settings?.ntfyPublishUrl);
 
@@ -115,7 +119,7 @@ export function renderSettingsPanel({
           </label>
           <div class="settings-actions">
             ${
-              resolvedNotificationSupport.hasNotificationApi
+              canRequestNotificationPermission
                 ? `
                   <button class="ghost-button" data-action="request-notification-permission" type="button">
                     Allow notifications
@@ -147,6 +151,20 @@ export function renderSettingsPanel({
               : ''
           }
         </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-heading">
+          <h2>Reminders</h2>
+        </div>
+        <label class="toggle-row">
+          <span>Idle reminder (every minute)</span>
+          <input
+            ${settings.idleReminderEnabled ? 'checked' : ''}
+            data-setting-toggle="idleReminderEnabled"
+            type="checkbox"
+          >
+        </label>
       </div>
 
       <div class="panel-section">

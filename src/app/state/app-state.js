@@ -14,12 +14,15 @@ export function createAppState() {
     backgroundNotice: '',
     focusHistory: loadFocusHistory(),
     historyTagEditEntryId: '',
+    idleStartedAt: null,
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
+    lastIdleReminderAt: Date.now(),
     manualPipRequested: false,
     notificationNotice: '',
     ntfyNotice: '',
+    pauseStartedAt: null,
     serviceWorkerReady: false,
     settings: loadSettings()
   };

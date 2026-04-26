@@ -302,6 +302,16 @@ export function createRootEvents({
         state.settings.pipClockTickEvery10s = target.checked;
         persistSettings(state);
         renderApp();
+        return;
+      }
+
+      if (key === 'idleReminderEnabled') {
+        state.settings.idleReminderEnabled = target.checked;
+        persistSettings(state);
+        postWorkerAction(WORKER_ACTIONS.SET_IDLE_REMINDER, {
+          enabled: state.settings.idleReminderEnabled
+        });
+        renderApp();
       }
     }
   }

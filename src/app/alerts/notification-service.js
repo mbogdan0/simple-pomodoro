@@ -11,10 +11,13 @@ import {
   sendNtfyPush
 } from '../../utils/ntfy.js';
 
+const IDLE_REMINDER_INTERVAL_MS = 60_000;
+
 export function createNotificationService({
   state,
   ensureServiceWorkerRegistration,
-  playCompletionTone
+  playCompletionTone,
+  playUiActionTone = () => false
 }) {
   function getNotificationSupportModel() {
     const hasNotificationApi = typeof window.Notification === 'function';
@@ -153,6 +156,36 @@ export function createNotificationService({
     });
   }
 
+  function dispatchIdleReminder(now = Date.now()) {
+    if (state.activeSession?.status !== 'idle' || !state.settings.idleReminderEnabled) {
+      return;
+    }
+
+    if (now - state.lastIdleReminderAt < IDLE_REMINDER_INTERVAL_MS) return;
+
+    state.lastIdleReminderAt = now;
+
+    playUiActionTone(state.settings.alertSettings.soundEnabled);
+
+    if (state.settings.alertSettings.notificationsEnabled) {
+      void sendNotificationWithFallback({
+        body: 'Press Start when you are ready to focus.',
+        silent: true,
+        tag: buildNotificationTag('idle-reminder', String(Math.floor(now / 60_000))),
+        title: 'Timer is idle ⏸'
+      });
+    }
+  }
+
+  function maybeDispatchIdleReminder(now = Date.now()) {
+    if (state.activeSession?.status !== 'idle' || !state.settings.idleReminderEnabled) {
+      state.lastIdleReminderAt = now;
+      return;
+    }
+
+    dispatchIdleReminder(now);
+  }
+
   function requestNotificationPermission() {
     const notificationSupport = getNotificationSupportModel();
 
@@ -209,8 +242,10 @@ export function createNotificationService({
 
   return {
     dispatchCompletionAlerts,
+    dispatchIdleReminder,
     getNotificationSupportModel,
     maybeDispatchFocusMinuteReminder,
+    maybeDispatchIdleReminder,
     requestNotificationPermission,
     sendNotificationWithFallback,
     testNotification,

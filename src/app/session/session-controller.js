@@ -9,6 +9,7 @@ import {
 import {
   advanceAfterCompletion,
   forceCompleteCurrentStep,
+  getCurrentStep,
   markAlertsDispatched,
   normalizeSession,
   pauseSession,
@@ -21,6 +22,14 @@ import {
 } from '../../core/session.js';
 import { loadActiveSession } from '../../core/storage.js';
 import { WORKER_ACTIONS } from '../../core/worker-protocol.js';
+
+function createIdleStepKey(session) {
+  if (session?.status !== 'idle') {
+    return '';
+  }
+
+  return `${session.currentStepIndex}:${getCurrentStep(session)?.id ?? ''}`;
+}
 
 export function createSessionController({
   state,
@@ -59,6 +68,8 @@ export function createSessionController({
       syncWorker = false
     } = options;
 
+    const previousSession = state.activeSession;
+    const committedAt = Date.now();
     let session = normalizeSession(nextSession, state.settings);
 
     if (session.status === 'completed_waiting_next') {
@@ -80,10 +91,32 @@ export function createSessionController({
         state.lastCompletionKey = completionKey;
       }
 
-      session = advanceAfterCompletion(session, state.settings, Date.now());
+      session = advanceAfterCompletion(session, state.settings, committedAt);
     }
 
     state.activeSession = session;
+
+    if (session.status === 'idle') {
+      const previousIdleStepKey = createIdleStepKey(previousSession);
+      const nextIdleStepKey = createIdleStepKey(session);
+
+      if (
+        previousIdleStepKey !== nextIdleStepKey ||
+        !Number.isFinite(state.idleStartedAt)
+      ) {
+        state.idleStartedAt = committedAt;
+      }
+    } else {
+      state.idleStartedAt = null;
+    }
+
+    if (session.status === 'paused') {
+      if (previousSession?.status !== 'paused' || !Number.isFinite(state.pauseStartedAt)) {
+        state.pauseStartedAt = committedAt;
+      }
+    } else {
+      state.pauseStartedAt = null;
+    }
 
     if (persist) {
       persistSession(state);

@@ -9,6 +9,7 @@ import {
 import { createFaviconModel, renderFaviconDataUrl } from '../../core/favicon.js';
 import {
   formatClock,
+  formatCompactElapsed,
   formatDocumentTitle,
   formatNotificationPermissionLabel,
   formatStepTypeLabel,
@@ -61,6 +62,14 @@ export function createAppRenderer({
     const progress = getProgressRatio(session, now);
     const { focusRepeatCurrent, focusRepeatTotal } = getFocusRepeatProgress(session);
     const { stepCurrent, stepTotal } = getStepProgress(session);
+    const statusDetailText =
+      state.settings.idleReminderEnabled &&
+      session.status === 'idle' &&
+      Number.isFinite(state.idleStartedAt)
+        ? formatCompactElapsed(now - state.idleStartedAt)
+        : paused && Number.isFinite(state.pauseStartedAt)
+          ? formatCompactElapsed(now - state.pauseStartedAt)
+          : '';
 
     return {
       accent: palette.accent,
@@ -84,6 +93,7 @@ export function createAppRenderer({
       progressTrack: PROGRESS_TRACK_COLOR,
       progressPercent: Math.round(progress * 100),
       resetDisabled: !canResetSession(session),
+      statusDetailText,
       statusText: formatStatusLabel(session.status),
       step,
       stepCurrent,
@@ -156,16 +166,24 @@ export function createAppRenderer({
     const cycleProgressElement = root.querySelector('[data-live-cycle-progress]');
     const progressBarElement = root.querySelector('[data-live-progress]');
     const statusElement = root.querySelector('[data-live-status]');
+    const statusTextElement = root.querySelector('[data-live-status-text]');
     const stepLabelElement = root.querySelector('[data-live-step-label]');
     const repeatMetaElement = root.querySelector('[data-live-repeat-meta]');
     const progressFillElement = root.querySelector('[data-live-progress-fill]');
+    const statusDetailElement = root.querySelector('[data-live-status-detail]');
 
     if (clockElement) {
       clockElement.textContent = timerModel.clock;
     }
 
-    if (statusElement) {
+    if (statusTextElement) {
+      statusTextElement.textContent = timerModel.statusText;
+    } else if (statusElement) {
       statusElement.textContent = timerModel.statusText;
+    }
+
+    if (statusDetailElement) {
+      statusDetailElement.textContent = timerModel.statusDetailText;
     }
 
     if (stepLabelElement) {

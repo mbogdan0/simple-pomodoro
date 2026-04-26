@@ -13,10 +13,14 @@ import {
 } from './core/session.js';
 import { WORKER_ACTIONS, WORKER_MESSAGE_TYPES } from './core/worker-protocol.js';
 
+const IDLE_REMINDER_INTERVAL_MS = 60_000;
+
 let session = null;
 let completionWatchdogHandle = null;
 let lastCompletionKey = '';
 let tickHandle = null;
+let idleReminderEnabled = false;
+let idleReminderHandle = null;
 
 function emit(type, nextSession, extra = {}) {
   self.postMessage({
@@ -38,6 +42,28 @@ function stopTicker() {
     clearInterval(tickHandle);
     tickHandle = null;
   }
+}
+
+function stopIdleReminder() {
+  if (idleReminderHandle) {
+    clearTimeout(idleReminderHandle);
+    idleReminderHandle = null;
+  }
+}
+
+function scheduleIdleReminder() {
+  stopIdleReminder();
+
+  if (!idleReminderEnabled) return;
+  if (!session || session.status !== 'idle') return;
+
+  idleReminderHandle = setTimeout(() => {
+    self.postMessage({
+      now: Date.now(),
+      type: WORKER_MESSAGE_TYPES.IDLE_REMINDER
+    });
+    scheduleIdleReminder();
+  }, IDLE_REMINDER_INTERVAL_MS);
 }
 
 function stopTimers() {
@@ -82,6 +108,7 @@ function syncAndEmit(now = Date.now(), emitTick = false) {
     return;
   }
 
+  const previousStatus = session.status;
   session = syncSession(session, now);
 
   if (session.status === 'running') {
@@ -95,6 +122,10 @@ function syncAndEmit(now = Date.now(), emitTick = false) {
 
   if (session.status !== 'running') {
     stopTimers();
+  }
+
+  if (session.status !== previousStatus) {
+    scheduleIdleReminder();
   }
 
   emit(emitTick ? WORKER_MESSAGE_TYPES.TICK : WORKER_MESSAGE_TYPES.STATE, session, {
@@ -130,6 +161,8 @@ function replaceSession(nextSession, reason = 'init') {
     stopTimers();
   }
 
+  scheduleIdleReminder();
+
   if (emitCompletionIfNeeded()) {
     return;
   }
@@ -146,6 +179,12 @@ self.onmessage = ({ data }) => {
       return;
     }
 
+    if (type === WORKER_ACTIONS.SET_IDLE_REMINDER) {
+      idleReminderEnabled = Boolean(payload.enabled);
+      scheduleIdleReminder();
+      return;
+    }
+
     if (!session) {
       emit(WORKER_MESSAGE_TYPES.ERROR, session, { error: 'Worker is not initialized yet.' });
       return;
@@ -157,6 +196,7 @@ self.onmessage = ({ data }) => {
       case WORKER_ACTIONS.END_STEP_EARLY:
         session = forceCompleteCurrentStep(session, now);
         stopTimers();
+        scheduleIdleReminder();
         if (emitCompletionIfNeeded('manual_early')) {
           break;
         }
@@ -165,6 +205,7 @@ self.onmessage = ({ data }) => {
       case WORKER_ACTIONS.PAUSE:
         session = pauseSession(session, now);
         stopTimers();
+        scheduleIdleReminder();
         emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'pause' });
         break;
       case WORKER_ACTIONS.RESET_ALL:
@@ -173,16 +214,19 @@ self.onmessage = ({ data }) => {
           session = syncIdleSessionWithSettings(session, payload.settings, now);
         }
         stopTimers();
+        scheduleIdleReminder();
         emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'reset-all' });
         break;
       case WORKER_ACTIONS.RESUME:
         session = resumeSession(session, now);
         startTicker();
+        scheduleIdleReminder();
         emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'resume' });
         break;
       case WORKER_ACTIONS.START_STEP:
         session = prepareSessionForStepStart(session, payload.settings, now);
         startTicker();
+        scheduleIdleReminder();
         emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'start' });
         break;
       case WORKER_ACTIONS.SET_FOCUS_TAG:

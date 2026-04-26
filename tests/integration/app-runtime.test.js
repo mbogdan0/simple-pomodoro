@@ -200,6 +200,60 @@ describe('app runtime integration', () => {
     expect(commitSession).toHaveBeenCalled();
   });
 
+  it('toggles idle reminders and syncs the worker setting', () => {
+    class FakeHTMLElement {
+      constructor() {
+        this.checked = false;
+        this.dataset = {};
+      }
+    }
+    class FakeHTMLInputElement extends FakeHTMLElement {}
+    globalThis.HTMLElement = FakeHTMLElement;
+    globalThis.HTMLInputElement = FakeHTMLInputElement;
+
+    const { state } = createSessionHarness();
+    const persistSettings = vi.fn();
+    const postWorkerAction = vi.fn();
+    const renderApp = vi.fn();
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone: vi.fn()
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory: vi.fn(),
+      persistSettings,
+      postWorkerAction,
+      renderApp,
+      root: {
+        addEventListener: vi.fn()
+      },
+      state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    const idleReminderInput = new FakeHTMLInputElement();
+    idleReminderInput.checked = true;
+    idleReminderInput.dataset.settingToggle = 'idleReminderEnabled';
+    idleReminderInput.matches = (selector) => selector === '[data-setting-toggle]';
+
+    rootEvents.handleRootChange({
+      target: idleReminderInput
+    });
+
+    expect(state.settings.idleReminderEnabled).toBe(true);
+    expect(persistSettings).toHaveBeenCalledTimes(1);
+    expect(postWorkerAction).toHaveBeenCalledWith(WORKER_ACTIONS.SET_IDLE_REMINDER, {
+      enabled: true
+    });
+    expect(renderApp).toHaveBeenCalledTimes(1);
+  });
+
   it('confirms end-step-early action and dispatches worker command', () => {
     const postWorkerAction = vi.fn();
     const confirmSpy = vi.fn(() => true);

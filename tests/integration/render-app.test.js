@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRenderer } from '../../src/app/view/render-app.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import { createInitialSession, startCurrentStep } from '../../src/core/session.js';
+import { createInitialSession, pauseSession, startCurrentStep } from '../../src/core/session.js';
 
 const originalDocument = globalThis.document;
 
@@ -82,6 +82,8 @@ function createLiveElementMap() {
     '[data-live-progress-fill]': { style: {} },
     '[data-live-repeat-meta]': { textContent: '' },
     '[data-live-status]': { textContent: '' },
+    '[data-live-status-detail]': { textContent: '' },
+    '[data-live-status-text]': { textContent: '' },
     '[data-live-step-label]': { textContent: '' }
   };
 }
@@ -143,7 +145,7 @@ describe('render app integration', () => {
     expect(root.innerHTML).toMatch(/data-action="reset-session"(?![^>]*disabled)/);
     expect(root.innerHTML).toMatch(/data-action="end-step-early"(?![^>]*disabled)/);
     expect(liveElements['[data-live-clock]'].textContent).toMatch(/\d{2}:\d{2}/);
-    expect(liveElements['[data-live-status]'].textContent).toBe('Running');
+    expect(liveElements['[data-live-status-text]'].textContent).toBe('Running');
     expect(liveElements['[data-live-progress]'].attrs['aria-valuenow']).toBeDefined();
     expect(liveElements['[data-live-progress-fill]'].style.width).toMatch(/%/);
     expect(documentStub.title).toContain('Focus');
@@ -190,5 +192,105 @@ describe('render app integration', () => {
 
     expect(root.innerHTML).toMatch(/data-action="reset-session"[^>]*disabled/);
     expect(root.innerHTML).toMatch(/data-action="end-step-early"[^>]*disabled/);
+  });
+
+  it('updates idle delay detail during live timer updates', () => {
+    const documentStub = createDocumentStub();
+    setDocument(documentStub);
+
+    const liveElements = createLiveElementMap();
+    const root = {
+      innerHTML: '',
+      querySelector(selector) {
+        return liveElements[selector] ?? null;
+      }
+    };
+    const settings = {
+      ...createDefaultSettings(),
+      idleReminderEnabled: true
+    };
+    const state = {
+      activeSession: createInitialSession(settings),
+      backgroundNotice: '',
+      focusHistory: [],
+      idleStartedAt: 1_000,
+      isNtfyTesting: false,
+      manualPipRequested: false,
+      notificationNotice: '',
+      ntfyNotice: '',
+      settings
+    };
+    const renderer = createAppRenderer({
+      getNotificationSupportModel: () => ({
+        hasNotificationApi: true,
+        hasServiceWorker: true,
+        permissionState: 'granted',
+        unsupported: false
+      }),
+      pipController: {
+        isSupported: vi.fn(() => true)
+      },
+      root,
+      state
+    });
+
+    renderer.renderApp();
+    const renderedHtml = root.innerHTML;
+    renderer.updateTimerLiveRegion(71_000);
+
+    expect(renderedHtml).toContain('data-live-status-detail');
+    expect(renderedHtml).toContain('data-live-status-text');
+    expect(liveElements['[data-live-status-text]'].textContent).toBe('Ready');
+    expect(liveElements['[data-live-status-detail]'].textContent).toBe('1m 10s');
+    expect(root.innerHTML).toBe(renderedHtml);
+  });
+
+  it('updates pause duration detail during live timer updates', () => {
+    const documentStub = createDocumentStub();
+    setDocument(documentStub);
+
+    const liveElements = createLiveElementMap();
+    const root = {
+      innerHTML: '',
+      querySelector(selector) {
+        return liveElements[selector] ?? null;
+      }
+    };
+    const settings = createDefaultSettings();
+    const running = startCurrentStep(createInitialSession(settings), 1_000);
+    const state = {
+      activeSession: pauseSession(running, 5_000),
+      backgroundNotice: '',
+      focusHistory: [],
+      idleStartedAt: null,
+      isNtfyTesting: false,
+      manualPipRequested: false,
+      notificationNotice: '',
+      ntfyNotice: '',
+      pauseStartedAt: 1_000,
+      settings
+    };
+    const renderer = createAppRenderer({
+      getNotificationSupportModel: () => ({
+        hasNotificationApi: true,
+        hasServiceWorker: true,
+        permissionState: 'granted',
+        unsupported: false
+      }),
+      pipController: {
+        isSupported: vi.fn(() => true)
+      },
+      root,
+      state
+    });
+
+    renderer.renderApp();
+    const renderedHtml = root.innerHTML;
+    renderer.updateTimerLiveRegion(71_000);
+
+    expect(renderedHtml).toContain('data-live-status-detail');
+    expect(liveElements['[data-live-status-text]'].textContent).toBe('Paused');
+    expect(liveElements['[data-live-status-detail]'].textContent).toBe('1m 10s');
+    expect(root.innerHTML).toBe(renderedHtml);
   });
 });

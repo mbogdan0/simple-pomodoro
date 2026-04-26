@@ -10,6 +10,7 @@ export function createWorkerBridge({
   backgroundUnavailableNotice = DEFAULT_BACKGROUND_UNAVAILABLE_NOTICE,
   backgroundUnsupportedNotice = DEFAULT_BACKGROUND_UNSUPPORTED_NOTICE,
   handleLocalAction,
+  onIdleReminder = () => {},
   onWorkerMissing = () => {},
   onWorkerState,
   onWorkerTick,
@@ -77,10 +78,15 @@ export function createWorkerBridge({
   }
 
   function handleWorkerMessage(event) {
-    const { completionKey, reason, session, type } = event.data ?? {};
+    const { completionKey, now, reason, session, type } = event.data ?? {};
 
     if (type === WORKER_MESSAGE_TYPES.ERROR) {
       disableWorkerAndSwitchToLocal(session ?? state.activeSession);
+      return;
+    }
+
+    if (type === WORKER_MESSAGE_TYPES.IDLE_REMINDER) {
+      onIdleReminder(now ?? Date.now());
       return;
     }
 
