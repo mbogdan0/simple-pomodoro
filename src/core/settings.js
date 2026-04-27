@@ -22,7 +22,10 @@ export function normalizeStepType(type) {
   return STEP_TYPES.includes(type) ? type : 'work';
 }
 
-export function createScenarioStep(type = 'work', durationMs = DEFAULT_TEMPLATE_DURATIONS_MS[normalizeStepType(type)]) {
+export function createScenarioStep(
+  type = 'work',
+  durationMs = DEFAULT_TEMPLATE_DURATIONS_MS[normalizeStepType(type)]
+) {
   const normalizedType = normalizeStepType(type);
 
   return {
@@ -32,9 +35,14 @@ export function createScenarioStep(type = 'work', durationMs = DEFAULT_TEMPLATE_
   };
 }
 
-export function normalizeScenarioStep(step, index, templateDurations = DEFAULT_TEMPLATE_DURATIONS_MS) {
+export function normalizeScenarioStep(
+  step,
+  index,
+  templateDurations = DEFAULT_TEMPLATE_DURATIONS_MS
+) {
   const normalizedType = normalizeStepType(step?.type);
-  const fallbackMs = templateDurations[normalizedType] ?? DEFAULT_TEMPLATE_DURATIONS_MS[normalizedType];
+  const fallbackMs =
+    templateDurations[normalizedType] ?? DEFAULT_TEMPLATE_DURATIONS_MS[normalizedType];
 
   return {
     durationMs: sanitizeDurationMs(step?.durationMs, fallbackMs),
@@ -70,7 +78,10 @@ export function createDefaultScenario(
 export function normalizeTemplateDurations(rawDurations = {}) {
   return {
     longBreak: sanitizeDurationMs(rawDurations.longBreak, DEFAULT_TEMPLATE_DURATIONS_MS.longBreak),
-    shortBreak: sanitizeDurationMs(rawDurations.shortBreak, DEFAULT_TEMPLATE_DURATIONS_MS.shortBreak),
+    shortBreak: sanitizeDurationMs(
+      rawDurations.shortBreak,
+      DEFAULT_TEMPLATE_DURATIONS_MS.shortBreak
+    ),
     work: sanitizeDurationMs(rawDurations.work, DEFAULT_TEMPLATE_DURATIONS_MS.work)
   };
 }

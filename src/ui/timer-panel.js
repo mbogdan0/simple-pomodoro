@@ -34,16 +34,10 @@ function getCycleDotTitle(dot, index) {
   const focusState = dot?.focusState ?? 'pending';
   const breakState = dot?.breakState ?? 'pending';
 
-  const focusText = focusState === 'done'
-    ? 'completed'
-    : focusState === 'active'
-      ? 'in progress'
-      : 'not completed';
-  const breakText = breakState === 'done'
-    ? 'completed'
-    : breakState === 'active'
-      ? 'in progress'
-      : 'not completed';
+  const focusText =
+    focusState === 'done' ? 'completed' : focusState === 'active' ? 'in progress' : 'not completed';
+  const breakText =
+    breakState === 'done' ? 'completed' : breakState === 'active' ? 'in progress' : 'not completed';
 
   return `Repeat ${repeatNumber}: focus ${focusText}, break ${breakText}`;
 }
@@ -91,7 +85,7 @@ export function renderCycleProgressMarkup(cycleDots = []) {
         <span class="cycle-dot" data-cycle-dot data-repeat-index="${index}" title="${title}">
           <span class="cycle-dot__marker ${visual.stateClass} ${visual.isActive ? 'is-active' : ''} ${visual.activeClass}"></span>
         </span>
-      `
+      `;
     })
     .join('');
 }

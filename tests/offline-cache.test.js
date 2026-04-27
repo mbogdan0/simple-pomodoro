@@ -10,14 +10,12 @@ import {
 describe('offline cache helpers', () => {
   it('marks only same-origin GET requests as cacheable', () => {
     const origin = 'https://mbogdan0.github.io';
-    const sameOriginGet = new Request(
-      'https://mbogdan0.github.io/simple-pomodoro/index.html',
-      { method: 'GET' }
-    );
-    const sameOriginPost = new Request(
-      'https://mbogdan0.github.io/simple-pomodoro/index.html',
-      { method: 'POST' }
-    );
+    const sameOriginGet = new Request('https://mbogdan0.github.io/simple-pomodoro/index.html', {
+      method: 'GET'
+    });
+    const sameOriginPost = new Request('https://mbogdan0.github.io/simple-pomodoro/index.html', {
+      method: 'POST'
+    });
     const crossOriginGet = new Request('https://example.com/simple-pomodoro/index.html', {
       method: 'GET'
     });

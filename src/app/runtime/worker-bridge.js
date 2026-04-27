@@ -27,9 +27,7 @@ export function createWorkerBridge({
     const inlineSource = globalThis.__TIMER_WORKER_SOURCE__;
 
     if (typeof inlineSource === 'string' && inlineSource) {
-      const blobUrl = URL.createObjectURL(
-        new Blob([inlineSource], { type: 'text/javascript' })
-      );
+      const blobUrl = URL.createObjectURL(new Blob([inlineSource], { type: 'text/javascript' }));
       const worker = new Worker(blobUrl);
       worker.addEventListener(
         'message',

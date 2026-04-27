@@ -86,9 +86,10 @@ export function getFocusRepeatProgress(session) {
 
   const normalizedIndex = getNormalizedStepIndex(session, scenario);
   const currentStep = scenario[normalizedIndex];
-  const focusRepeatCurrent = currentStep?.type === 'work'
-    ? countWorkStepsUpTo(scenario, normalizedIndex)
-    : countWorkStepsUpTo(scenario, normalizedIndex - 1);
+  const focusRepeatCurrent =
+    currentStep?.type === 'work'
+      ? countWorkStepsUpTo(scenario, normalizedIndex)
+      : countWorkStepsUpTo(scenario, normalizedIndex - 1);
 
   return {
     focusRepeatCurrent: Math.max(0, Math.min(focusRepeatCurrent, focusRepeatTotal)),
@@ -119,9 +120,7 @@ export function getCycleRepeatDots(session) {
 
     return {
       breakState:
-        breakStepIndex >= 0
-          ? resolveDotState(breakStepIndex, currentStepIndex, status)
-          : 'pending',
+        breakStepIndex >= 0 ? resolveDotState(breakStepIndex, currentStepIndex, status) : 'pending',
       focusState: resolveDotState(focusStepIndex, currentStepIndex, status),
       id: scenario[focusStepIndex]?.id ?? `repeat-${repeatIndex}`
     };

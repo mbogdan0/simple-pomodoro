@@ -48,9 +48,7 @@ export function formatPipClock({
   const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
   const stepDurationSeconds = toWholeSeconds(stepDurationMs);
   const elapsedSeconds =
-    stepDurationSeconds === null
-      ? null
-      : Math.max(0, stepDurationSeconds - remainingSeconds);
+    stepDurationSeconds === null ? null : Math.max(0, stepDurationSeconds - remainingSeconds);
 
   if (elapsedSeconds !== null && elapsedSeconds < 10) {
     return formatClock(remainingMs);

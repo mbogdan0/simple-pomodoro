@@ -46,21 +46,26 @@
   display: block;
   height: 16px;
   position: relative;
-  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
   width: 16px;
 }
 
 .cycle-dot__marker::after {
   border-bottom: 1.5px solid transparent;
   border-right: 1.5px solid transparent;
-  content: "";
+  content: '';
   height: 6px;
   left: 50%;
   opacity: 0;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -58%) rotate(42deg);
-  transition: border-color 160ms ease, opacity 160ms ease;
+  transition:
+    border-color 160ms ease,
+    opacity 160ms ease;
   width: 3px;
 }
 
@@ -94,7 +99,9 @@
 }
 
 .cycle-dot__marker.is-outlined.is-active {
-  box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(31, 38, 35, 0.08);
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    0 0 0 3px rgba(31, 38, 35, 0.08);
 }
 
 .focus-tags {
@@ -115,7 +122,10 @@
   font-weight: 500;
   min-height: 30px;
   padding: 4px 10px;
-  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 .focus-tag-button--none.is-active {

@@ -56,7 +56,10 @@ export function createLifecycleSync({
       syncWorkerNow();
     };
     const maybeConfirmBeforeUnload = (event) => {
-      if (!event || (state.activeSession.status !== 'running' && state.activeSession.status !== 'paused')) {
+      if (
+        !event ||
+        (state.activeSession.status !== 'running' && state.activeSession.status !== 'paused')
+      ) {
         return;
       }
 

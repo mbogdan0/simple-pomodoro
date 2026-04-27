@@ -32,8 +32,8 @@ function normalizeHeaderValue(value = '') {
 }
 
 function toUtf8Base64(value = '') {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(value, 'utf-8').toString('base64');
+  if (typeof globalThis.Buffer !== 'undefined') {
+    return globalThis.Buffer.from(value, 'utf-8').toString('base64');
   }
 
   if (typeof TextEncoder === 'function' && typeof btoa === 'function') {
@@ -82,10 +82,7 @@ function shortenNtfyCompletionBody(body = '') {
   return NTFY_COMPLETION_BODY_SHORTENINGS[body] ?? body;
 }
 
-export function createNtfyCompletionPayload({
-  body = '',
-  stepType = 'work'
-} = {}) {
+export function createNtfyCompletionPayload({ body = '', stepType = 'work' } = {}) {
   return {
     body: shortenNtfyCompletionBody(body),
     title: resolveNtfyCompletionTitle(stepType)
@@ -111,11 +108,7 @@ export function createNtfyRequestOptions(payload = {}) {
   };
 }
 
-export async function sendNtfyPush({
-  fetchImpl = globalThis.fetch,
-  payload,
-  publishUrl
-}) {
+export async function sendNtfyPush({ fetchImpl = globalThis.fetch, payload, publishUrl }) {
   if (!publishUrl || typeof fetchImpl !== 'function') {
     return false;
   }

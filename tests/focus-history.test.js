@@ -52,7 +52,9 @@ describe('focus history helpers', () => {
       2_000
     );
 
-    expect(completedShortBreak.scenario[completedShortBreak.currentStepIndex].type).toBe('shortBreak');
+    expect(completedShortBreak.scenario[completedShortBreak.currentStepIndex].type).toBe(
+      'shortBreak'
+    );
     expect(createFocusHistoryEntry(completedShortBreak)).toBe(null);
   });
 

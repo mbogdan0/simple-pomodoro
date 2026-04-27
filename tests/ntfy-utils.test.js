@@ -74,7 +74,10 @@ describe('ntfy utils', () => {
         publishUrl: 'https://ntfy.sh/topic'
       })
     ).resolves.toBe(true);
-    expect(okFetch).toHaveBeenCalledWith('https://ntfy.sh/topic', createNtfyRequestOptions(payload));
+    expect(okFetch).toHaveBeenCalledWith(
+      'https://ntfy.sh/topic',
+      createNtfyRequestOptions(payload)
+    );
 
     await expect(
       sendNtfyPush({

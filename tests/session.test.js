@@ -98,7 +98,8 @@ describe('timer session engine', () => {
 
   it('marks step as completed and waits for explicit start of next step', () => {
     const session = startCurrentStep(createInitialSession(settings), 1_000);
-    const farFuture = session.endsAt + settings.templateDurations.shortBreak + settings.templateDurations.work;
+    const farFuture =
+      session.endsAt + settings.templateDurations.shortBreak + settings.templateDurations.work;
     const completed = syncSession(session, farFuture);
 
     expect(completed.status).toBe('completed_waiting_next');
@@ -159,7 +160,11 @@ describe('timer session engine', () => {
       5_000
     );
     const completed = syncSession(runningLastStep, runningLastStep.endsAt + 1_000);
-    const wrappedIdle = advanceAfterCompletion(completed, initialSettings, completed.finishedAt + 50);
+    const wrappedIdle = advanceAfterCompletion(
+      completed,
+      initialSettings,
+      completed.finishedAt + 50
+    );
 
     expect(wrappedIdle.status).toBe('idle');
     expect(wrappedIdle.currentStepIndex).toBe(0);
@@ -198,11 +203,7 @@ describe('timer session engine', () => {
     };
     const running = startCurrentStep(createInitialSession(autoStartSettings), 1_000);
     const completed = syncSession(running, running.endsAt + 1_000);
-    const next = advanceAfterCompletion(
-      completed,
-      autoStartSettings,
-      completed.finishedAt + 50
-    );
+    const next = advanceAfterCompletion(completed, autoStartSettings, completed.finishedAt + 50);
 
     expect(next.status).toBe('running');
     expect(next.currentStepIndex).toBe(1);
@@ -222,11 +223,7 @@ describe('timer session engine', () => {
       5_000
     );
     const completed = syncSession(runningLastStep, runningLastStep.endsAt + 1_000);
-    const next = advanceAfterCompletion(
-      completed,
-      autoStartSettings,
-      completed.finishedAt + 100
-    );
+    const next = advanceAfterCompletion(completed, autoStartSettings, completed.finishedAt + 100);
 
     expect(next.status).toBe('idle');
     expect(next.currentStepIndex).toBe(0);

@@ -15,8 +15,17 @@ import {
   formatStepTypeLabel,
   formatStatusLabel
 } from '../../core/format.js';
-import { getCycleRepeatDots, getFocusRepeatProgress, getStepProgress } from '../../core/progress.js';
-import { canResetSession, getCurrentStep, getProgressRatio, getRemainingMs } from '../../core/session.js';
+import {
+  getCycleRepeatDots,
+  getFocusRepeatProgress,
+  getStepProgress
+} from '../../core/progress.js';
+import {
+  canResetSession,
+  getCurrentStep,
+  getProgressRatio,
+  getRemainingMs
+} from '../../core/session.js';
 import { renderHistoryPanel } from '../../ui/history-panel.js';
 import { renderSettingsPanel } from '../../ui/settings-panel.js';
 import { renderCycleProgressMarkup, renderTimerPanel } from '../../ui/timer-panel.js';
@@ -37,12 +46,7 @@ function formatRepeatMeta(timerModel) {
   return `Focus repeat ${timerModel.focusRepeatCurrent}/${timerModel.focusRepeatTotal} · Step ${timerModel.stepCurrent}/${timerModel.stepTotal}`;
 }
 
-export function createAppRenderer({
-  root,
-  state,
-  pipController,
-  getNotificationSupportModel
-}) {
+export function createAppRenderer({ root, state, pipController, getNotificationSupportModel }) {
   const faviconLink = ensureFaviconLink();
   let chromeSignature = '';
   let liveUpdateHooks = {

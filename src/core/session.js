@@ -1,4 +1,8 @@
-export { createInitialSession, normalizeSession, syncIdleSessionWithSettings } from './session/normalize.js';
+export {
+  createInitialSession,
+  normalizeSession,
+  syncIdleSessionWithSettings
+} from './session/normalize.js';
 export {
   canResetSession,
   getCurrentStep,

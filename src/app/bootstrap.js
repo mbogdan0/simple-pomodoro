@@ -27,8 +27,13 @@ export function startApp(root) {
   const audioService = createAudioService(window);
   let serviceWorkerRegistration = null;
 
+  function canUseServiceWorker() {
+    const isDevelopmentRuntime = Boolean(globalThis['__APP_DEV__']);
+    return !isDevelopmentRuntime && 'serviceWorker' in navigator && window.isSecureContext;
+  }
+
   async function registerServiceWorker() {
-    if (!('serviceWorker' in navigator) || !window.isSecureContext) {
+    if (!canUseServiceWorker()) {
       return;
     }
 
@@ -46,7 +51,7 @@ export function startApp(root) {
       return serviceWorkerRegistration;
     }
 
-    if (!('serviceWorker' in navigator) || !window.isSecureContext) {
+    if (!canUseServiceWorker()) {
       return null;
     }
 

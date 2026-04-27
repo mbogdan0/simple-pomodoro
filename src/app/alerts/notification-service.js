@@ -195,9 +195,10 @@ export function createNotificationService({
     }
 
     return Notification.requestPermission().then((permission) => {
-      state.notificationNotice = permission === 'granted'
-        ? 'Notifications are now allowed.'
-        : 'Notification permission was not granted.';
+      state.notificationNotice =
+        permission === 'granted'
+          ? 'Notifications are now allowed.'
+          : 'Notification permission was not granted.';
       return state.notificationNotice;
     });
   }
@@ -234,9 +235,7 @@ export function createNotificationService({
       publishUrl: state.settings.ntfyPublishUrl
     });
 
-    state.ntfyNotice = sent
-      ? 'ntfy test push was sent.'
-      : 'Unable to send ntfy test push.';
+    state.ntfyNotice = sent ? 'ntfy test push was sent.' : 'Unable to send ntfy test push.';
     return state.ntfyNotice;
   }
 

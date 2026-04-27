@@ -89,7 +89,9 @@ function writeJson(storage, key, value) {
 
 export function loadSettings(storage) {
   const resolvedStorage = resolveStorage(storage);
-  return normalizeSettings(parseJson(resolvedStorage, STORAGE_KEYS.settings) ?? createDefaultSettings());
+  return normalizeSettings(
+    parseJson(resolvedStorage, STORAGE_KEYS.settings) ?? createDefaultSettings()
+  );
 }
 
 export function saveSettings(settings, storage) {

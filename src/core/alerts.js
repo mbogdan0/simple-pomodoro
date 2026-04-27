@@ -15,10 +15,7 @@ export function shouldDispatchCompletion(nextKey, previousKey) {
   return Boolean(nextKey) && nextKey !== previousKey;
 }
 
-export function resolveCompletionNotificationBody({
-  autoStartNextStep = false,
-  session
-}) {
+export function resolveCompletionNotificationBody({ autoStartNextStep = false, session }) {
   const hasUpcomingStep = Boolean(session) && hasNextStep(session);
 
   if (autoStartNextStep && hasUpcomingStep) {
@@ -39,10 +36,7 @@ export function resolveCompletionAlertTitle(session) {
   return `${stepLabel} done ✅`;
 }
 
-export function createCompletionAlertPayload({
-  autoStartNextStep = false,
-  session
-}) {
+export function createCompletionAlertPayload({ autoStartNextStep = false, session }) {
   return {
     body: resolveCompletionNotificationBody({
       autoStartNextStep,

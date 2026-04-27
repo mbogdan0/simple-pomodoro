@@ -2,11 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createSessionController } from '../../src/app/session/session-controller.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import {
-  createInitialSession,
-  startCurrentStep,
-  syncSession
-} from '../../src/core/session.js';
+import { createInitialSession, startCurrentStep, syncSession } from '../../src/core/session.js';
 import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
 function createControllerHarness(stateOverrides = {}) {

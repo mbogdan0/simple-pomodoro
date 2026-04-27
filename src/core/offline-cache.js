@@ -47,8 +47,7 @@ export function isAppShellRequest(request, scope) {
 
     return shellUrls.some(
       (shellUrl) =>
-        requestUrl.origin === shellUrl.origin &&
-        requestUrl.pathname === shellUrl.pathname
+        requestUrl.origin === shellUrl.origin && requestUrl.pathname === shellUrl.pathname
     );
   } catch {
     return false;

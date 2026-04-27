@@ -145,11 +145,7 @@ export function renderSettingsPanel({
               ? '<p class="notice-banner subtle">Notifications are not supported in this browser.</p>'
               : ''
           }
-          ${
-            notificationNotice
-              ? `<p class="inline-note">${notificationNotice}</p>`
-              : ''
-          }
+          ${notificationNotice ? `<p class="inline-note">${notificationNotice}</p>` : ''}
         </div>
       </div>
 
@@ -201,11 +197,7 @@ export function renderSettingsPanel({
               }
             </button>
           </div>
-          ${
-            ntfyNotice
-              ? `<p class="inline-note">${ntfyNotice}</p>`
-              : ''
-          }
+          ${ntfyNotice ? `<p class="inline-note">${ntfyNotice}</p>` : ''}
         </div>
       </div>
     </section>

@@ -1,11 +1,5 @@
-import {
-  createCompletionKey,
-  shouldDispatchCompletion
-} from '../../core/alerts.js';
-import {
-  appendFocusHistoryEntry,
-  createFocusHistoryEntry
-} from '../../core/focus-history.js';
+import { createCompletionKey, shouldDispatchCompletion } from '../../core/alerts.js';
+import { appendFocusHistoryEntry, createFocusHistoryEntry } from '../../core/focus-history.js';
 import {
   advanceAfterCompletion,
   forceCompleteCurrentStep,
@@ -100,10 +94,7 @@ export function createSessionController({
       const previousIdleStepKey = createIdleStepKey(previousSession);
       const nextIdleStepKey = createIdleStepKey(session);
 
-      if (
-        previousIdleStepKey !== nextIdleStepKey ||
-        !Number.isFinite(state.idleStartedAt)
-      ) {
+      if (previousIdleStepKey !== nextIdleStepKey || !Number.isFinite(state.idleStartedAt)) {
         state.idleStartedAt = committedAt;
       }
     } else {
@@ -194,7 +185,11 @@ export function createSessionController({
         break;
       case WORKER_ACTIONS.RESET_ALL:
         nextSession = resetSession(state.activeSession, now);
-        nextSession = syncIdleSessionWithSettings(nextSession, payload.settings ?? state.settings, now);
+        nextSession = syncIdleSessionWithSettings(
+          nextSession,
+          payload.settings ?? state.settings,
+          now
+        );
         break;
       case WORKER_ACTIONS.RESUME:
         nextSession = resumeSession(state.activeSession, now);

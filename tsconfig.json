@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src/app/events/**/*.js", "src/app/types.js", "src/core/worker-protocol.js"],
+  "exclude": ["dist", "node_modules"]
+}

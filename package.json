@@ -4,12 +4,26 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "node build.mjs dev",
     "build": "node build.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "check": "npm run test && npm run build"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "esbuild": "^0.28.0",
+    "eslint": "^9.37.0",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.4"
   }
 }

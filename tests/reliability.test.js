@@ -10,7 +10,11 @@ import {
   shouldDispatchCompletion,
   shouldDispatchFocusMinuteReminder
 } from '../src/core/alerts.js';
-import { getCycleRepeatDots, getFocusRepeatProgress, getStepProgress } from '../src/core/progress.js';
+import {
+  getCycleRepeatDots,
+  getFocusRepeatProgress,
+  getStepProgress
+} from '../src/core/progress.js';
 import { createDefaultSettings } from '../src/core/settings.js';
 import { createInitialSession, startCurrentStep, syncSession } from '../src/core/session.js';
 
@@ -21,9 +25,7 @@ function pickChannelFromMockedApis(mockedEnvironment) {
     hasNotificationApi: typeof mockedNotificationApi === 'function',
     hasServiceWorker: Boolean(mockedEnvironment.navigator?.serviceWorker),
     notificationPermission:
-      typeof mockedNotificationApi === 'function'
-        ? mockedNotificationApi.permission
-        : 'unsupported'
+      typeof mockedNotificationApi === 'function' ? mockedNotificationApi.permission : 'unsupported'
   });
 }
 

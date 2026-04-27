@@ -30,9 +30,8 @@ export function createFaviconModel(session, now = Date.now()) {
     };
   }
 
-  const palette = session.status === 'completed_waiting_next'
-    ? PALETTES.completed
-    : PALETTES[step.type];
+  const palette =
+    session.status === 'completed_waiting_next' ? PALETTES.completed : PALETTES[step.type];
 
   return {
     background: palette.background,

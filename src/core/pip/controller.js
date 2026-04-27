@@ -5,8 +5,8 @@ import { renderInWindow } from './render.js';
 export function isPictureInPictureSupported(targetWindow = globalThis.window) {
   return Boolean(
     targetWindow &&
-      targetWindow.documentPictureInPicture &&
-      typeof targetWindow.documentPictureInPicture.requestWindow === 'function'
+    targetWindow.documentPictureInPicture &&
+    typeof targetWindow.documentPictureInPicture.requestWindow === 'function'
   );
 }
 

@@ -14,7 +14,9 @@ function normalizeFocusTag(value) {
 
 function ensureScenarioSnapshot(rawScenario, settings) {
   if (Array.isArray(rawScenario) && rawScenario.length) {
-    return rawScenario.map((step, index) => normalizeScenarioStep(step, index, settings?.templateDurations));
+    return rawScenario.map((step, index) =>
+      normalizeScenarioStep(step, index, settings?.templateDurations)
+    );
   }
 
   return createDefaultScenario(settings?.templateDurations, settings?.repeatCount);
@@ -23,7 +25,11 @@ function ensureScenarioSnapshot(rawScenario, settings) {
 export function normalizeSession(rawSession = {}, settings) {
   const scenario = ensureScenarioSnapshot(rawSession.scenario, settings);
   const status = VALID_SESSION_STATUSES.includes(rawSession.status) ? rawSession.status : 'idle';
-  const currentStepIndex = clamp(Math.floor(Number(rawSession.currentStepIndex) || 0), 0, scenario.length - 1);
+  const currentStepIndex = clamp(
+    Math.floor(Number(rawSession.currentStepIndex) || 0),
+    0,
+    scenario.length - 1
+  );
 
   const normalized = {
     alertsDispatched: Boolean(rawSession.alertsDispatched),

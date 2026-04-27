@@ -175,11 +175,9 @@ export function renderHistoryPanel(historyEntries = [], historyTagEditEntryId = 
         <h2>Focus History</h2>
       </div>
       <ul class="history-list">
-        ${
-          groupHistoryEntriesByDay(historyEntries)
-            .map((group) => renderHistoryDayGroup(group, historyTagEditEntryId))
-            .join('')
-        }
+        ${groupHistoryEntriesByDay(historyEntries)
+          .map((group) => renderHistoryDayGroup(group, historyTagEditEntryId))
+          .join('')}
       </ul>
     </section>
   `;

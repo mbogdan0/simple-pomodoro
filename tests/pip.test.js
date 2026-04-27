@@ -88,7 +88,9 @@ function createHostWindow({ pipWindow, support = true } = {}) {
 
 describe('picture-in-picture controller', () => {
   it('detects feature support via documentPictureInPicture API', () => {
-    expect(isPictureInPictureSupported(createHostWindow({ pipWindow: createFakePipWindow() }))).toBe(true);
+    expect(
+      isPictureInPictureSupported(createHostWindow({ pipWindow: createFakePipWindow() }))
+    ).toBe(true);
     expect(isPictureInPictureSupported(createHostWindow({ support: false }))).toBe(false);
   });
 
