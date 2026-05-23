@@ -5,6 +5,7 @@ import { createInitialSession } from '../../src/core/session.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
 
 const originalDocument = globalThis.document;
+const originalHTMLInputElement = globalThis.HTMLInputElement;
 const originalWindow = globalThis.window;
 
 function createState(overrides = {}) {
@@ -14,6 +15,7 @@ function createState(overrides = {}) {
     activeSession: createInitialSession(settings),
     backgroundNotice: '',
     focusHistory: [],
+    focusNoteDraft: '',
     historyTagEditEntryId: '',
     idleStartedAt: null,
     isNtfyTesting: false,
@@ -52,6 +54,7 @@ function createDeps(rootOverrides = {}, stateOverrides = {}) {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusNoteDraft: vi.fn(),
       persistSettings: vi.fn(),
       postWorkerAction: vi.fn(),
       renderApp: vi.fn(),
@@ -73,6 +76,7 @@ describe('root events shell', () => {
 
   afterEach(() => {
     globalThis.document = originalDocument;
+    globalThis.HTMLInputElement = originalHTMLInputElement;
     globalThis.window = originalWindow;
     vi.restoreAllMocks();
   });
@@ -142,7 +146,7 @@ describe('root events shell', () => {
     const rootEvents = createRootEvents(deps);
     rootEvents.bindRootEvents();
 
-    expect(root.addEventListener).toHaveBeenCalledTimes(2);
+    expect(root.addEventListener).toHaveBeenCalledTimes(3);
     expect(documentHandlers.click).toBeTypeOf('function');
 
     documentHandlers.click({
@@ -154,5 +158,31 @@ describe('root events shell', () => {
     });
 
     expect(openMenu.open).toBe(false);
+  });
+
+  it('normalizes and persists focus note draft on input without re-rendering', () => {
+    class FakeHTMLInputElement {
+      constructor() {
+        this.value = '';
+      }
+
+      matches(selector) {
+        return selector === '[data-focus-note-input]';
+      }
+    }
+
+    globalThis.HTMLInputElement = FakeHTMLInputElement;
+
+    const { deps, state } = createDeps();
+    const rootEvents = createRootEvents(deps);
+    const input = new FakeHTMLInputElement();
+    input.value = 'Keep shipping reliable release notes for sprint 8';
+
+    rootEvents.handleRootInput({ target: input });
+
+    expect(state.focusNoteDraft).toBe('Keep shipping reliable release');
+    expect(input.value).toBe('Keep shipping reliable release');
+    expect(deps.persistFocusNoteDraft).toHaveBeenCalledTimes(1);
+    expect(deps.renderApp).not.toHaveBeenCalled();
   });
 });

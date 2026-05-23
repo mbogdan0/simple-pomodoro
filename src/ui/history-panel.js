@@ -1,4 +1,5 @@
 import { FOCUS_TAG_LABELS, FOCUS_TAGS } from '../core/constants.js';
+import { MAX_FOCUS_NOTE_LENGTH, escapeHtml } from '../core/focus-note.js';
 import { formatClock } from '../core/format.js';
 
 const HISTORY_DAY_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -113,9 +114,26 @@ function renderHistoryTagReadOnly(entryId, focusTag) {
   `;
 }
 
+function renderFocusNoteField(focusNoteDraft = '') {
+  return `
+    <label class="focus-note-field">
+      <span class="sr-only">Focus note</span>
+      <input
+        class="focus-note-input"
+        data-focus-note-input
+        maxlength="${MAX_FOCUS_NOTE_LENGTH}"
+        placeholder="Add a short focus note"
+        type="text"
+        value="${escapeHtml(focusNoteDraft)}"
+      >
+    </label>
+  `;
+}
+
 function renderHistoryItem(entry, historyTagEditEntryId = '') {
   const date = new Date(entry.completedAt);
   const focusTag = resolveFocusTag(entry.focusTag);
+  const focusNote = typeof entry.focusNote === 'string' ? entry.focusNote : '';
   const isEditingTag = entry.id === historyTagEditEntryId;
 
   return `
@@ -124,6 +142,11 @@ function renderHistoryItem(entry, historyTagEditEntryId = '') {
         <time class="history-item-date" datetime="${date.toISOString()}">${formatCompletedAt(entry.completedAt)}</time>
         <div class="history-item-details">
           <p class="history-item-duration">${formatFocusDuration(entry.durationMs)}</p>
+          ${
+            focusNote
+              ? `<p class="history-item-note" title="${escapeHtml(focusNote)}">${escapeHtml(focusNote)}</p>`
+              : ''
+          }
           ${
             isEditingTag
               ? renderHistoryTagOptions(entry.id, focusTag)
@@ -157,13 +180,18 @@ function renderHistoryDayGroup(group, historyTagEditEntryId = '') {
   `;
 }
 
-export function renderHistoryPanel(historyEntries = [], historyTagEditEntryId = '') {
+export function renderHistoryPanel(
+  historyEntries = [],
+  historyTagEditEntryId = '',
+  focusNoteDraft = ''
+) {
   if (!historyEntries.length) {
     return `
       <section class="panel history-layout" id="panel-history" aria-label="History panel" role="region">
         <div class="panel-heading">
           <h2>Focus History</h2>
         </div>
+        ${renderFocusNoteField(focusNoteDraft)}
         <p class="inline-note history-empty">No completed focus sessions yet.</p>
       </section>
     `;
@@ -174,6 +202,7 @@ export function renderHistoryPanel(historyEntries = [], historyTagEditEntryId = 
       <div class="panel-heading">
         <h2>Focus History</h2>
       </div>
+      ${renderFocusNoteField(focusNoteDraft)}
       <ul class="history-list">
         ${groupHistoryEntriesByDay(historyEntries)
           .map((group) => renderHistoryDayGroup(group, historyTagEditEntryId))

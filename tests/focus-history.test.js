@@ -40,6 +40,19 @@ describe('focus history helpers', () => {
     expect(entry?.completedAt).toBe(completedFocus.finishedAt);
   });
 
+  it('stores focus note snapshot in completed focus entries', () => {
+    const settings = createDefaultSettings();
+    const completedFocus = completeCurrentStep(createInitialSession(settings));
+
+    const entry = createFocusHistoryEntry(
+      completedFocus,
+      '',
+      'Write launch checklist and test migration flows'
+    );
+
+    expect(entry?.focusNote).toBe('Write launch checklist and tes');
+  });
+
   it('does not create history entries for completed non-focus steps', () => {
     const settings = createDefaultSettings();
     const base = createInitialSession(settings);
@@ -147,6 +160,32 @@ describe('focus history helpers', () => {
         stepType: 'work'
       })?.focusTag
     ).toBe('none');
+  });
+
+  it('normalizes history focus note values to max 30 chars', () => {
+    expect(
+      normalizeFocusHistoryEntry({
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusNote: 'Keep calm and review pull request diffs carefully',
+        focusTag: 'work',
+        id: 'with-note',
+        stepId: 'step-id',
+        stepType: 'work'
+      })?.focusNote
+    ).toBe('Keep calm and review pull requ');
+
+    expect(
+      normalizeFocusHistoryEntry({
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusNote: 123,
+        focusTag: 'work',
+        id: 'bad-note',
+        stepId: 'step-id',
+        stepType: 'work'
+      })?.focusNote
+    ).toBeUndefined();
   });
 
   it('updates only selected history entry tag', () => {

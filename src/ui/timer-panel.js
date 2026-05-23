@@ -1,3 +1,5 @@
+import { MAX_FOCUS_NOTE_LENGTH, escapeHtml } from '../core/focus-note.js';
+
 function getCycleDotVisualState(dot) {
   const focusDone = dot?.focusState === 'done';
   const breakDone = dot?.breakState === 'done';
@@ -75,6 +77,22 @@ function renderFocusTagsMarkup(timerModel) {
   `;
 }
 
+function renderFocusNoteField(focusNoteDraft = '') {
+  return `
+    <label class="focus-note-field">
+      <span class="sr-only">Focus note</span>
+      <input
+        class="focus-note-input"
+        data-focus-note-input
+        maxlength="${MAX_FOCUS_NOTE_LENGTH}"
+        placeholder="Add a short focus note"
+        type="text"
+        value="${escapeHtml(focusNoteDraft)}"
+      >
+    </label>
+  `;
+}
+
 export function renderCycleProgressMarkup(cycleDots = []) {
   return cycleDots
     .map((dot, index) => {
@@ -121,6 +139,7 @@ export function renderTimerPanel(timerModel) {
         ${renderCycleProgressMarkup(timerModel.cycleDots)}
       </div>
       ${renderFocusTagsMarkup(timerModel)}
+      ${renderFocusNoteField(timerModel.focusNoteDraft)}
       <p class="timer-repeat-meta sr-only" data-live-repeat-meta>
         Focus repeat ${timerModel.focusRepeatCurrent}/${timerModel.focusRepeatTotal} ·
         Step ${timerModel.stepCurrent}/${timerModel.stepTotal}

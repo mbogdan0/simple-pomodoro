@@ -36,7 +36,7 @@ export function createSessionController({
   updateTimerLiveRegion
 }) {
   function maybeTrackCompletedFocus(session, completionKey = '') {
-    const nextEntry = createFocusHistoryEntry(session, completionKey);
+    const nextEntry = createFocusHistoryEntry(session, completionKey, state.focusNoteDraft);
 
     if (!nextEntry) {
       return;

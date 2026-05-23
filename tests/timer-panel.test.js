@@ -14,6 +14,7 @@ function createTimerModel(overrides = {}) {
       { breakState: 'done', focusState: 'done', id: 'focus-2' }
     ],
     endStepEarlyDisabled: false,
+    focusNoteDraft: '',
     focusTag: 'work',
     focusTagOptions: [
       { id: 'none', label: 'Other' },
@@ -49,6 +50,8 @@ describe('timer panel behavior', () => {
     expect(html).toContain('focus-tag-button--work is-active');
     expect(html).toContain('class="overflow-actions"');
     expect(html).toContain('data-action="end-step-early"');
+    expect(html).toContain('data-focus-note-input');
+    expect(html).toContain('maxlength="30"');
     expect(html).toContain('role="timer"');
     expect(html).toContain('role="progressbar"');
     expect(html).toContain('role="status"');
@@ -85,5 +88,16 @@ describe('timer panel behavior', () => {
     expect(html).toContain('data-live-status-detail');
     expect(html).toContain('data-live-status-text');
     expect(html).toContain('1m 10s');
+  });
+
+  it('escapes focus note draft value in the rendered input', () => {
+    const html = renderTimerPanel(
+      createTimerModel({
+        focusNoteDraft: '"<script>alert(1)</script>'
+      })
+    );
+
+    expect(html).toContain('&quot;&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('<script>');
   });
 });

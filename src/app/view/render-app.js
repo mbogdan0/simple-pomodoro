@@ -88,6 +88,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
         id: tag,
         label: FOCUS_TAG_LABELS[tag]
       })),
+      focusNoteDraft: state.focusNoteDraft,
       focusRepeatCurrent,
       focusRepeatTotal,
       pipToggleLabel: 'Toggle PiP',
@@ -153,7 +154,11 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
           }
           ${
             activeTab === 'history'
-              ? renderHistoryPanel(state.focusHistory, state.historyTagEditEntryId)
+              ? renderHistoryPanel(
+                  state.focusHistory,
+                  state.historyTagEditEntryId,
+                  state.focusNoteDraft
+                )
               : ''
           }
         </section>

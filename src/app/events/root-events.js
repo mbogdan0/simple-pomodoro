@@ -2,6 +2,7 @@
 
 import { createRootActionHandlers } from './root-action-handlers.js';
 import { createRootSettingsHandlers } from './root-settings-handlers.js';
+import { normalizeFocusNote } from '../../core/focus-note.js';
 
 function closeAllOverflowActionsMenus(root) {
   if (typeof root.querySelectorAll !== 'function') {
@@ -17,7 +18,7 @@ function closeAllOverflowActionsMenus(root) {
  * @param {import('./root-event-types.js').RootEventDeps} deps
  */
 export function createRootEvents(deps) {
-  const { root } = deps;
+  const { persistFocusNoteDraft, root, state } = deps;
   const { handlers: actionHandlers, playUiActionTone } = createRootActionHandlers(deps);
   const settingsHandlers = createRootSettingsHandlers(deps);
 
@@ -62,14 +63,41 @@ export function createRootEvents(deps) {
     closeAllOverflowActionsMenus(root);
   }
 
+  function handleRootInput(event) {
+    const target = event?.target;
+
+    if (
+      typeof HTMLInputElement === 'undefined' ||
+      !(target instanceof HTMLInputElement) ||
+      !target.matches('[data-focus-note-input]')
+    ) {
+      return;
+    }
+
+    const normalizedFocusNote = normalizeFocusNote(target.value);
+
+    if (target.value !== normalizedFocusNote) {
+      target.value = normalizedFocusNote;
+    }
+
+    if (state.focusNoteDraft === normalizedFocusNote) {
+      return;
+    }
+
+    state.focusNoteDraft = normalizedFocusNote;
+    persistFocusNoteDraft(state);
+  }
+
   function bindRootEvents() {
     root.addEventListener('click', handleRootClick);
     root.addEventListener('change', settingsHandlers.handleRootChange);
+    root.addEventListener('input', handleRootInput);
     document.addEventListener('click', handleDocumentClick);
   }
 
   return {
     bindRootEvents,
+    handleRootInput,
     handleRootChange: settingsHandlers.handleRootChange,
     handleRootClick
   };

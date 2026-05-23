@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { startApp } from '../../src/app/bootstrap.js';
-import { createMemoryStorage } from '../../src/core/storage.js';
+import { STORAGE_KEYS } from '../../src/core/constants.js';
+import { createDefaultSettings } from '../../src/core/settings.js';
+import { createInitialSession } from '../../src/core/session.js';
+import {
+  createMemoryStorage,
+  saveActiveSession,
+  saveFocusNoteDraft
+} from '../../src/core/storage.js';
 
 const originalDocument = globalThis.document;
 const originalLocalStorage = globalThis.localStorage;
@@ -162,6 +169,7 @@ describe('bootstrap startup integration', () => {
     expect(root.innerHTML).toContain('data-action="switch-tab"');
     expect(rootListeners.click).toBeTypeOf('function');
     expect(rootListeners.change).toBeTypeOf('function');
+    expect(rootListeners.input).toBeTypeOf('function');
     expect(documentStub.handlers.visibilitychange).toBeTypeOf('function');
     expect(windowStub.handlers.focus).toBeTypeOf('function');
     expect(windowStub.handlers.beforeunload).toBeTypeOf('function');
@@ -171,5 +179,84 @@ describe('bootstrap startup integration', () => {
     expect(windowStub.handlers.pointerdown).toBeTypeOf('function');
     expect(windowStub.handlers.keydown).toBeTypeOf('function');
     expect(globalThis.setInterval).toHaveBeenCalledWith(expect.any(Function), 500);
+  });
+
+  it('confirms stale startup session and resets when user accepts', () => {
+    const documentStub = createDocumentStub();
+    const root = {
+      addEventListener: vi.fn(),
+      innerHTML: '',
+      querySelector() {
+        return null;
+      }
+    };
+    const settings = createDefaultSettings();
+    const staleSession = {
+      ...createInitialSession(settings),
+      currentStepIndex: 2,
+      updatedAt: Date.now() - 61 * 60 * 1000
+    };
+    const storage = createMemoryStorage();
+
+    saveActiveSession(staleSession, storage);
+    saveFocusNoteDraft('Ship staged rollout checklist', storage);
+
+    setDocument(documentStub);
+    setLocalStorage(storage);
+    setNavigator({});
+    setWindow({
+      addEventListener: vi.fn(),
+      confirm: vi.fn(() => true),
+      handlers: {},
+      isSecureContext: false
+    });
+    setWorker(undefined);
+    globalThis.setInterval = vi.fn(() => 1);
+
+    const app = startApp(root);
+
+    expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
+    expect(app.state.activeSession.currentStepIndex).toBe(0);
+    expect(app.state.focusNoteDraft).toBe('');
+    expect(storage.getItem(STORAGE_KEYS.focusNoteDraft)).toBe('""');
+  });
+
+  it('keeps stale startup session when user declines reset prompt', () => {
+    const documentStub = createDocumentStub();
+    const root = {
+      addEventListener: vi.fn(),
+      innerHTML: '',
+      querySelector() {
+        return null;
+      }
+    };
+    const settings = createDefaultSettings();
+    const staleSession = {
+      ...createInitialSession(settings),
+      currentStepIndex: 3,
+      updatedAt: Date.now() - 61 * 60 * 1000
+    };
+    const storage = createMemoryStorage();
+
+    saveActiveSession(staleSession, storage);
+    saveFocusNoteDraft('Keep this note', storage);
+
+    setDocument(documentStub);
+    setLocalStorage(storage);
+    setNavigator({});
+    setWindow({
+      addEventListener: vi.fn(),
+      confirm: vi.fn(() => false),
+      handlers: {},
+      isSecureContext: false
+    });
+    setWorker(undefined);
+    globalThis.setInterval = vi.fn(() => 1);
+
+    const app = startApp(root);
+
+    expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
+    expect(app.state.activeSession.currentStepIndex).toBe(3);
+    expect(app.state.focusNoteDraft).toBe('Keep this note');
   });
 });

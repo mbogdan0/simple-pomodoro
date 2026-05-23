@@ -2,9 +2,11 @@ import { normalizeSession } from '../../core/session.js';
 import {
   loadActiveSession,
   loadFocusHistory,
+  loadFocusNoteDraft,
   loadSettings,
   saveActiveSession,
   saveFocusHistory,
+  saveFocusNoteDraft,
   saveSettings
 } from '../../core/storage.js';
 
@@ -13,6 +15,7 @@ export function createAppState() {
     activeSession: null,
     backgroundNotice: '',
     focusHistory: loadFocusHistory(),
+    focusNoteDraft: loadFocusNoteDraft(),
     historyTagEditEntryId: '',
     idleStartedAt: null,
     isNtfyTesting: false,
@@ -41,4 +44,8 @@ export function persistSession(state) {
 
 export function persistFocusHistory(state) {
   saveFocusHistory(state.focusHistory);
+}
+
+export function persistFocusNoteDraft(state) {
+  saveFocusNoteDraft(state.focusNoteDraft);
 }

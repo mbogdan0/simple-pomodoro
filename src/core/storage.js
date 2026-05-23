@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from './constants.js';
+import { normalizeFocusNote } from './focus-note.js';
 import { normalizeFocusHistory } from './focus-history.js';
 import { createDefaultSettings, normalizeSettings } from './settings.js';
 import { createInitialSession, normalizeSession } from './session.js';
@@ -113,6 +114,18 @@ export function loadFocusHistory(storage) {
 
 export function saveFocusHistory(history, storage) {
   writeJson(resolveStorage(storage), STORAGE_KEYS.focusHistory, normalizeFocusHistory(history));
+}
+
+export function loadFocusNoteDraft(storage) {
+  return normalizeFocusNote(parseJson(resolveStorage(storage), STORAGE_KEYS.focusNoteDraft));
+}
+
+export function saveFocusNoteDraft(focusNoteDraft, storage) {
+  writeJson(
+    resolveStorage(storage),
+    STORAGE_KEYS.focusNoteDraft,
+    normalizeFocusNote(focusNoteDraft)
+  );
 }
 
 export function createMemoryStorage(initialState = {}) {

@@ -14,6 +14,7 @@ function createState(overrides = {}) {
     activeSession: createInitialSession(settings),
     backgroundNotice: '',
     focusHistory: [],
+    focusNoteDraft: '',
     historyTagEditEntryId: '',
     idleStartedAt: null,
     isNtfyTesting: false,
@@ -48,6 +49,7 @@ function createDeps(stateOverrides = {}) {
   const playCompletionTone = vi.fn(() => true);
   const playUiActionTone = vi.fn(() => true);
   const persistFocusHistory = vi.fn();
+  const persistFocusNoteDraft = vi.fn();
   const persistSettings = vi.fn();
   const postWorkerAction = vi.fn();
   const renderApp = vi.fn();
@@ -65,6 +67,7 @@ function createDeps(stateOverrides = {}) {
       testNtfy: vi.fn(async () => '')
     },
     persistFocusHistory,
+    persistFocusNoteDraft,
     persistSettings,
     postWorkerAction,
     renderApp,
@@ -80,6 +83,7 @@ function createDeps(stateOverrides = {}) {
     deps,
     spies: {
       persistFocusHistory,
+      persistFocusNoteDraft,
       persistSettings,
       playCompletionTone,
       playUiActionTone,
@@ -129,7 +133,9 @@ describe('root action handlers', () => {
   });
 
   it('dispatches timer command actions through the worker bridge', () => {
-    const { deps, spies } = createDeps();
+    const { deps, spies, state } = createDeps({
+      focusNoteDraft: 'Prepare launch notes'
+    });
     const { handlers } = createRootActionHandlers(deps);
 
     handlers['start-step'](createActionButton());
@@ -154,6 +160,9 @@ describe('root action handlers', () => {
     });
     expect(spies.postWorkerAction).toHaveBeenNthCalledWith(5, WORKER_ACTIONS.END_STEP_EARLY);
     expect(globalThis.window.confirm).toHaveBeenCalledTimes(2);
+    expect(state.focusNoteDraft).toBe('');
+    expect(spies.persistFocusNoteDraft).toHaveBeenCalledTimes(1);
+    expect(spies.renderApp).toHaveBeenCalledTimes(1);
   });
 
   it('handles tab and pip actions with persisted state updates', async () => {
@@ -221,6 +230,7 @@ describe('root action handlers', () => {
     expect(spies.postWorkerAction).not.toHaveBeenCalled();
     expect(spies.persistSettings).not.toHaveBeenCalled();
     expect(spies.persistFocusHistory).not.toHaveBeenCalled();
+    expect(spies.persistFocusNoteDraft).not.toHaveBeenCalled();
     expect(state.historyTagEditEntryId).toBe('');
   });
 });

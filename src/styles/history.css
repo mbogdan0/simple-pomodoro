@@ -74,6 +74,12 @@
   margin: 0;
 }
 
+.history-item-note {
+  color: #77817b;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
 .history-tag {
   border: 1px solid transparent;
   border-radius: 999px;

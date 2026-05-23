@@ -15,6 +15,7 @@ function createState(overrides = {}) {
     activeSession: createInitialSession(settings),
     backgroundNotice: '',
     focusHistory: [],
+    focusNoteDraft: '',
     historyTagEditEntryId: '',
     idleStartedAt: null,
     isNtfyTesting: false,

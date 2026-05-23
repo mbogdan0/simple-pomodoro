@@ -24,6 +24,7 @@ function createSessionHarness(stateOverrides = {}) {
     activeSession: createInitialSession(settings),
     backgroundNotice: '',
     focusHistory: [],
+    focusNoteDraft: '',
     historyTagEditEntryId: '',
     isNtfyTesting: false,
     lastCompletionKey: '',
@@ -159,6 +160,7 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusNoteDraft: vi.fn(),
       persistSettings,
       postWorkerAction: vi.fn(),
       renderApp: vi.fn(),
@@ -227,6 +229,7 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusNoteDraft: vi.fn(),
       persistSettings,
       postWorkerAction,
       renderApp,
@@ -271,6 +274,7 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusNoteDraft: vi.fn(),
       persistSettings: vi.fn(),
       postWorkerAction,
       renderApp: vi.fn(),
@@ -318,6 +322,7 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusNoteDraft: vi.fn(),
       persistSettings: vi.fn(),
       postWorkerAction: vi.fn(),
       renderApp: vi.fn(),
@@ -363,6 +368,7 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusNoteDraft: vi.fn(),
       persistSettings: vi.fn(),
       postWorkerAction: vi.fn(),
       renderApp: vi.fn(),
@@ -402,6 +408,7 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusNoteDraft: vi.fn(),
       persistSettings: vi.fn(),
       postWorkerAction: vi.fn(),
       renderApp: vi.fn(),
@@ -466,6 +473,7 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory,
+      persistFocusNoteDraft: vi.fn(),
       persistSettings: vi.fn(),
       postWorkerAction: vi.fn(),
       renderApp,

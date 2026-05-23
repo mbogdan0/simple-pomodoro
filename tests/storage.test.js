@@ -7,9 +7,11 @@ import {
   createMemoryStorage,
   loadActiveSession,
   loadFocusHistory,
+  loadFocusNoteDraft,
   loadSettings,
   saveActiveSession,
   saveFocusHistory,
+  saveFocusNoteDraft,
   saveSettings
 } from '../src/core/storage.js';
 
@@ -42,6 +44,13 @@ describe('storage layer', () => {
     expect(loadSettings(storage)).toEqual(settings);
     expect(loadActiveSession(settings, storage)).toEqual(session);
     expect(loadFocusHistory(storage)).toEqual(history);
+  });
+
+  it('roundtrips focus note draft through localStorage abstraction', () => {
+    const storage = createMemoryStorage();
+    saveFocusNoteDraft('Deep work on architecture review', storage);
+
+    expect(loadFocusNoteDraft(storage)).toBe('Deep work on architecture revi');
   });
 
   it('normalizes repeat count and unsupported tabs while loading settings', () => {

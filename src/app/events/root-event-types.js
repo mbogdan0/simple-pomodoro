@@ -45,6 +45,7 @@
  *   testNtfy: () => Promise<string>
  * }} notificationService
  * @property {(state: import('../types.js').AppState) => void} persistFocusHistory
+ * @property {(state: import('../types.js').AppState) => void} persistFocusNoteDraft
  * @property {(state: import('../types.js').AppState) => void} persistSettings
  * @property {(type: string, payload?: object) => void} postWorkerAction
  * @property {() => void} renderApp

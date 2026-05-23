@@ -113,6 +113,25 @@
   width: min(420px, 100%);
 }
 
+.focus-note-field {
+  width: min(420px, 100%);
+}
+
+.focus-note-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text);
+  min-height: 34px;
+  padding: 6px 0;
+  width: 100%;
+}
+
+.focus-note-input::placeholder {
+  color: #97a09a;
+}
+
 .focus-tag-button {
   background: #f4f2ed;
   border: 1px solid #d9d3c8;

@@ -19,6 +19,7 @@ describe('history panel behavior', () => {
       {
         completedAt: recentDayEarly,
         durationMs: 25 * 60 * 1000,
+        focusNote: 'Prepare math chapter summary',
         focusTag: 'study',
         id: 'focus-2',
         stepId: 'focus-2',
@@ -45,6 +46,7 @@ describe('history panel behavior', () => {
     expect(html).toContain('40:00');
     expect(html).toContain('25:00');
     expect(html).toContain('45:00');
+    expect(html).toContain('Prepare math chapter summary');
     expect(html).toContain('history-tag--none');
     expect(html).toContain('history-tag--study');
     expect(html).toContain('history-tag--work');
@@ -61,9 +63,11 @@ describe('history panel behavior', () => {
   });
 
   it('renders empty state when no entries are present', () => {
-    const html = renderHistoryPanel([]);
+    const html = renderHistoryPanel([], '', 'Plan API pagination');
 
     expect(html).toContain('No completed focus sessions yet.');
+    expect(html).toContain('data-focus-note-input');
+    expect(html).toContain('value="Plan API pagination"');
     expect(html).not.toContain('history-list');
   });
 
@@ -88,5 +92,24 @@ describe('history panel behavior', () => {
     expect(html).toContain('data-focus-tag="work"');
     expect(html).toContain('data-focus-tag="study"');
     expect(html).not.toContain('data-action="toggle-history-entry-tag-edit"');
+  });
+
+  it('escapes focus note content in history item text and title', () => {
+    const completedAt = new Date(2026, 3, 20, 18, 30, 0).getTime();
+    const html = renderHistoryPanel([
+      {
+        completedAt,
+        durationMs: 25 * 60 * 1000,
+        focusNote: "'><img src=x onerror=alert(1)>",
+        focusTag: 'work',
+        id: 'focus-1',
+        stepId: 'focus-1',
+        stepType: 'work'
+      }
+    ]);
+
+    expect(html).toContain('history-item-note');
+    expect(html).toContain('&#39;&gt;&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
   });
 });

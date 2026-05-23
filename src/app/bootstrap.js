@@ -8,15 +8,31 @@ import { createSessionController } from './session/session-controller.js';
 import {
   createAppState,
   persistFocusHistory,
+  persistFocusNoteDraft,
   persistSession,
   persistSettings
 } from './state/app-state.js';
 import { createAppRenderer } from './view/render-app.js';
 import { createTimerPipController } from '../core/pip.js';
-import { normalizeSession, syncSession } from '../core/session.js';
+import { canResetSession, normalizeSession, syncSession } from '../core/session.js';
 import { WORKER_ACTIONS, WORKER_MESSAGE_TYPES } from '../core/worker-protocol.js';
 
 const SERVICE_WORKER_URL = 'service-worker.js';
+const STALE_SESSION_THRESHOLD_MS = 60 * 60 * 1000;
+const STALE_SESSION_CONFIRMATION_MESSAGE =
+  'Your previous session was last active over an hour ago. Start a new session now?';
+
+function shouldConfirmStaleSession(session, now = Date.now()) {
+  if (!canResetSession(session)) {
+    return false;
+  }
+
+  if (!Number.isFinite(session?.updatedAt)) {
+    return false;
+  }
+
+  return now - session.updatedAt >= STALE_SESSION_THRESHOLD_MS;
+}
 
 export function startApp(root) {
   if (!root) {
@@ -26,6 +42,11 @@ export function startApp(root) {
   const state = createAppState();
   const audioService = createAudioService(window);
   let serviceWorkerRegistration = null;
+
+  function clearFocusNoteDraft() {
+    state.focusNoteDraft = '';
+    persistFocusNoteDraft(state);
+  }
 
   function canUseServiceWorker() {
     const isDevelopmentRuntime = Boolean(globalThis['__APP_DEV__']);
@@ -183,6 +204,7 @@ export function startApp(root) {
     commitSession: sessionController.commitSession,
     notificationService,
     persistFocusHistory,
+    persistFocusNoteDraft,
     persistSettings,
     postWorkerAction: workerBridge.postWorkerAction,
     renderApp: renderer.renderApp,
@@ -202,12 +224,27 @@ export function startApp(root) {
   }
 
   persistSettings(state);
-  sessionController.commitSession(syncSession(state.activeSession, Date.now()), {
-    dispatchAlerts: true,
-    persist: true,
-    render: false,
-    syncWorker: false
-  });
+  const startupNow = Date.now();
+  const shouldShowStaleSessionConfirmation = shouldConfirmStaleSession(
+    state.activeSession,
+    startupNow
+  );
+
+  if (shouldShowStaleSessionConfirmation && window.confirm(STALE_SESSION_CONFIRMATION_MESSAGE)) {
+    clearFocusNoteDraft();
+    sessionController.handleLocalAction(WORKER_ACTIONS.RESET_ALL, {
+      now: startupNow,
+      settings: state.settings
+    });
+  } else {
+    sessionController.commitSession(syncSession(state.activeSession, startupNow), {
+      dispatchAlerts: true,
+      persist: true,
+      render: false,
+      syncWorker: false
+    });
+  }
+
   renderer.renderApp();
   audioService.primeOnGesture();
   void registerServiceWorker();

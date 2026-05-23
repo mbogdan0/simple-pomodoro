@@ -1,5 +1,6 @@
 import { createCompletionKey } from './alerts.js';
 import { FOCUS_TAGS, MAX_FOCUS_HISTORY_ENTRIES, STEP_TYPES } from './constants.js';
+import { normalizeFocusNote } from './focus-note.js';
 import { getCurrentStep } from './session.js';
 
 function normalizeHistoryId(value) {
@@ -51,13 +52,14 @@ export function normalizeFocusHistoryEntry(rawEntry) {
   const completedAt = normalizeTimestamp(rawEntry.completedAt);
   const durationMs = normalizeDurationMs(rawEntry.durationMs);
   const focusTag = normalizeFocusTag(rawEntry.focusTag);
+  const focusNote = normalizeFocusNote(rawEntry.focusNote);
   const stepId = normalizeHistoryId(rawEntry.stepId);
 
   if (!id || !stepId || !Number.isFinite(completedAt) || !Number.isFinite(durationMs)) {
     return null;
   }
 
-  return {
+  const normalizedEntry = {
     completedAt,
     durationMs,
     focusTag,
@@ -65,6 +67,12 @@ export function normalizeFocusHistoryEntry(rawEntry) {
     stepId,
     stepType: normalizeStepType(rawEntry.stepType)
   };
+
+  if (focusNote) {
+    normalizedEntry.focusNote = focusNote;
+  }
+
+  return normalizedEntry;
 }
 
 export function normalizeFocusHistory(rawHistory = []) {
@@ -78,7 +86,7 @@ export function normalizeFocusHistory(rawHistory = []) {
     .slice(0, MAX_FOCUS_HISTORY_ENTRIES);
 }
 
-export function createFocusHistoryEntry(session, completionKeyHint = '') {
+export function createFocusHistoryEntry(session, completionKeyHint = '', focusNote = '') {
   if (session?.status !== 'completed_waiting_next') {
     return null;
   }
@@ -98,7 +106,9 @@ export function createFocusHistoryEntry(session, completionKeyHint = '') {
     return null;
   }
 
-  return {
+  const normalizedFocusNote = normalizeFocusNote(focusNote);
+
+  const entry = {
     completedAt,
     durationMs,
     focusTag: normalizeFocusTag(session.focusTag),
@@ -106,6 +116,12 @@ export function createFocusHistoryEntry(session, completionKeyHint = '') {
     stepId,
     stepType: 'work'
   };
+
+  if (normalizedFocusNote) {
+    entry.focusNote = normalizedFocusNote;
+  }
+
+  return entry;
 }
 
 export function appendFocusHistoryEntry(history = [], rawEntry) {

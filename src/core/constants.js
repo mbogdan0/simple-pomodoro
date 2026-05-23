@@ -69,6 +69,7 @@ export const DEFAULT_ALERT_SETTINGS = {
 
 export const STORAGE_KEYS = {
   focusHistory: 'timer.focus-history.v1',
+  focusNoteDraft: 'timer.focus-note-draft.v1',
   settings: 'timer.settings.v2',
   activeSession: 'timer.active-session.v2'
 };

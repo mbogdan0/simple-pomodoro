@@ -25,6 +25,7 @@ export function createRootActionHandlers(deps) {
     audioService,
     notificationService,
     persistFocusHistory,
+    persistFocusNoteDraft,
     persistSettings,
     postWorkerAction,
     renderApp,
@@ -34,6 +35,11 @@ export function createRootActionHandlers(deps) {
 
   function playUiActionTone() {
     audioService.playUiActionTone(state.settings.alertSettings.soundEnabled);
+  }
+
+  function clearFocusNoteDraft() {
+    state.focusNoteDraft = '';
+    persistFocusNoteDraft(state);
   }
 
   function testSound() {
@@ -111,6 +117,8 @@ export function createRootActionHandlers(deps) {
         return;
       }
 
+      clearFocusNoteDraft();
+      renderApp();
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.RESET_ALL, { settings: state.settings });
     },
