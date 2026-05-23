@@ -2,16 +2,10 @@ import { createCompletionKey, shouldDispatchCompletion } from '../../core/alerts
 import { appendFocusHistoryEntry, createFocusHistoryEntry } from '../../core/focus-history.js';
 import {
   advanceAfterCompletion,
-  forceCompleteCurrentStep,
+  applySessionAction,
   getCurrentStep,
   markAlertsDispatched,
   normalizeSession,
-  pauseSession,
-  prepareSessionForStepStart,
-  resetSession,
-  resumeSession,
-  setSessionFocusTag,
-  syncIdleSessionWithSettings,
   syncSession
 } from '../../core/session.js';
 import { loadActiveSession } from '../../core/storage.js';
@@ -25,6 +19,91 @@ function createIdleStepKey(session) {
   return `${session.currentStepIndex}:${getCurrentStep(session)?.id ?? ''}`;
 }
 
+function isFiniteNumber(value) {
+  return Number.isFinite(value);
+}
+
+function reduceCommittedSession({
+  commitNow,
+  completionKeyHint = '',
+  completionReason = '',
+  dispatchAlerts = false,
+  focusHistory = [],
+  focusNoteDraft = '',
+  idleStartedAt = null,
+  lastCompletionKey = '',
+  nextSession,
+  pauseStartedAt = null,
+  previousSession,
+  settings
+}) {
+  let session = normalizeSession(nextSession, settings);
+  let nextFocusHistory = focusHistory;
+  let nextLastCompletionKey = lastCompletionKey;
+  let shouldPersistFocusHistory = false;
+  const completionAlerts = [];
+
+  if (session.status === 'completed_waiting_next') {
+    const completionKey = completionKeyHint || createCompletionKey(session);
+    const shouldSuppressCompletionAlerts = completionReason === 'manual_early';
+    const nextEntry = createFocusHistoryEntry(session, completionKey, focusNoteDraft);
+
+    if (nextEntry) {
+      const appendedHistory = appendFocusHistoryEntry(nextFocusHistory, nextEntry);
+
+      if (appendedHistory.length !== nextFocusHistory.length) {
+        nextFocusHistory = appendedHistory;
+        shouldPersistFocusHistory = true;
+      }
+    }
+
+    const mayDispatchByKey = completionKey
+      ? shouldDispatchCompletion(completionKey, lastCompletionKey)
+      : !session.alertsDispatched;
+
+    if (!completionKey || mayDispatchByKey) {
+      if (dispatchAlerts && !shouldSuppressCompletionAlerts) {
+        completionAlerts.push({
+          completionKey,
+          session
+        });
+      }
+
+      session = markAlertsDispatched(session);
+    }
+
+    if (completionKey) {
+      nextLastCompletionKey = completionKey;
+    }
+
+    session = advanceAfterCompletion(session, settings, commitNow);
+  }
+
+  const nextIdleStartedAt =
+    session.status === 'idle'
+      ? createIdleStepKey(previousSession) !== createIdleStepKey(session) ||
+        !isFiniteNumber(idleStartedAt)
+        ? commitNow
+        : idleStartedAt
+      : null;
+  const nextPauseStartedAt =
+    session.status === 'paused'
+      ? previousSession?.status !== 'paused' || !isFiniteNumber(pauseStartedAt)
+        ? commitNow
+        : pauseStartedAt
+      : null;
+
+  return {
+    completionAlerts,
+    idleStartedAt: nextIdleStartedAt,
+    lastCompletionKey: nextLastCompletionKey,
+    pauseStartedAt: nextPauseStartedAt,
+    session,
+    shouldPersistFocusHistory,
+    focusHistory: nextFocusHistory
+  };
+}
+
 export function createSessionController({
   state,
   dispatchCompletionAlerts,
@@ -35,23 +114,6 @@ export function createSessionController({
   updatePageChrome,
   updateTimerLiveRegion
 }) {
-  function maybeTrackCompletedFocus(session, completionKey = '') {
-    const nextEntry = createFocusHistoryEntry(session, completionKey, state.focusNoteDraft);
-
-    if (!nextEntry) {
-      return;
-    }
-
-    const nextHistory = appendFocusHistoryEntry(state.focusHistory, nextEntry);
-
-    if (nextHistory.length === state.focusHistory.length) {
-      return;
-    }
-
-    state.focusHistory = nextHistory;
-    persistFocusHistory(state);
-  }
-
   function commitSession(nextSession, options = {}) {
     const {
       completionKeyHint = '',
@@ -64,50 +126,34 @@ export function createSessionController({
 
     const previousSession = state.activeSession;
     const committedAt = Date.now();
-    let session = normalizeSession(nextSession, state.settings);
+    const reduced = reduceCommittedSession({
+      commitNow: committedAt,
+      completionKeyHint,
+      completionReason,
+      dispatchAlerts,
+      focusHistory: state.focusHistory,
+      focusNoteDraft: state.focusNoteDraft,
+      idleStartedAt: state.idleStartedAt,
+      lastCompletionKey: state.lastCompletionKey,
+      nextSession,
+      pauseStartedAt: state.pauseStartedAt,
+      previousSession,
+      settings: state.settings
+    });
 
-    if (session.status === 'completed_waiting_next') {
-      const completionKey = completionKeyHint || createCompletionKey(session);
-      const shouldSuppressCompletionAlerts = completionReason === 'manual_early';
-      maybeTrackCompletedFocus(session, completionKey);
-      const mayDispatchByKey = completionKey
-        ? shouldDispatchCompletion(completionKey, state.lastCompletionKey)
-        : !session.alertsDispatched;
+    state.activeSession = reduced.session;
+    state.focusHistory = reduced.focusHistory;
+    state.idleStartedAt = reduced.idleStartedAt;
+    state.lastCompletionKey = reduced.lastCompletionKey;
+    state.pauseStartedAt = reduced.pauseStartedAt;
 
-      if (!completionKey || mayDispatchByKey) {
-        if (dispatchAlerts && !shouldSuppressCompletionAlerts) {
-          dispatchCompletionAlerts(session, completionKey);
-        }
-        session = markAlertsDispatched(session);
-      }
-
-      if (completionKey) {
-        state.lastCompletionKey = completionKey;
-      }
-
-      session = advanceAfterCompletion(session, state.settings, committedAt);
+    if (reduced.shouldPersistFocusHistory) {
+      persistFocusHistory(state);
     }
 
-    state.activeSession = session;
-
-    if (session.status === 'idle') {
-      const previousIdleStepKey = createIdleStepKey(previousSession);
-      const nextIdleStepKey = createIdleStepKey(session);
-
-      if (previousIdleStepKey !== nextIdleStepKey || !Number.isFinite(state.idleStartedAt)) {
-        state.idleStartedAt = committedAt;
-      }
-    } else {
-      state.idleStartedAt = null;
-    }
-
-    if (session.status === 'paused') {
-      if (previousSession?.status !== 'paused' || !Number.isFinite(state.pauseStartedAt)) {
-        state.pauseStartedAt = committedAt;
-      }
-    } else {
-      state.pauseStartedAt = null;
-    }
+    reduced.completionAlerts.forEach(({ completionKey, session }) => {
+      dispatchCompletionAlerts(session, completionKey);
+    });
 
     if (persist) {
       persistSession(state);
@@ -171,52 +217,25 @@ export function createSessionController({
   }
 
   function handleLocalAction(type, payload = {}) {
-    const now = payload.now ?? Date.now();
-    let nextSession = state.activeSession;
-    let completionReason = '';
-
-    switch (type) {
-      case WORKER_ACTIONS.END_STEP_EARLY:
-        nextSession = forceCompleteCurrentStep(state.activeSession, now);
-        completionReason = 'manual_early';
-        break;
-      case WORKER_ACTIONS.PAUSE:
-        nextSession = pauseSession(state.activeSession, now);
-        break;
-      case WORKER_ACTIONS.RESET_ALL:
-        nextSession = resetSession(state.activeSession, now);
-        nextSession = syncIdleSessionWithSettings(
-          nextSession,
-          payload.settings ?? state.settings,
-          now
-        );
-        break;
-      case WORKER_ACTIONS.RESUME:
-        nextSession = resumeSession(state.activeSession, now);
-        break;
-      case WORKER_ACTIONS.START_STEP:
-        nextSession = prepareSessionForStepStart(
-          state.activeSession,
-          payload.settings ?? state.settings,
-          now
-        );
-        break;
-      case WORKER_ACTIONS.SET_FOCUS_TAG:
-        nextSession = setSessionFocusTag(state.activeSession, payload.focusTag, now);
-        break;
-      case WORKER_ACTIONS.SYNC_NOW:
-        reconcileSession();
-        return;
-      default:
-        return;
+    if (type === WORKER_ACTIONS.SYNC_NOW) {
+      reconcileSession();
+      return;
     }
 
-    commitSession(nextSession, {
+    const actionResult = applySessionAction(state.activeSession, type, payload, {
+      settings: state.settings
+    });
+
+    if (!actionResult.handled) {
+      return;
+    }
+
+    commitSession(actionResult.nextSession, {
+      completionReason: actionResult.completionReason,
       dispatchAlerts: true,
       persist: true,
       render: true,
-      syncWorker: false,
-      completionReason
+      syncWorker: false
     });
   }
 

@@ -3,6 +3,7 @@ export {
   normalizeSession,
   syncIdleSessionWithSettings
 } from './session/normalize.js';
+export { applySessionAction } from './session/actions.js';
 export {
   canResetSession,
   getCurrentStep,

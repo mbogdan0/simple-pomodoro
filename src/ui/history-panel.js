@@ -1,6 +1,7 @@
 import { FOCUS_TAG_LABELS, FOCUS_TAGS } from '../core/constants.js';
 import { MAX_FOCUS_NOTE_LENGTH, escapeHtml } from '../core/focus-note.js';
 import { formatClock } from '../core/format.js';
+import { ROOT_ACTIONS } from '../app/events/root-contracts.js';
 
 const HISTORY_DAY_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
@@ -84,7 +85,7 @@ function renderHistoryTagOptions(entryId, activeTag) {
         return `
           <button
             class="history-tag history-tag--${tag} history-tag-option ${isActive ? 'is-active' : ''}"
-            data-action="set-history-entry-focus-tag"
+            data-action="${ROOT_ACTIONS.SET_HISTORY_ENTRY_FOCUS_TAG}"
             data-entry-id="${entryId}"
             data-focus-tag="${tag}"
             aria-pressed="${isActive ? 'true' : 'false'}"
@@ -104,7 +105,7 @@ function renderHistoryTagReadOnly(entryId, focusTag) {
       <span class="history-tag history-tag--${focusTag}">${FOCUS_TAG_LABELS[focusTag]}</span>
       <button
         class="history-tag-edit-button"
-        data-action="toggle-history-entry-tag-edit"
+        data-action="${ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_TAG_EDIT}"
         data-entry-id="${entryId}"
         type="button"
       >
@@ -139,7 +140,7 @@ function renderHistoryNote(entryId, focusNote, isEditingNote) {
       }
       <button
         class="history-note-edit-button"
-        data-action="toggle-history-entry-note-edit"
+        data-action="${ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_NOTE_EDIT}"
         data-entry-id="${entryId}"
         type="button"
       >
@@ -172,7 +173,7 @@ function renderHistoryItem(entry, historyTagEditEntryId = '', historyNoteEditEnt
       </div>
       <button
         class="ghost-button"
-        data-action="clear-history-entry"
+        data-action="${ROOT_ACTIONS.CLEAR_HISTORY_ENTRY}"
         data-entry-id="${entry.id}"
         type="button"
       >

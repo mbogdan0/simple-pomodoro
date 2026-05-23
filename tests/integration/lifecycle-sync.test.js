@@ -33,6 +33,11 @@ function setWindow(value) {
 
 function createEventHub() {
   const handlers = {};
+  const removeEventListener = vi.fn((type, handler) => {
+    if (handlers[type] === handler) {
+      delete handlers[type];
+    }
+  });
 
   return {
     addEventListener(type, handler) {
@@ -41,7 +46,8 @@ function createEventHub() {
     fire(type, payload) {
       handlers[type]?.(payload);
     },
-    handlers
+    handlers,
+    removeEventListener
   };
 }
 
@@ -244,5 +250,33 @@ describe('lifecycle sync integration', () => {
     windowHub.fire('beforeunload', completedEvent);
     expect(completedEvent.preventDefault).not.toHaveBeenCalled();
     expect(completedEvent.returnValue).toBeUndefined();
+  });
+
+  it('unbinds lifecycle listeners on dispose', () => {
+    const documentHub = createEventHub();
+    const windowHub = createEventHub();
+    setDocument(documentHub);
+    setWindow(windowHub);
+
+    const lifecycle = createLifecycleSync({
+      commitSession: vi.fn(),
+      persistSession: vi.fn(),
+      reconcileSession: vi.fn(),
+      renderApp: vi.fn(),
+      restoreSessionFromStorage: vi.fn(),
+      state: {
+        activeSession: createInitialSession(createDefaultSettings()),
+        settings: createDefaultSettings()
+      },
+      syncWorkerNow: vi.fn(),
+      updatePageChrome: vi.fn()
+    });
+
+    lifecycle.bindGlobalEvents();
+    lifecycle.dispose();
+    lifecycle.dispose();
+
+    expect(documentHub.removeEventListener).toHaveBeenCalledTimes(1);
+    expect(windowHub.removeEventListener).toHaveBeenCalledTimes(5);
   });
 });

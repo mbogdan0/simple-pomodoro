@@ -161,6 +161,33 @@ describe('root events shell', () => {
     expect(openMenu.open).toBe(false);
   });
 
+  it('unbinds root and document listeners on dispose', () => {
+    const documentHandlers = {};
+    const documentRemovals = vi.fn();
+    const rootRemovals = vi.fn();
+    const { deps, root } = createDeps({
+      removeEventListener: rootRemovals
+    });
+
+    globalThis.document = {
+      addEventListener(type, handler) {
+        documentHandlers[type] = handler;
+      },
+      removeEventListener(type, handler) {
+        documentRemovals(type, handler);
+      }
+    };
+
+    const rootEvents = createRootEvents(deps);
+    rootEvents.bindRootEvents();
+    rootEvents.dispose();
+    rootEvents.dispose();
+
+    expect(root.addEventListener).toHaveBeenCalledTimes(3);
+    expect(rootRemovals).toHaveBeenCalledTimes(3);
+    expect(documentRemovals).toHaveBeenCalledTimes(1);
+  });
+
   it('normalizes and persists focus note draft on input without re-rendering', () => {
     class FakeHTMLInputElement {
       constructor() {

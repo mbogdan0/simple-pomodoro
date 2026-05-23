@@ -13,6 +13,8 @@ export function createLifecycleSync({
   syncWorkerNow,
   updatePageChrome
 }) {
+  let boundListeners = null;
+
   function handleStorageSyncEvent(event) {
     if (!event?.key) {
       return;
@@ -50,6 +52,12 @@ export function createLifecycleSync({
   }
 
   function bindGlobalEvents() {
+    if (boundListeners) {
+      return;
+    }
+
+    const documentTarget = globalThis.document;
+    const windowTarget = globalThis.window;
     const resyncNow = () => {
       restoreSessionFromStorage();
       reconcileSession();
@@ -66,9 +74,8 @@ export function createLifecycleSync({
       event.preventDefault();
       event.returnValue = '';
     };
-
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
+    const handleVisibilityChange = () => {
+      if (!documentTarget.hidden) {
         resyncNow();
         return;
       }
@@ -76,22 +83,55 @@ export function createLifecycleSync({
       persistSession(state);
       syncWorkerNow();
       updatePageChrome();
-    });
-
-    window.addEventListener('focus', resyncNow);
-    window.addEventListener('pageshow', resyncNow);
-
-    window.addEventListener('pagehide', () => {
+    };
+    const handlePageHide = () => {
       persistSession(state);
       syncWorkerNow();
-    });
+    };
 
-    window.addEventListener('beforeunload', maybeConfirmBeforeUnload);
-    window.addEventListener('storage', handleStorageSyncEvent);
+    documentTarget.addEventListener?.('visibilitychange', handleVisibilityChange);
+    windowTarget.addEventListener?.('focus', resyncNow);
+    windowTarget.addEventListener?.('pageshow', resyncNow);
+    windowTarget.addEventListener?.('pagehide', handlePageHide);
+    windowTarget.addEventListener?.('beforeunload', maybeConfirmBeforeUnload);
+    windowTarget.addEventListener?.('storage', handleStorageSyncEvent);
+
+    boundListeners = {
+      documentTarget,
+      handlePageHide,
+      handleVisibilityChange,
+      maybeConfirmBeforeUnload,
+      resyncNow,
+      windowTarget
+    };
+  }
+
+  function dispose() {
+    if (!boundListeners) {
+      return;
+    }
+
+    const {
+      documentTarget,
+      handlePageHide,
+      handleVisibilityChange,
+      maybeConfirmBeforeUnload,
+      resyncNow,
+      windowTarget
+    } = boundListeners;
+
+    documentTarget.removeEventListener?.('visibilitychange', handleVisibilityChange);
+    windowTarget.removeEventListener?.('focus', resyncNow);
+    windowTarget.removeEventListener?.('pageshow', resyncNow);
+    windowTarget.removeEventListener?.('pagehide', handlePageHide);
+    windowTarget.removeEventListener?.('beforeunload', maybeConfirmBeforeUnload);
+    windowTarget.removeEventListener?.('storage', handleStorageSyncEvent);
+    boundListeners = null;
   }
 
   return {
     bindGlobalEvents,
+    dispose,
     handleStorageSyncEvent
   };
 }

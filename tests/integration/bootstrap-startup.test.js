@@ -11,6 +11,7 @@ import {
 } from '../../src/core/storage.js';
 
 const originalDocument = globalThis.document;
+const originalClearInterval = globalThis.clearInterval;
 const originalLocalStorage = globalThis.localStorage;
 const originalNavigator = globalThis.navigator;
 const originalSetInterval = globalThis.setInterval;
@@ -75,6 +76,11 @@ function createCanvasStub() {
 function createDocumentStub() {
   const handlers = {};
   let faviconLink = null;
+  const removeEventListener = vi.fn((type, handler) => {
+    if (handlers[type] === handler) {
+      delete handlers[type];
+    }
+  });
 
   return {
     addEventListener(type, handler) {
@@ -108,12 +114,18 @@ function createDocumentStub() {
 
       return null;
     },
+    removeEventListener,
     title: ''
   };
 }
 
 function createWindowStub() {
   const handlers = {};
+  const removeEventListener = vi.fn((type, handler) => {
+    if (handlers[type] === handler) {
+      delete handlers[type];
+    }
+  });
 
   return {
     addEventListener(type, handler) {
@@ -123,7 +135,8 @@ function createWindowStub() {
       return true;
     },
     handlers,
-    isSecureContext: false
+    isSecureContext: false,
+    removeEventListener
   };
 }
 
@@ -134,6 +147,7 @@ describe('bootstrap startup integration', () => {
     setNavigator(originalNavigator);
     setWindow(originalWindow);
     setWorker(originalWorker);
+    globalThis.clearInterval = originalClearInterval;
     globalThis.setInterval = originalSetInterval;
     vi.restoreAllMocks();
   });
@@ -258,5 +272,69 @@ describe('bootstrap startup integration', () => {
     expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
     expect(app.state.activeSession.currentStepIndex).toBe(3);
     expect(app.state.focusNoteDraft).toBe('Keep this note');
+  });
+
+  it('disposes runtime listeners, interval, and worker resources safely', () => {
+    const documentStub = createDocumentStub();
+    const windowStub = createWindowStub();
+    const rootListeners = {};
+    const root = {
+      addEventListener(type, handler) {
+        rootListeners[type] = handler;
+      },
+      innerHTML: '',
+      querySelector() {
+        return null;
+      },
+      removeEventListener: vi.fn((type, handler) => {
+        if (rootListeners[type] === handler) {
+          delete rootListeners[type];
+        }
+      })
+    };
+    const workerInstances = [];
+    class FakeWorker {
+      constructor() {
+        this.handlers = {};
+        this.postMessage = vi.fn();
+        this.terminate = vi.fn();
+        workerInstances.push(this);
+      }
+
+      addEventListener(type, handler) {
+        this.handlers[type] = handler;
+      }
+
+      removeEventListener(type, handler) {
+        if (this.handlers[type] === handler) {
+          delete this.handlers[type];
+        }
+      }
+    }
+
+    setDocument(documentStub);
+    setLocalStorage(createMemoryStorage());
+    setNavigator({});
+    setWindow(windowStub);
+    setWorker(FakeWorker);
+    globalThis.setInterval = vi.fn(() => 42);
+    globalThis.clearInterval = vi.fn();
+
+    const app = startApp(root);
+
+    expect(workerInstances).toHaveLength(1);
+    expect(rootListeners.click).toBeTypeOf('function');
+    expect(windowStub.handlers.storage).toBeTypeOf('function');
+    expect(documentStub.handlers.visibilitychange).toBeTypeOf('function');
+
+    app.dispose();
+    app.dispose();
+
+    expect(globalThis.clearInterval).toHaveBeenCalledTimes(1);
+    expect(globalThis.clearInterval).toHaveBeenCalledWith(42);
+    expect(root.removeEventListener).toHaveBeenCalledTimes(3);
+    expect(windowStub.removeEventListener).toHaveBeenCalledTimes(7);
+    expect(documentStub.removeEventListener).toHaveBeenCalledTimes(2);
+    expect(workerInstances[0].terminate).toHaveBeenCalledTimes(1);
   });
 });

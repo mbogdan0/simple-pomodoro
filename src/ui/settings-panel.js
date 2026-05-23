@@ -1,5 +1,10 @@
 import { STEP_TYPES, STEP_TYPE_LABELS } from '../core/constants.js';
 import { formatMinutesValue } from '../core/format.js';
+import {
+  ALERT_SETTING_KEYS,
+  ROOT_ACTIONS,
+  SETTING_TOGGLE_KEYS
+} from '../app/events/root-contracts.js';
 
 export function renderSettingsPanel({
   isNtfyTesting = false,
@@ -64,7 +69,7 @@ export function renderSettingsPanel({
           <span>Auto-start next step</span>
           <input
             ${settings.autoStartNextStep ? 'checked' : ''}
-            data-setting-toggle="autoStartNextStep"
+            data-setting-toggle="${SETTING_TOGGLE_KEYS.AUTO_START_NEXT_STEP}"
             type="checkbox"
           >
         </label>
@@ -82,7 +87,7 @@ export function renderSettingsPanel({
                 <span>PiP clock updates every 10 seconds</span>
                 <input
                   ${settings.pipClockTickEvery10s ? 'checked' : ''}
-                  data-setting-toggle="pipClockTickEvery10s"
+                  data-setting-toggle="${SETTING_TOGGLE_KEYS.PIP_CLOCK_TICK_EVERY_10S}"
                   type="checkbox"
                 >
               </label>
@@ -105,7 +110,7 @@ export function renderSettingsPanel({
             <span>Sound</span>
             <input
               ${settings.alertSettings.soundEnabled ? 'checked' : ''}
-              data-alert-setting="soundEnabled"
+              data-alert-setting="${ALERT_SETTING_KEYS.SOUND_ENABLED}"
               type="checkbox"
             >
           </label>
@@ -113,7 +118,7 @@ export function renderSettingsPanel({
             <span>Notifications</span>
             <input
               ${settings.alertSettings.notificationsEnabled ? 'checked' : ''}
-              data-alert-setting="notificationsEnabled"
+              data-alert-setting="${ALERT_SETTING_KEYS.NOTIFICATIONS_ENABLED}"
               type="checkbox"
             >
           </label>
@@ -121,20 +126,20 @@ export function renderSettingsPanel({
             ${
               canRequestNotificationPermission
                 ? `
-                  <button class="ghost-button" data-action="request-notification-permission" type="button">
+                  <button class="ghost-button" data-action="${ROOT_ACTIONS.REQUEST_NOTIFICATION_PERMISSION}" type="button">
                     Allow notifications
                   </button>
                 `
                 : ''
             }
-            <button class="ghost-button" data-action="test-sound" type="button">
+            <button class="ghost-button" data-action="${ROOT_ACTIONS.TEST_SOUND}" type="button">
               Test sound
             </button>
             ${
               resolvedNotificationSupport.unsupported
                 ? ''
                 : `
-                  <button class="ghost-button" data-action="test-notification" type="button">
+                  <button class="ghost-button" data-action="${ROOT_ACTIONS.TEST_NOTIFICATION}" type="button">
                     Test notification
                   </button>
                 `
@@ -157,7 +162,7 @@ export function renderSettingsPanel({
           <span>Idle reminder (every minute)</span>
           <input
             ${settings.idleReminderEnabled ? 'checked' : ''}
-            data-setting-toggle="idleReminderEnabled"
+            data-setting-toggle="${SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED}"
             type="checkbox"
           >
         </label>
@@ -185,7 +190,7 @@ export function renderSettingsPanel({
           <div class="settings-actions">
             <button
               class="ghost-button"
-              data-action="test-ntfy"
+              data-action="${ROOT_ACTIONS.TEST_NTFY}"
               type="button"
               aria-busy="${isNtfyTesting ? 'true' : 'false'}"
               ${hasNtfyPublishUrl && !isNtfyTesting ? '' : 'disabled'}

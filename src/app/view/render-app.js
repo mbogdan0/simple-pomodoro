@@ -29,6 +29,7 @@ import {
 import { renderHistoryPanel } from '../../ui/history-panel.js';
 import { renderSettingsPanel } from '../../ui/settings-panel.js';
 import { renderCycleProgressMarkup, renderTimerPanel } from '../../ui/timer-panel.js';
+import { ROOT_ACTIONS, ROOT_TABS } from '../events/root-contracts.js';
 
 function ensureFaviconLink() {
   let link = document.querySelector('link[rel="icon"]');
@@ -46,9 +47,64 @@ function formatRepeatMeta(timerModel) {
   return `Focus repeat ${timerModel.focusRepeatCurrent}/${timerModel.focusRepeatTotal} · Step ${timerModel.stepCurrent}/${timerModel.stepTotal}`;
 }
 
+function collectLiveRefs(root) {
+  return {
+    clockElement: root.querySelector('[data-live-clock]'),
+    cycleProgressElement: root.querySelector('[data-live-cycle-progress]'),
+    progressBarElement: root.querySelector('[data-live-progress]'),
+    progressFillElement: root.querySelector('[data-live-progress-fill]'),
+    repeatMetaElement: root.querySelector('[data-live-repeat-meta]'),
+    statusDetailElement: root.querySelector('[data-live-status-detail]'),
+    statusElement: root.querySelector('[data-live-status]'),
+    statusTextElement: root.querySelector('[data-live-status-text]'),
+    stepLabelElement: root.querySelector('[data-live-step-label]')
+  };
+}
+
+function patchLiveTimerDom(refs, timerModel) {
+  if (refs.clockElement) {
+    refs.clockElement.textContent = timerModel.clock;
+  }
+
+  if (refs.statusTextElement) {
+    refs.statusTextElement.textContent = timerModel.statusText;
+  } else if (refs.statusElement) {
+    refs.statusElement.textContent = timerModel.statusText;
+  }
+
+  if (refs.statusDetailElement) {
+    refs.statusDetailElement.textContent = timerModel.statusDetailText;
+  }
+
+  if (refs.stepLabelElement) {
+    refs.stepLabelElement.textContent = timerModel.stepLabel;
+  }
+
+  if (refs.repeatMetaElement) {
+    refs.repeatMetaElement.textContent = formatRepeatMeta(timerModel);
+  }
+
+  if (refs.cycleProgressElement) {
+    refs.cycleProgressElement.innerHTML = renderCycleProgressMarkup(timerModel.cycleDots);
+  }
+
+  if (refs.progressBarElement) {
+    refs.progressBarElement.setAttribute('aria-valuenow', String(timerModel.progressPercent));
+    refs.progressBarElement.setAttribute(
+      'aria-valuetext',
+      `${timerModel.progressPercent}% complete in current step`
+    );
+  }
+
+  if (refs.progressFillElement) {
+    refs.progressFillElement.style.width = `${timerModel.progressPercent}%`;
+  }
+}
+
 export function createAppRenderer({ root, state, pipController, getNotificationSupportModel }) {
   const faviconLink = ensureFaviconLink();
   let chromeSignature = '';
+  let liveRefs = collectLiveRefs(root);
   let liveUpdateHooks = {
     maybeDispatchFocusMinuteReminder: () => {},
     syncPictureInPicture: () => {}
@@ -93,7 +149,11 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
       focusRepeatTotal,
       pipToggleLabel: 'Toggle PiP',
       showPipToggle: pipSupported,
-      primaryAction: running ? 'pause-step' : paused ? 'resume-step' : 'start-step',
+      primaryAction: running
+        ? ROOT_ACTIONS.PAUSE_STEP
+        : paused
+          ? ROOT_ACTIONS.RESUME_STEP
+          : ROOT_ACTIONS.START_STEP,
       primaryActionLabel: running ? 'Pause' : paused ? 'Resume' : 'Start',
       progressTrack: PROGRESS_TRACK_COLOR,
       progressPercent: Math.round(progress * 100),
@@ -122,7 +182,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
                 ([tab, label]) => `
                   <button
                     class="tab-button ${activeTab === tab ? 'is-active' : ''}"
-                    data-action="switch-tab"
+                    data-action="${ROOT_ACTIONS.SWITCH_TAB}"
                     data-tab="${tab}"
                     aria-current="${activeTab === tab ? 'page' : 'false'}"
                     aria-pressed="${activeTab === tab ? 'true' : 'false'}"
@@ -137,9 +197,9 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
         </header>
 
         <section class="panel-grid">
-          ${activeTab === 'timer' ? renderTimerPanel(timerModel) : ''}
+          ${activeTab === ROOT_TABS.TIMER ? renderTimerPanel(timerModel) : ''}
           ${
-            activeTab === 'settings'
+            activeTab === ROOT_TABS.SETTINGS
               ? renderSettingsPanel({
                   isNtfyTesting: state.isNtfyTesting,
                   notificationNotice: state.notificationNotice,
@@ -153,7 +213,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
               : ''
           }
           ${
-            activeTab === 'history'
+            activeTab === ROOT_TABS.HISTORY
               ? renderHistoryPanel(
                   state.focusHistory,
                   state.historyTagEditEntryId,
@@ -165,60 +225,18 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
       </main>
     `;
 
+    liveRefs = collectLiveRefs(root);
     updateTimerLiveRegion();
     updatePageChrome();
   }
 
   function updateTimerLiveRegion(now = Date.now()) {
     const timerModel = getTimerModel(now);
-    const clockElement = root.querySelector('[data-live-clock]');
-    const cycleProgressElement = root.querySelector('[data-live-cycle-progress]');
-    const progressBarElement = root.querySelector('[data-live-progress]');
-    const statusElement = root.querySelector('[data-live-status]');
-    const statusTextElement = root.querySelector('[data-live-status-text]');
-    const stepLabelElement = root.querySelector('[data-live-step-label]');
-    const repeatMetaElement = root.querySelector('[data-live-repeat-meta]');
-    const progressFillElement = root.querySelector('[data-live-progress-fill]');
-    const statusDetailElement = root.querySelector('[data-live-status-detail]');
-
-    if (clockElement) {
-      clockElement.textContent = timerModel.clock;
+    if (!liveRefs.clockElement && !liveRefs.statusElement) {
+      liveRefs = collectLiveRefs(root);
     }
 
-    if (statusTextElement) {
-      statusTextElement.textContent = timerModel.statusText;
-    } else if (statusElement) {
-      statusElement.textContent = timerModel.statusText;
-    }
-
-    if (statusDetailElement) {
-      statusDetailElement.textContent = timerModel.statusDetailText;
-    }
-
-    if (stepLabelElement) {
-      stepLabelElement.textContent = timerModel.stepLabel;
-    }
-
-    if (repeatMetaElement) {
-      repeatMetaElement.textContent = formatRepeatMeta(timerModel);
-    }
-
-    if (cycleProgressElement) {
-      cycleProgressElement.innerHTML = renderCycleProgressMarkup(timerModel.cycleDots);
-    }
-
-    if (progressBarElement) {
-      progressBarElement.setAttribute('aria-valuenow', String(timerModel.progressPercent));
-      progressBarElement.setAttribute(
-        'aria-valuetext',
-        `${timerModel.progressPercent}% complete in current step`
-      );
-    }
-
-    if (progressFillElement) {
-      progressFillElement.style.width = `${timerModel.progressPercent}%`;
-    }
-
+    patchLiveTimerDom(liveRefs, timerModel);
     liveUpdateHooks.syncPictureInPicture(timerModel, now);
     liveUpdateHooks.maybeDispatchFocusMinuteReminder(state.activeSession, now);
   }

@@ -22,6 +22,7 @@ export function createRootEvents(deps) {
   const { persistFocusHistory, persistFocusNoteDraft, root, state } = deps;
   const { handlers: actionHandlers, playUiActionTone } = createRootActionHandlers(deps);
   const settingsHandlers = createRootSettingsHandlers(deps);
+  let isBound = false;
 
   function handleRootClick(event) {
     const target = event?.target;
@@ -119,14 +120,32 @@ export function createRootEvents(deps) {
   }
 
   function bindRootEvents() {
+    if (isBound) {
+      return;
+    }
+
     root.addEventListener('click', handleRootClick);
     root.addEventListener('change', settingsHandlers.handleRootChange);
     root.addEventListener('input', handleRootInput);
     document.addEventListener('click', handleDocumentClick);
+    isBound = true;
+  }
+
+  function dispose() {
+    if (!isBound) {
+      return;
+    }
+
+    root.removeEventListener?.('click', handleRootClick);
+    root.removeEventListener?.('change', settingsHandlers.handleRootChange);
+    root.removeEventListener?.('input', handleRootInput);
+    document.removeEventListener?.('click', handleDocumentClick);
+    isBound = false;
   }
 
   return {
     bindRootEvents,
+    dispose,
     handleRootInput,
     handleRootChange: settingsHandlers.handleRootChange,
     handleRootClick

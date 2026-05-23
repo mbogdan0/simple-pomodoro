@@ -1,4 +1,5 @@
 import { MAX_FOCUS_NOTE_LENGTH, escapeHtml } from '../core/focus-note.js';
+import { ROOT_ACTIONS } from '../app/events/root-contracts.js';
 
 function getCycleDotVisualState(dot) {
   const focusDone = dot?.focusState === 'done';
@@ -63,7 +64,7 @@ function renderFocusTagsMarkup(timerModel) {
           return `
             <button
               class="focus-tag-button focus-tag-button--${option.id} ${isActive ? 'is-active' : ''}"
-              data-action="set-focus-tag"
+              data-action="${ROOT_ACTIONS.SET_FOCUS_TAG}"
               data-focus-tag="${option.id}"
               aria-pressed="${isActive ? 'true' : 'false'}"
               type="button"
@@ -204,7 +205,7 @@ export function renderTimerPanel(timerModel) {
             <div class="overflow-actions__menu" aria-label="Timer actions" role="menu">
               <button
                 class="overflow-actions__item"
-                data-action="reset-session"
+                data-action="${ROOT_ACTIONS.RESET_SESSION}"
                 role="menuitem"
                 type="button"
                 ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
@@ -213,7 +214,7 @@ export function renderTimerPanel(timerModel) {
               </button>
               <button
                 class="overflow-actions__item"
-                data-action="end-step-early"
+                data-action="${ROOT_ACTIONS.END_STEP_EARLY}"
                 role="menuitem"
                 type="button"
                 ${endStepEarlyDisabled ? 'disabled aria-disabled="true"' : ''}
@@ -229,7 +230,7 @@ export function renderTimerPanel(timerModel) {
               ? `
                 <button
                   class="action-button subtle action-button--pip"
-                  data-action="toggle-pip-window"
+                  data-action="${ROOT_ACTIONS.TOGGLE_PIP_WINDOW}"
                   type="button"
                 >
                   <span class="action-button__icon action-button__icon--pip" aria-hidden="true">

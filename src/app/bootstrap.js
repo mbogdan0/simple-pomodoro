@@ -212,15 +212,36 @@ export function startApp(root) {
     state,
     toggleManualPipWindow: pipSync.toggleManualPipWindow
   });
+  let disposed = false;
+  let safetyIntervalHandle = null;
 
   function startSafetyInterval() {
-    setInterval(() => {
+    safetyIntervalHandle = setInterval(() => {
       const now = Date.now();
       sessionController.reconcileSession();
       renderer.updateTimerLiveRegion(now);
       renderer.updatePageChrome(now);
       notificationService.maybeDispatchIdleReminder(now);
     }, 500);
+  }
+
+  function dispose() {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+
+    if (Number.isFinite(safetyIntervalHandle)) {
+      clearInterval(safetyIntervalHandle);
+      safetyIntervalHandle = null;
+    }
+
+    rootEvents.dispose?.();
+    lifecycleSync.dispose?.();
+    workerBridge.disposeWorker();
+    pipController.close();
+    audioService.dispose?.();
   }
 
   persistSettings(state);
@@ -257,6 +278,7 @@ export function startApp(root) {
   rootEvents.bindRootEvents();
 
   return {
+    dispose,
     state
   };
 }

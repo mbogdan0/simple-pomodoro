@@ -1,16 +1,6 @@
 import { createCompletionKey } from './core/alerts.js';
 import { WORKER_TICK_INTERVAL_MS } from './core/constants.js';
-import {
-  forceCompleteCurrentStep,
-  normalizeSession,
-  pauseSession,
-  prepareSessionForStepStart,
-  resetSession,
-  resumeSession,
-  setSessionFocusTag,
-  syncIdleSessionWithSettings,
-  syncSession
-} from './core/session.js';
+import { applySessionAction, normalizeSession, syncSession } from './core/session.js';
 import { WORKER_ACTIONS, WORKER_MESSAGE_TYPES } from './core/worker-protocol.js';
 
 const IDLE_REMINDER_INTERVAL_MS = 60_000;
@@ -192,53 +182,42 @@ self.onmessage = ({ data }) => {
 
     const now = payload.now ?? Date.now();
 
-    switch (type) {
-      case WORKER_ACTIONS.END_STEP_EARLY:
-        session = forceCompleteCurrentStep(session, now);
-        stopTimers();
-        scheduleIdleReminder();
-        if (emitCompletionIfNeeded('manual_early')) {
-          break;
-        }
-        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'end-step-early' });
-        break;
-      case WORKER_ACTIONS.PAUSE:
-        session = pauseSession(session, now);
-        stopTimers();
-        scheduleIdleReminder();
-        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'pause' });
-        break;
-      case WORKER_ACTIONS.RESET_ALL:
-        session = resetSession(session, now);
-        if (payload.settings) {
-          session = syncIdleSessionWithSettings(session, payload.settings, now);
-        }
-        stopTimers();
-        scheduleIdleReminder();
-        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'reset-all' });
-        break;
-      case WORKER_ACTIONS.RESUME:
-        session = resumeSession(session, now);
-        startTicker();
-        scheduleIdleReminder();
-        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'resume' });
-        break;
-      case WORKER_ACTIONS.START_STEP:
-        session = prepareSessionForStepStart(session, payload.settings, now);
-        startTicker();
-        scheduleIdleReminder();
-        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'start' });
-        break;
-      case WORKER_ACTIONS.SET_FOCUS_TAG:
-        session = setSessionFocusTag(session, payload.focusTag, now);
-        emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: 'set-focus-tag' });
-        break;
-      case WORKER_ACTIONS.SYNC_NOW:
-        syncAndEmit(now, false);
-        break;
-      default:
-        emit(WORKER_MESSAGE_TYPES.ERROR, session, { error: `Unknown worker message: ${type}` });
+    if (type === WORKER_ACTIONS.SYNC_NOW) {
+      syncAndEmit(now, false);
+      return;
     }
+
+    const actionResult = applySessionAction(session, type, payload, {
+      now
+    });
+
+    if (!actionResult.handled) {
+      emit(WORKER_MESSAGE_TYPES.ERROR, session, { error: `Unknown worker message: ${type}` });
+      return;
+    }
+
+    session = actionResult.nextSession;
+
+    if (actionResult.timerMode === 'start') {
+      startTicker();
+    } else if (actionResult.timerMode === 'stop') {
+      stopTimers();
+    }
+
+    if (actionResult.timerMode !== 'keep') {
+      scheduleIdleReminder();
+    }
+
+    if (type === WORKER_ACTIONS.END_STEP_EARLY) {
+      if (emitCompletionIfNeeded(actionResult.completionReason || 'manual_early')) {
+        return;
+      }
+
+      emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: actionResult.reason });
+      return;
+    }
+
+    emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: actionResult.reason });
   } catch (error) {
     emit(WORKER_MESSAGE_TYPES.ERROR, session, {
       error: error instanceof Error ? error.message : String(error)

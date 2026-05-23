@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createRootSettingsHandlers } from '../../src/app/events/root-settings-handlers.js';
+import { ALERT_SETTING_KEYS, SETTING_TOGGLE_KEYS } from '../../src/app/events/root-contracts.js';
 import { createInitialSession } from '../../src/core/session.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
 import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
@@ -221,5 +222,56 @@ describe('root settings handlers', () => {
     expect(spies.persistSettings).not.toHaveBeenCalled();
     expect(spies.renderApp).not.toHaveBeenCalled();
     expect(spies.postWorkerAction).not.toHaveBeenCalled();
+  });
+
+  it('applies consistent side-effect matrix for supported toggle keys', () => {
+    const toggleMatrix = [
+      {
+        key: SETTING_TOGGLE_KEYS.AUTO_START_NEXT_STEP,
+        expectedSyncWorker: false
+      },
+      {
+        key: SETTING_TOGGLE_KEYS.PIP_CLOCK_TICK_EVERY_10S,
+        expectedSyncWorker: false
+      },
+      {
+        key: SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED,
+        expectedSyncWorker: true
+      }
+    ];
+
+    toggleMatrix.forEach(({ key, expectedSyncWorker }) => {
+      const { deps, spies } = createDeps();
+      const { handleRootChange } = createRootSettingsHandlers(deps);
+      const toggleInput = new HTMLInputElement();
+      toggleInput.dataset.settingToggle = key;
+      toggleInput.checked = true;
+      toggleInput.matches = (selector) => selector === '[data-setting-toggle]';
+
+      handleRootChange({ target: toggleInput });
+
+      expect(spies.persistSettings).toHaveBeenCalledTimes(1);
+      expect(spies.renderApp).toHaveBeenCalledTimes(1);
+      expect(spies.commitSession).not.toHaveBeenCalled();
+      expect(spies.postWorkerAction).toHaveBeenCalledTimes(expectedSyncWorker ? 1 : 0);
+    });
+  });
+
+  it('applies consistent side-effect matrix for alert toggles', () => {
+    [ALERT_SETTING_KEYS.SOUND_ENABLED, ALERT_SETTING_KEYS.NOTIFICATIONS_ENABLED].forEach((key) => {
+      const { deps, spies } = createDeps();
+      const { handleRootChange } = createRootSettingsHandlers(deps);
+      const alertInput = new HTMLInputElement();
+      alertInput.dataset.alertSetting = key;
+      alertInput.checked = false;
+      alertInput.matches = (selector) => selector === '[data-alert-setting]';
+
+      handleRootChange({ target: alertInput });
+
+      expect(spies.persistSettings).toHaveBeenCalledTimes(1);
+      expect(spies.renderApp).toHaveBeenCalledTimes(1);
+      expect(spies.commitSession).not.toHaveBeenCalled();
+      expect(spies.postWorkerAction).not.toHaveBeenCalled();
+    });
   });
 });

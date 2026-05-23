@@ -1,24 +1,7 @@
 // @ts-check
 
 /**
- * @typedef {
- *   | 'pause-step'
- *   | 'request-notification-permission'
- *   | 'reset-session'
- *   | 'end-step-early'
- *   | 'resume-step'
- *   | 'start-step'
- *   | 'set-focus-tag'
- *   | 'toggle-pip-window'
- *   | 'switch-tab'
- *   | 'clear-history-entry'
- *   | 'toggle-history-entry-note-edit'
- *   | 'toggle-history-entry-tag-edit'
- *   | 'set-history-entry-focus-tag'
- *   | 'test-notification'
- *   | 'test-sound'
- *   | 'test-ntfy'
- * } RootActionName
+ * @typedef {typeof import('./root-contracts.js').ROOT_ACTIONS[keyof typeof import('./root-contracts.js').ROOT_ACTIONS]} RootActionName
  */
 
 /**
@@ -33,6 +16,7 @@
  * @property {import('../types.js').AppState} state
  * @property {{
  *   addEventListener: (eventType: string, handler: EventListener | ((event: Event) => void)) => void,
+ *   removeEventListener?: (eventType: string, handler: EventListener | ((event: Event) => void)) => void,
  *   querySelectorAll?: (selector: string) => ArrayLike<{ open?: boolean }>
  * }} root
  * @property {{

@@ -5,6 +5,7 @@ import {
   updateFocusHistoryEntryFocusTag
 } from '../../core/focus-history.js';
 import { WORKER_ACTIONS } from '../../core/worker-protocol.js';
+import { ROOT_ACTIONS, ROOT_TABS } from './root-contracts.js';
 
 const RESET_CONFIRMATION_MESSAGE = 'Reset all steps and return to the first step?';
 const END_STEP_EARLY_CONFIRMATION_MESSAGE = 'End the current step now?';
@@ -75,7 +76,7 @@ export function createRootActionHandlers(deps) {
 
   /** @type {Record<import('./root-event-types.js').RootActionName, (button: import('./root-event-types.js').RootActionElement) => void>} */
   const handlers = {
-    'clear-history-entry': (button) => {
+    [ROOT_ACTIONS.CLEAR_HISTORY_ENTRY]: (button) => {
       const entryId = button?.dataset?.entryId;
 
       if (!entryId) {
@@ -94,7 +95,7 @@ export function createRootActionHandlers(deps) {
       persistFocusHistory(state);
       renderApp();
     },
-    'end-step-early': (button) => {
+    [ROOT_ACTIONS.END_STEP_EARLY]: (button) => {
       closeOverflowActionsMenu(button);
 
       if (!window.confirm(END_STEP_EARLY_CONFIRMATION_MESSAGE)) {
@@ -104,16 +105,16 @@ export function createRootActionHandlers(deps) {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.END_STEP_EARLY);
     },
-    'pause-step': () => {
+    [ROOT_ACTIONS.PAUSE_STEP]: () => {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.PAUSE);
     },
-    'request-notification-permission': () => {
+    [ROOT_ACTIONS.REQUEST_NOTIFICATION_PERMISSION]: () => {
       void notificationService.requestNotificationPermission().then(() => {
         renderApp();
       });
     },
-    'reset-session': (button) => {
+    [ROOT_ACTIONS.RESET_SESSION]: (button) => {
       closeOverflowActionsMenu(button);
 
       if (!window.confirm(RESET_CONFIRMATION_MESSAGE)) {
@@ -125,11 +126,11 @@ export function createRootActionHandlers(deps) {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.RESET_ALL, { settings: state.settings });
     },
-    'resume-step': () => {
+    [ROOT_ACTIONS.RESUME_STEP]: () => {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.RESUME);
     },
-    'set-focus-tag': (button) => {
+    [ROOT_ACTIONS.SET_FOCUS_TAG]: (button) => {
       const focusTag = button?.dataset?.focusTag;
 
       if (!focusTag) {
@@ -139,7 +140,7 @@ export function createRootActionHandlers(deps) {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.SET_FOCUS_TAG, { focusTag });
     },
-    'set-history-entry-focus-tag': (button) => {
+    [ROOT_ACTIONS.SET_HISTORY_ENTRY_FOCUS_TAG]: (button) => {
       const entryId = button?.dataset?.entryId;
       const focusTag = button?.dataset?.focusTag;
 
@@ -152,7 +153,7 @@ export function createRootActionHandlers(deps) {
       persistFocusHistory(state);
       renderApp();
     },
-    'toggle-history-entry-note-edit': (button) => {
+    [ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_NOTE_EDIT]: (button) => {
       const entryId = button?.dataset?.entryId;
 
       if (!entryId) {
@@ -162,14 +163,14 @@ export function createRootActionHandlers(deps) {
       state.historyNoteEditEntryId = state.historyNoteEditEntryId === entryId ? '' : entryId;
       renderApp();
     },
-    'start-step': () => {
+    [ROOT_ACTIONS.START_STEP]: () => {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.START_STEP, { settings: state.settings });
     },
-    'switch-tab': (button) => {
+    [ROOT_ACTIONS.SWITCH_TAB]: (button) => {
       const tab = button?.dataset?.tab;
 
-      if (tab !== 'timer' && tab !== 'settings' && tab !== 'history') {
+      if (tab !== ROOT_TABS.TIMER && tab !== ROOT_TABS.SETTINGS && tab !== ROOT_TABS.HISTORY) {
         return;
       }
 
@@ -178,18 +179,18 @@ export function createRootActionHandlers(deps) {
       persistSettings(state);
       renderApp();
     },
-    'test-notification': () => {
+    [ROOT_ACTIONS.TEST_NOTIFICATION]: () => {
       void notificationService.testNotification().then(() => {
         renderApp();
       });
     },
-    'test-ntfy': () => {
+    [ROOT_ACTIONS.TEST_NTFY]: () => {
       void testNtfy();
     },
-    'test-sound': () => {
+    [ROOT_ACTIONS.TEST_SOUND]: () => {
       testSound();
     },
-    'toggle-history-entry-tag-edit': (button) => {
+    [ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_TAG_EDIT]: (button) => {
       const entryId = button?.dataset?.entryId;
 
       if (!entryId) {
@@ -199,7 +200,7 @@ export function createRootActionHandlers(deps) {
       state.historyTagEditEntryId = state.historyTagEditEntryId === entryId ? '' : entryId;
       renderApp();
     },
-    'toggle-pip-window': () => {
+    [ROOT_ACTIONS.TOGGLE_PIP_WINDOW]: () => {
       playUiActionTone();
       void toggleManualPipWindow();
     }

@@ -4,6 +4,7 @@ import { parseMinutesValue } from '../../core/format.js';
 import { syncIdleSessionWithSettings } from '../../core/session.js';
 import { normalizeNtfyPublishUrl, sanitizeRepeatCount } from '../../core/settings.js';
 import { WORKER_ACTIONS } from '../../core/worker-protocol.js';
+import { ALERT_SETTING_KEYS, SETTING_TOGGLE_KEYS } from './root-contracts.js';
 
 /**
  * @param {import('./root-event-types.js').RootEventDeps} deps
@@ -11,10 +12,17 @@ import { WORKER_ACTIONS } from '../../core/worker-protocol.js';
 export function createRootSettingsHandlers(deps) {
   const { commitSession, persistSettings, postWorkerAction, renderApp, state } = deps;
 
-  function afterSettingsMutation() {
-    persistSettings(state);
+  function applySettingsMutation(
+    mutate,
+    { persist = true, rebuildIdleSession = false, rerender = true, syncWorker = false } = {}
+  ) {
+    mutate();
 
-    if (state.activeSession.status === 'idle') {
+    if (persist) {
+      persistSettings(state);
+    }
+
+    if (rebuildIdleSession && state.activeSession.status === 'idle') {
       commitSession(syncIdleSessionWithSettings(state.activeSession, state.settings, Date.now()), {
         dispatchAlerts: false,
         persist: true,
@@ -24,7 +32,47 @@ export function createRootSettingsHandlers(deps) {
       return;
     }
 
-    renderApp();
+    if (syncWorker) {
+      postWorkerAction(WORKER_ACTIONS.SET_IDLE_REMINDER, {
+        enabled: state.settings.idleReminderEnabled
+      });
+    }
+
+    if (rerender) {
+      renderApp();
+    }
+  }
+
+  /** @type {Map<string, (checked: boolean) => void>} */
+  const toggleMutations = new Map([
+    [
+      SETTING_TOGGLE_KEYS.AUTO_START_NEXT_STEP,
+      (checked) => (state.settings.autoStartNextStep = checked)
+    ],
+    [
+      SETTING_TOGGLE_KEYS.PIP_CLOCK_TICK_EVERY_10S,
+      (checked) => (state.settings.pipClockTickEvery10s = checked)
+    ],
+    [
+      SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED,
+      (checked) => (state.settings.idleReminderEnabled = checked)
+    ]
+  ]);
+
+  /** @type {Map<string, (checked: boolean) => void>} */
+  const alertMutations = new Map([
+    [
+      ALERT_SETTING_KEYS.SOUND_ENABLED,
+      (checked) => (state.settings.alertSettings.soundEnabled = checked)
+    ],
+    [
+      ALERT_SETTING_KEYS.NOTIFICATIONS_ENABLED,
+      (checked) => (state.settings.alertSettings.notificationsEnabled = checked)
+    ]
+  ]);
+
+  function shouldSyncIdleReminderToggle(settingKey) {
+    return settingKey === SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED;
   }
 
   function handleTemplateDurationChange(target) {
@@ -34,17 +82,31 @@ export function createRootSettingsHandlers(deps) {
       return false;
     }
 
-    state.settings.templateDurations[type] = parseMinutesValue(
-      target.value,
-      state.settings.templateDurations[type]
+    applySettingsMutation(
+      () => {
+        state.settings.templateDurations[type] = parseMinutesValue(
+          target.value,
+          state.settings.templateDurations[type]
+        );
+      },
+      {
+        rebuildIdleSession: true
+      }
     );
-    afterSettingsMutation();
+
     return true;
   }
 
   function handleRepeatCountChange(target) {
-    state.settings.repeatCount = sanitizeRepeatCount(target.value, state.settings.repeatCount);
-    afterSettingsMutation();
+    applySettingsMutation(
+      () => {
+        state.settings.repeatCount = sanitizeRepeatCount(target.value, state.settings.repeatCount);
+      },
+      {
+        rebuildIdleSession: true
+      }
+    );
+
     return true;
   }
 
@@ -55,9 +117,16 @@ export function createRootSettingsHandlers(deps) {
       return false;
     }
 
-    state.settings.alertSettings[key] = target.checked;
-    persistSettings(state);
-    renderApp();
+    const mutate = alertMutations.get(key);
+    applySettingsMutation(() => {
+      if (mutate) {
+        mutate(target.checked);
+        return;
+      }
+
+      state.settings.alertSettings[key] = target.checked;
+    });
+
     return true;
   }
 
@@ -66,10 +135,11 @@ export function createRootSettingsHandlers(deps) {
       return false;
     }
 
-    state.settings.ntfyPublishUrl = normalizeNtfyPublishUrl(target.value);
-    state.ntfyNotice = '';
-    persistSettings(state);
-    renderApp();
+    applySettingsMutation(() => {
+      state.settings.ntfyPublishUrl = normalizeNtfyPublishUrl(target.value);
+      state.ntfyNotice = '';
+    });
+
     return true;
   }
 
@@ -80,31 +150,22 @@ export function createRootSettingsHandlers(deps) {
       return false;
     }
 
-    if (key === 'autoStartNextStep') {
-      state.settings.autoStartNextStep = target.checked;
-      persistSettings(state);
-      renderApp();
-      return true;
+    const mutate = toggleMutations.get(key);
+
+    if (!mutate) {
+      return false;
     }
 
-    if (key === 'pipClockTickEvery10s') {
-      state.settings.pipClockTickEvery10s = target.checked;
-      persistSettings(state);
-      renderApp();
-      return true;
-    }
+    applySettingsMutation(
+      () => {
+        mutate(target.checked);
+      },
+      {
+        syncWorker: shouldSyncIdleReminderToggle(key)
+      }
+    );
 
-    if (key === 'idleReminderEnabled') {
-      state.settings.idleReminderEnabled = target.checked;
-      persistSettings(state);
-      postWorkerAction(WORKER_ACTIONS.SET_IDLE_REMINDER, {
-        enabled: state.settings.idleReminderEnabled
-      });
-      renderApp();
-      return true;
-    }
-
-    return false;
+    return true;
   }
 
   /**
