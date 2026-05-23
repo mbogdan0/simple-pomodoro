@@ -99,18 +99,10 @@ function renderHistoryTagOptions(entryId, activeTag) {
   `;
 }
 
-function renderHistoryTagReadOnly(entryId, focusTag) {
+function renderHistoryTagReadOnly(focusTag) {
   return `
     <div class="history-tag-editor">
       <span class="history-tag history-tag--${focusTag}">${FOCUS_TAG_LABELS[focusTag]}</span>
-      <button
-        class="history-tag-edit-button"
-        data-action="${ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_TAG_EDIT}"
-        data-entry-id="${entryId}"
-        type="button"
-      >
-        Edit tag
-      </button>
     </div>
   `;
 }
@@ -138,15 +130,55 @@ function renderHistoryNote(entryId, focusNote, isEditingNote) {
             ? `<p class="history-item-note" title="${escapeHtml(focusNote)}">${escapeHtml(focusNote)}</p>`
             : ''
       }
-      <button
-        class="history-note-edit-button"
-        data-action="${ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_NOTE_EDIT}"
-        data-entry-id="${entryId}"
-        type="button"
-      >
-        ${isEditingNote ? 'Done' : 'Edit note'}
-      </button>
+      ${
+        isEditingNote
+          ? `
+            <button
+              class="history-note-edit-button"
+              data-action="${ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_NOTE_EDIT}"
+              data-entry-id="${entryId}"
+              type="button"
+            >
+              Done
+            </button>
+          `
+          : ''
+      }
     </div>
+  `;
+}
+
+function renderHistoryEditMenu(entryId) {
+  return `
+    <details class="history-edit-menu">
+      <summary
+        class="history-edit-menu__trigger"
+        aria-label="Edit history entry"
+        title="Edit history entry"
+      >
+        Edit
+      </summary>
+      <div class="history-edit-menu__list" aria-label="History entry edit options" role="menu">
+        <button
+          class="history-edit-menu__item"
+          data-action="${ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_NOTE_EDIT}"
+          data-entry-id="${entryId}"
+          role="menuitem"
+          type="button"
+        >
+          Edit note
+        </button>
+        <button
+          class="history-edit-menu__item"
+          data-action="${ROOT_ACTIONS.TOGGLE_HISTORY_ENTRY_TAG_EDIT}"
+          data-entry-id="${entryId}"
+          role="menuitem"
+          type="button"
+        >
+          Edit tag
+        </button>
+      </div>
+    </details>
   `;
 }
 
@@ -167,8 +199,9 @@ function renderHistoryItem(entry, historyTagEditEntryId = '', historyNoteEditEnt
           ${
             isEditingTag
               ? renderHistoryTagOptions(entry.id, focusTag)
-              : renderHistoryTagReadOnly(entry.id, focusTag)
+              : renderHistoryTagReadOnly(focusTag)
           }
+          ${isEditingTag || isEditingNote ? '' : renderHistoryEditMenu(entry.id)}
         </div>
       </div>
       <button

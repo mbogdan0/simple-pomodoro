@@ -5,12 +5,12 @@ import { createRootSettingsHandlers } from './root-settings-handlers.js';
 import { updateFocusHistoryEntryFocusNote } from '../../core/focus-history.js';
 import { normalizeFocusNote } from '../../core/focus-note.js';
 
-function closeAllOverflowActionsMenus(root) {
+function closeAllCollapsibleMenus(root) {
   if (typeof root.querySelectorAll !== 'function') {
     return;
   }
 
-  root.querySelectorAll('.overflow-actions[open]').forEach((menu) => {
+  root.querySelectorAll('.overflow-actions[open], .history-edit-menu[open]').forEach((menu) => {
     menu.open = false;
   });
 }
@@ -19,17 +19,29 @@ function closeAllOverflowActionsMenus(root) {
  * @param {import('./root-event-types.js').RootEventDeps} deps
  */
 export function createRootEvents(deps) {
-  const { persistFocusHistory, persistFocusNoteDraft, root, state } = deps;
+  const { persistFocusHistory, persistFocusNoteDraft, renderApp, root, state } = deps;
   const { handlers: actionHandlers, playUiActionTone } = createRootActionHandlers(deps);
   const settingsHandlers = createRootSettingsHandlers(deps);
   let isBound = false;
 
+  function closeActiveHistoryEditors() {
+    if (!state.historyTagEditEntryId && !state.historyNoteEditEntryId) {
+      return false;
+    }
+
+    state.historyTagEditEntryId = '';
+    state.historyNoteEditEntryId = '';
+    return true;
+  }
+
   function handleRootClick(event) {
     const target = event?.target;
-    const clickedInsideOverflowMenu = Boolean(target?.closest?.('.overflow-actions'));
+    const clickedInsideOverflowMenu = Boolean(
+      target?.closest?.('.overflow-actions, .history-edit-menu')
+    );
 
     if (!clickedInsideOverflowMenu) {
-      closeAllOverflowActionsMenus(root);
+      closeAllCollapsibleMenus(root);
     }
 
     if (target?.closest?.('.action-button--overflow')) {
@@ -57,12 +69,23 @@ export function createRootEvents(deps) {
 
   function handleDocumentClick(event) {
     const target = event?.target;
+    const clickedInsideOverflowMenu = Boolean(
+      target?.closest?.('.overflow-actions, .history-edit-menu')
+    );
 
-    if (target?.closest?.('.overflow-actions')) {
+    if (clickedInsideOverflowMenu) {
       return;
     }
 
-    closeAllOverflowActionsMenus(root);
+    closeAllCollapsibleMenus(root);
+
+    if (target?.closest?.('.history-item')) {
+      return;
+    }
+
+    if (closeActiveHistoryEditors()) {
+      renderApp();
+    }
   }
 
   function handleRootInput(event) {

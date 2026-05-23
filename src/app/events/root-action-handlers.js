@@ -150,6 +150,7 @@ export function createRootActionHandlers(deps) {
 
       state.focusHistory = updateFocusHistoryEntryFocusTag(state.focusHistory, entryId, focusTag);
       state.historyTagEditEntryId = '';
+      state.historyNoteEditEntryId = '';
       persistFocusHistory(state);
       renderApp();
     },
@@ -160,7 +161,12 @@ export function createRootActionHandlers(deps) {
         return;
       }
 
-      state.historyNoteEditEntryId = state.historyNoteEditEntryId === entryId ? '' : entryId;
+      if (state.historyNoteEditEntryId === entryId) {
+        state.historyNoteEditEntryId = '';
+      } else {
+        state.historyNoteEditEntryId = entryId;
+        state.historyTagEditEntryId = '';
+      }
       renderApp();
     },
     [ROOT_ACTIONS.START_STEP]: () => {
@@ -197,7 +203,12 @@ export function createRootActionHandlers(deps) {
         return;
       }
 
-      state.historyTagEditEntryId = state.historyTagEditEntryId === entryId ? '' : entryId;
+      if (state.historyTagEditEntryId === entryId) {
+        state.historyTagEditEntryId = '';
+      } else {
+        state.historyTagEditEntryId = entryId;
+        state.historyNoteEditEntryId = '';
+      }
       renderApp();
     },
     [ROOT_ACTIONS.TOGGLE_PIP_WINDOW]: () => {

@@ -92,7 +92,7 @@ describe('root events shell', () => {
     rootEvents.handleRootClick({
       target: {
         closest(selector) {
-          if (selector === '.overflow-actions') {
+          if (selector.includes('.overflow-actions')) {
             return null;
           }
 
@@ -159,6 +159,76 @@ describe('root events shell', () => {
     });
 
     expect(openMenu.open).toBe(false);
+  });
+
+  it('closes active history editors on outside document click', () => {
+    const openMenu = { open: true };
+    const documentHandlers = {};
+    const { deps, state } = createDeps(
+      {
+        querySelectorAll: vi.fn(() => [openMenu])
+      },
+      {
+        historyNoteEditEntryId: 'focus-1'
+      }
+    );
+
+    globalThis.document = {
+      addEventListener(type, handler) {
+        documentHandlers[type] = handler;
+      }
+    };
+
+    const rootEvents = createRootEvents(deps);
+    rootEvents.bindRootEvents();
+
+    documentHandlers.click({
+      target: {
+        closest() {
+          return null;
+        }
+      }
+    });
+
+    expect(openMenu.open).toBe(false);
+    expect(state.historyNoteEditEntryId).toBe('');
+    expect(state.historyTagEditEntryId).toBe('');
+    expect(deps.renderApp).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps active history editors open for clicks inside the same history row', () => {
+    const documentHandlers = {};
+    const { deps, state } = createDeps(
+      {},
+      {
+        historyTagEditEntryId: 'focus-1'
+      }
+    );
+
+    globalThis.document = {
+      addEventListener(type, handler) {
+        documentHandlers[type] = handler;
+      }
+    };
+
+    const rootEvents = createRootEvents(deps);
+    rootEvents.bindRootEvents();
+
+    documentHandlers.click({
+      target: {
+        closest(selector) {
+          if (selector.includes('.history-item')) {
+            return {};
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyTagEditEntryId).toBe('focus-1');
+    expect(state.historyNoteEditEntryId).toBe('');
+    expect(deps.renderApp).not.toHaveBeenCalled();
   });
 
   it('unbinds root and document listeners on dispose', () => {

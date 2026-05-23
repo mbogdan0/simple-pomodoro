@@ -426,7 +426,7 @@ describe('app runtime integration', () => {
     rootEvents.handleRootClick({
       target: {
         closest(selector) {
-          if (selector === '.overflow-actions') {
+          if (selector.includes('.overflow-actions')) {
             return {};
           }
 
@@ -528,8 +528,122 @@ describe('app runtime integration', () => {
 
     expect(state.focusHistory[0].focusTag).toBe('study');
     expect(state.historyTagEditEntryId).toBe('');
+    expect(state.historyNoteEditEntryId).toBe('');
     expect(persistFocusHistory).toHaveBeenCalledTimes(1);
     expect(renderApp).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps history editing scoped to one row and one mode at a time', () => {
+    const persistFocusHistory = vi.fn();
+    const renderApp = vi.fn();
+    const { state } = createSessionHarness({
+      focusHistory: [
+        {
+          completedAt: 1_720_000_000_000,
+          durationMs: 25 * 60 * 1000,
+          focusTag: 'none',
+          id: 'focus-1',
+          stepId: 'focus-1',
+          stepType: 'work'
+        },
+        {
+          completedAt: 1_720_000_060_000,
+          durationMs: 30 * 60 * 1000,
+          focusTag: 'work',
+          id: 'focus-2',
+          stepId: 'focus-2',
+          stepType: 'work'
+        }
+      ]
+    });
+
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone: vi.fn()
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory,
+      persistFocusNoteDraft: vi.fn(),
+      persistSettings: vi.fn(),
+      postWorkerAction: vi.fn(),
+      renderApp,
+      root: {
+        addEventListener: vi.fn(),
+        querySelectorAll() {
+          return [];
+        }
+      },
+      state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'toggle-history-entry-note-edit',
+                entryId: 'focus-1'
+              }
+            };
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyNoteEditEntryId).toBe('focus-1');
+    expect(state.historyTagEditEntryId).toBe('');
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'toggle-history-entry-tag-edit',
+                entryId: 'focus-2'
+              }
+            };
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyTagEditEntryId).toBe('focus-2');
+    expect(state.historyNoteEditEntryId).toBe('');
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'toggle-history-entry-note-edit',
+                entryId: 'focus-2'
+              }
+            };
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyNoteEditEntryId).toBe('focus-2');
+    expect(state.historyTagEditEntryId).toBe('');
+    expect(persistFocusHistory).not.toHaveBeenCalled();
+    expect(renderApp).toHaveBeenCalledTimes(3);
   });
 
   it('toggles and autosaves inline history note edit actions', () => {

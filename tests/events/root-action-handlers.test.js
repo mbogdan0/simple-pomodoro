@@ -191,6 +191,14 @@ describe('root action handlers', () => {
           id: 'focus-1',
           stepId: 'step-1',
           stepType: 'work'
+        },
+        {
+          completedAt: 1_720_000_100_000,
+          durationMs: 30 * 60 * 1000,
+          focusTag: 'work',
+          id: 'focus-2',
+          stepId: 'step-2',
+          stepType: 'work'
         }
       ]
     });
@@ -199,26 +207,42 @@ describe('root action handlers', () => {
 
     handlers['toggle-history-entry-tag-edit'](createActionButton({ entryId: 'focus-1' }));
     expect(state.historyTagEditEntryId).toBe('focus-1');
+    expect(state.historyNoteEditEntryId).toBe('');
 
     handlers['toggle-history-entry-note-edit'](createActionButton({ entryId: 'focus-1' }));
     expect(state.historyNoteEditEntryId).toBe('focus-1');
+    expect(state.historyTagEditEntryId).toBe('');
+
+    handlers['toggle-history-entry-tag-edit'](createActionButton({ entryId: 'focus-2' }));
+    expect(state.historyTagEditEntryId).toBe('focus-2');
+    expect(state.historyNoteEditEntryId).toBe('');
 
     handlers['set-history-entry-focus-tag'](
       createActionButton({
-        entryId: 'focus-1',
+        entryId: 'focus-2',
         focusTag: 'study'
       })
     );
 
-    expect(state.focusHistory[0].focusTag).toBe('study');
+    expect(state.focusHistory[1].focusTag).toBe('study');
     expect(state.historyTagEditEntryId).toBe('');
+    expect(state.historyNoteEditEntryId).toBe('');
 
-    handlers['clear-history-entry'](createActionButton({ entryId: 'focus-1' }));
+    handlers['clear-history-entry'](createActionButton({ entryId: 'focus-2' }));
 
-    expect(state.focusHistory).toEqual([]);
+    expect(state.focusHistory).toEqual([
+      {
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: 'focus-1',
+        stepId: 'step-1',
+        stepType: 'work'
+      }
+    ]);
     expect(state.historyNoteEditEntryId).toBe('');
     expect(spies.persistFocusHistory).toHaveBeenCalledTimes(2);
-    expect(spies.renderApp).toHaveBeenCalledTimes(4);
+    expect(spies.renderApp).toHaveBeenCalledTimes(5);
   });
 
   it('keeps no-op behavior for missing datasets and declined confirmations', () => {

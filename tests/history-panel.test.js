@@ -53,6 +53,7 @@ describe('history panel behavior', () => {
     expect(html).toContain('Other');
     expect((html.match(/class="history-day-group"/g) ?? []).length).toBe(2);
     expect((html.match(/data-action="clear-history-entry"/g) ?? []).length).toBe(3);
+    expect((html.match(/class="history-edit-menu"/g) ?? []).length).toBe(3);
     expect((html.match(/data-action="toggle-history-entry-note-edit"/g) ?? []).length).toBe(3);
     expect((html.match(/data-action="toggle-history-entry-tag-edit"/g) ?? []).length).toBe(3);
     expect(html).toContain('data-entry-id="focus-1"');
@@ -92,7 +93,8 @@ describe('history panel behavior', () => {
     expect(html).toContain('data-focus-tag="work"');
     expect(html).toContain('data-focus-tag="study"');
     expect(html).not.toContain('data-action="toggle-history-entry-tag-edit"');
-    expect(html).toContain('data-action="toggle-history-entry-note-edit"');
+    expect(html).not.toContain('data-action="toggle-history-entry-note-edit"');
+    expect(html).not.toContain('class="history-edit-menu"');
   });
 
   it('renders inline history note input for selected editing entry', () => {
@@ -117,6 +119,7 @@ describe('history panel behavior', () => {
     expect(html).toContain('data-entry-id="focus-1"');
     expect(html).toContain('value="Read chapter 4"');
     expect(html).toContain('Done');
+    expect(html).not.toContain('class="history-edit-menu"');
   });
 
   it('escapes focus note content in history item text and title', () => {
