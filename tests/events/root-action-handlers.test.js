@@ -15,6 +15,7 @@ function createState(overrides = {}) {
     backgroundNotice: '',
     focusHistory: [],
     focusNoteDraft: '',
+    historyNoteEditEntryId: '',
     historyTagEditEntryId: '',
     idleStartedAt: null,
     isNtfyTesting: false,
@@ -126,6 +127,7 @@ describe('root action handlers', () => {
         'test-notification',
         'test-ntfy',
         'test-sound',
+        'toggle-history-entry-note-edit',
         'toggle-history-entry-tag-edit',
         'toggle-pip-window'
       ].sort()
@@ -198,6 +200,9 @@ describe('root action handlers', () => {
     handlers['toggle-history-entry-tag-edit'](createActionButton({ entryId: 'focus-1' }));
     expect(state.historyTagEditEntryId).toBe('focus-1');
 
+    handlers['toggle-history-entry-note-edit'](createActionButton({ entryId: 'focus-1' }));
+    expect(state.historyNoteEditEntryId).toBe('focus-1');
+
     handlers['set-history-entry-focus-tag'](
       createActionButton({
         entryId: 'focus-1',
@@ -211,8 +216,9 @@ describe('root action handlers', () => {
     handlers['clear-history-entry'](createActionButton({ entryId: 'focus-1' }));
 
     expect(state.focusHistory).toEqual([]);
+    expect(state.historyNoteEditEntryId).toBe('');
     expect(spies.persistFocusHistory).toHaveBeenCalledTimes(2);
-    expect(spies.renderApp).toHaveBeenCalledTimes(3);
+    expect(spies.renderApp).toHaveBeenCalledTimes(4);
   });
 
   it('keeps no-op behavior for missing datasets and declined confirmations', () => {
@@ -223,6 +229,7 @@ describe('root action handlers', () => {
     handlers['set-focus-tag'](createActionButton());
     handlers['switch-tab'](createActionButton({ tab: 'invalid-tab' }));
     handlers['clear-history-entry'](createActionButton());
+    handlers['toggle-history-entry-note-edit'](createActionButton());
     handlers['toggle-history-entry-tag-edit'](createActionButton());
     handlers['set-history-entry-focus-tag'](createActionButton({ entryId: 'focus-1' }));
     handlers['reset-session'](createActionButton({}, { open: true }));
@@ -231,6 +238,7 @@ describe('root action handlers', () => {
     expect(spies.persistSettings).not.toHaveBeenCalled();
     expect(spies.persistFocusHistory).not.toHaveBeenCalled();
     expect(spies.persistFocusNoteDraft).not.toHaveBeenCalled();
+    expect(state.historyNoteEditEntryId).toBe('');
     expect(state.historyTagEditEntryId).toBe('');
   });
 });

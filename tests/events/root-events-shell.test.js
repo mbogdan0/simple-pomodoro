@@ -16,6 +16,7 @@ function createState(overrides = {}) {
     backgroundNotice: '',
     focusHistory: [],
     focusNoteDraft: '',
+    historyNoteEditEntryId: '',
     historyTagEditEntryId: '',
     idleStartedAt: null,
     isNtfyTesting: false,
@@ -183,6 +184,48 @@ describe('root events shell', () => {
     expect(state.focusNoteDraft).toBe('Keep shipping reliable release');
     expect(input.value).toBe('Keep shipping reliable release');
     expect(deps.persistFocusNoteDraft).toHaveBeenCalledTimes(1);
+    expect(deps.renderApp).not.toHaveBeenCalled();
+  });
+
+  it('autosaves note changes for a selected history entry without re-rendering', () => {
+    class FakeHTMLInputElement {
+      constructor() {
+        this.dataset = {};
+        this.value = '';
+      }
+
+      matches(selector) {
+        return selector === '[data-history-entry-focus-note-input]';
+      }
+    }
+
+    globalThis.HTMLInputElement = FakeHTMLInputElement;
+
+    const { deps, state } = createDeps(
+      {},
+      {
+        focusHistory: [
+          {
+            completedAt: 1_720_000_000_000,
+            durationMs: 25 * 60 * 1000,
+            focusTag: 'work',
+            id: 'focus-1',
+            stepId: 'focus-1',
+            stepType: 'work'
+          }
+        ]
+      }
+    );
+    const rootEvents = createRootEvents(deps);
+    const input = new FakeHTMLInputElement();
+    input.dataset.entryId = 'focus-1';
+    input.value = 'Audit release checklist and incident doc';
+
+    rootEvents.handleRootInput({ target: input });
+
+    expect(state.focusHistory[0].focusNote).toBe('Audit release checklist and in');
+    expect(input.value).toBe('Audit release checklist and in');
+    expect(deps.persistFocusHistory).toHaveBeenCalledTimes(1);
     expect(deps.renderApp).not.toHaveBeenCalled();
   });
 });

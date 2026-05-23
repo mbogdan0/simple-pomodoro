@@ -108,33 +108,53 @@ function renderHistoryTagReadOnly(entryId, focusTag) {
         data-entry-id="${entryId}"
         type="button"
       >
-        Edit
+        Edit tag
       </button>
     </div>
   `;
 }
 
-function renderFocusNoteField(focusNoteDraft = '') {
+function renderHistoryNote(entryId, focusNote, isEditingNote) {
   return `
-    <label class="focus-note-field">
-      <span class="sr-only">Focus note</span>
-      <input
-        class="focus-note-input"
-        data-focus-note-input
-        maxlength="${MAX_FOCUS_NOTE_LENGTH}"
-        placeholder="Add a short focus note"
-        type="text"
-        value="${escapeHtml(focusNoteDraft)}"
+    <div class="history-note-editor">
+      ${
+        isEditingNote
+          ? `
+            <label class="history-note-editor__field">
+              <span class="sr-only">Edit focus note</span>
+              <input
+                class="history-note-input"
+                data-history-entry-focus-note-input
+                data-entry-id="${entryId}"
+                maxlength="${MAX_FOCUS_NOTE_LENGTH}"
+                placeholder="Add a short note"
+                type="text"
+                value="${escapeHtml(focusNote)}"
+              >
+            </label>
+          `
+          : focusNote
+            ? `<p class="history-item-note" title="${escapeHtml(focusNote)}">${escapeHtml(focusNote)}</p>`
+            : ''
+      }
+      <button
+        class="history-note-edit-button"
+        data-action="toggle-history-entry-note-edit"
+        data-entry-id="${entryId}"
+        type="button"
       >
-    </label>
+        ${isEditingNote ? 'Done' : 'Edit note'}
+      </button>
+    </div>
   `;
 }
 
-function renderHistoryItem(entry, historyTagEditEntryId = '') {
+function renderHistoryItem(entry, historyTagEditEntryId = '', historyNoteEditEntryId = '') {
   const date = new Date(entry.completedAt);
   const focusTag = resolveFocusTag(entry.focusTag);
   const focusNote = typeof entry.focusNote === 'string' ? entry.focusNote : '';
   const isEditingTag = entry.id === historyTagEditEntryId;
+  const isEditingNote = entry.id === historyNoteEditEntryId;
 
   return `
     <li class="history-item">
@@ -142,11 +162,7 @@ function renderHistoryItem(entry, historyTagEditEntryId = '') {
         <time class="history-item-date" datetime="${date.toISOString()}">${formatCompletedAt(entry.completedAt)}</time>
         <div class="history-item-details">
           <p class="history-item-duration">${formatFocusDuration(entry.durationMs)}</p>
-          ${
-            focusNote
-              ? `<p class="history-item-note" title="${escapeHtml(focusNote)}">${escapeHtml(focusNote)}</p>`
-              : ''
-          }
+          ${renderHistoryNote(entry.id, focusNote, isEditingNote)}
           ${
             isEditingTag
               ? renderHistoryTagOptions(entry.id, focusTag)
@@ -166,7 +182,7 @@ function renderHistoryItem(entry, historyTagEditEntryId = '') {
   `;
 }
 
-function renderHistoryDayGroup(group, historyTagEditEntryId = '') {
+function renderHistoryDayGroup(group, historyTagEditEntryId = '', historyNoteEditEntryId = '') {
   return `
     <li class="history-day-group">
       <header class="history-day-header">
@@ -174,7 +190,9 @@ function renderHistoryDayGroup(group, historyTagEditEntryId = '') {
         <p class="history-day-total">${formatDailyFocusTotal(group.totalDurationMs)}</p>
       </header>
       <ul class="history-day-list">
-        ${group.entries.map((entry) => renderHistoryItem(entry, historyTagEditEntryId)).join('')}
+        ${group.entries
+          .map((entry) => renderHistoryItem(entry, historyTagEditEntryId, historyNoteEditEntryId))
+          .join('')}
       </ul>
     </li>
   `;
@@ -183,7 +201,7 @@ function renderHistoryDayGroup(group, historyTagEditEntryId = '') {
 export function renderHistoryPanel(
   historyEntries = [],
   historyTagEditEntryId = '',
-  focusNoteDraft = ''
+  historyNoteEditEntryId = ''
 ) {
   if (!historyEntries.length) {
     return `
@@ -191,7 +209,6 @@ export function renderHistoryPanel(
         <div class="panel-heading">
           <h2>Focus History</h2>
         </div>
-        ${renderFocusNoteField(focusNoteDraft)}
         <p class="inline-note history-empty">No completed focus sessions yet.</p>
       </section>
     `;
@@ -202,10 +219,11 @@ export function renderHistoryPanel(
       <div class="panel-heading">
         <h2>Focus History</h2>
       </div>
-      ${renderFocusNoteField(focusNoteDraft)}
       <ul class="history-list">
         ${groupHistoryEntriesByDay(historyEntries)
-          .map((group) => renderHistoryDayGroup(group, historyTagEditEntryId))
+          .map((group) =>
+            renderHistoryDayGroup(group, historyTagEditEntryId, historyNoteEditEntryId)
+          )
           .join('')}
       </ul>
     </section>

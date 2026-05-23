@@ -2,6 +2,7 @@
 
 import { createRootActionHandlers } from './root-action-handlers.js';
 import { createRootSettingsHandlers } from './root-settings-handlers.js';
+import { updateFocusHistoryEntryFocusNote } from '../../core/focus-history.js';
 import { normalizeFocusNote } from '../../core/focus-note.js';
 
 function closeAllOverflowActionsMenus(root) {
@@ -18,7 +19,7 @@ function closeAllOverflowActionsMenus(root) {
  * @param {import('./root-event-types.js').RootEventDeps} deps
  */
 export function createRootEvents(deps) {
-  const { persistFocusNoteDraft, root, state } = deps;
+  const { persistFocusHistory, persistFocusNoteDraft, root, state } = deps;
   const { handlers: actionHandlers, playUiActionTone } = createRootActionHandlers(deps);
   const settingsHandlers = createRootSettingsHandlers(deps);
 
@@ -66,11 +67,33 @@ export function createRootEvents(deps) {
   function handleRootInput(event) {
     const target = event?.target;
 
-    if (
-      typeof HTMLInputElement === 'undefined' ||
-      !(target instanceof HTMLInputElement) ||
-      !target.matches('[data-focus-note-input]')
-    ) {
+    if (typeof HTMLInputElement === 'undefined' || !(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (target.matches('[data-focus-note-input]')) {
+      const normalizedFocusNote = normalizeFocusNote(target.value);
+
+      if (target.value !== normalizedFocusNote) {
+        target.value = normalizedFocusNote;
+      }
+
+      if (state.focusNoteDraft === normalizedFocusNote) {
+        return;
+      }
+
+      state.focusNoteDraft = normalizedFocusNote;
+      persistFocusNoteDraft(state);
+      return;
+    }
+
+    if (!target.matches('[data-history-entry-focus-note-input]')) {
+      return;
+    }
+
+    const entryId = target.dataset.entryId;
+
+    if (!entryId) {
       return;
     }
 
@@ -80,12 +103,19 @@ export function createRootEvents(deps) {
       target.value = normalizedFocusNote;
     }
 
-    if (state.focusNoteDraft === normalizedFocusNote) {
+    const currentEntry = state.focusHistory.find((entry) => entry.id === entryId);
+    const currentFocusNote = normalizeFocusNote(currentEntry?.focusNote);
+
+    if (currentFocusNote === normalizedFocusNote) {
       return;
     }
 
-    state.focusNoteDraft = normalizedFocusNote;
-    persistFocusNoteDraft(state);
+    state.focusHistory = updateFocusHistoryEntryFocusNote(
+      state.focusHistory,
+      entryId,
+      normalizedFocusNote
+    );
+    persistFocusHistory(state);
   }
 
   function bindRootEvents() {

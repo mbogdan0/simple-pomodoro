@@ -157,7 +157,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
               ? renderHistoryPanel(
                   state.focusHistory,
                   state.historyTagEditEntryId,
-                  state.focusNoteDraft
+                  state.historyNoteEditEntryId
                 )
               : ''
           }

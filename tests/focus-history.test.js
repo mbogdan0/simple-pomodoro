@@ -6,6 +6,7 @@ import {
   createFocusHistoryEntry,
   normalizeFocusHistoryEntry,
   removeFocusHistoryEntry,
+  updateFocusHistoryEntryFocusNote,
   updateFocusHistoryEntryFocusTag
 } from '../src/core/focus-history.js';
 import { createDefaultSettings } from '../src/core/settings.js';
@@ -229,5 +230,59 @@ describe('focus history helpers', () => {
 
     expect(updateFocusHistoryEntryFocusTag(history, 'missing', 'study')).toEqual(history);
     expect(updateFocusHistoryEntryFocusTag(history, 'focus-1', 'deep')).toEqual(history);
+  });
+
+  it('updates only selected history entry note with a 30-char limit', () => {
+    const history = [
+      {
+        completedAt: 1_720_000_000_100,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: 'focus-1',
+        stepId: 'focus-1',
+        stepType: 'work'
+      },
+      {
+        completedAt: 1_720_000_000_200,
+        durationMs: 25 * 60 * 1000,
+        focusNote: 'Quick planning',
+        focusTag: 'work',
+        id: 'focus-2',
+        stepId: 'focus-2',
+        stepType: 'work'
+      }
+    ];
+
+    const updated = updateFocusHistoryEntryFocusNote(
+      history,
+      'focus-2',
+      'Review deployment runbook and release checklist'
+    );
+
+    expect(updated).toHaveLength(2);
+    expect(updated[0]).toMatchObject({ id: 'focus-1' });
+    expect(updated[1]).toMatchObject({
+      focusNote: 'Review deployment runbook and '
+    });
+  });
+
+  it('clears history entry note with empty value and keeps no-op behavior for unknown id', () => {
+    const history = [
+      {
+        completedAt: 1_720_000_000_200,
+        durationMs: 25 * 60 * 1000,
+        focusNote: 'Quick planning',
+        focusTag: 'work',
+        id: 'focus-2',
+        stepId: 'focus-2',
+        stepType: 'work'
+      }
+    ];
+
+    const cleared = updateFocusHistoryEntryFocusNote(history, 'focus-2', '');
+    const untouched = updateFocusHistoryEntryFocusNote(history, 'missing', 'note');
+
+    expect(cleared[0]).not.toHaveProperty('focusNote');
+    expect(untouched).toEqual(history);
   });
 });

@@ -178,3 +178,51 @@ export function updateFocusHistoryEntryFocusTag(history = [], entryId, focusTag)
 
   return matched ? nextHistory : normalizedHistory;
 }
+
+export function updateFocusHistoryEntryFocusNote(history = [], entryId, focusNote) {
+  const normalizedHistory = normalizeFocusHistory(history);
+  const normalizedId = normalizeHistoryId(entryId);
+
+  if (!normalizedId) {
+    return normalizedHistory;
+  }
+
+  const normalizedFocusNote = normalizeFocusNote(focusNote);
+  let matched = false;
+  let changed = false;
+
+  const nextHistory = normalizedHistory.map((entry) => {
+    if (entry.id !== normalizedId) {
+      return entry;
+    }
+
+    matched = true;
+    const currentFocusNote = normalizeFocusNote(entry.focusNote);
+
+    if (currentFocusNote === normalizedFocusNote) {
+      return entry;
+    }
+
+    changed = true;
+
+    if (!normalizedFocusNote) {
+      return (
+        normalizeFocusHistoryEntry({
+          ...entry,
+          focusNote: ''
+        }) ?? entry
+      );
+    }
+
+    return {
+      ...entry,
+      focusNote: normalizedFocusNote
+    };
+  });
+
+  if (!matched || !changed) {
+    return normalizedHistory;
+  }
+
+  return nextHistory;
+}

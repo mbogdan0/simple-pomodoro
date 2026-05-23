@@ -12,6 +12,7 @@
  *   | 'toggle-pip-window'
  *   | 'switch-tab'
  *   | 'clear-history-entry'
+ *   | 'toggle-history-entry-note-edit'
  *   | 'toggle-history-entry-tag-edit'
  *   | 'set-history-entry-focus-tag'
  *   | 'test-notification'

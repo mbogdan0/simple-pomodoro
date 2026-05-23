@@ -87,6 +87,9 @@ export function createRootActionHandlers(deps) {
       if (state.historyTagEditEntryId === entryId) {
         state.historyTagEditEntryId = '';
       }
+      if (state.historyNoteEditEntryId === entryId) {
+        state.historyNoteEditEntryId = '';
+      }
 
       persistFocusHistory(state);
       renderApp();
@@ -147,6 +150,16 @@ export function createRootActionHandlers(deps) {
       state.focusHistory = updateFocusHistoryEntryFocusTag(state.focusHistory, entryId, focusTag);
       state.historyTagEditEntryId = '';
       persistFocusHistory(state);
+      renderApp();
+    },
+    'toggle-history-entry-note-edit': (button) => {
+      const entryId = button?.dataset?.entryId;
+
+      if (!entryId) {
+        return;
+      }
+
+      state.historyNoteEditEntryId = state.historyNoteEditEntryId === entryId ? '' : entryId;
       renderApp();
     },
     'start-step': () => {

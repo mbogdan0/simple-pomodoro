@@ -16,6 +16,7 @@ export function createAppState() {
     backgroundNotice: '',
     focusHistory: loadFocusHistory(),
     focusNoteDraft: loadFocusNoteDraft(),
+    historyNoteEditEntryId: '',
     historyTagEditEntryId: '',
     idleStartedAt: null,
     isNtfyTesting: false,

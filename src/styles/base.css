@@ -28,6 +28,7 @@ button {
 .focus-tag-button:focus-visible,
 .history-tag-option:focus-visible,
 .history-tag-edit-button:focus-visible,
+.history-note-edit-button:focus-visible,
 .overflow-actions__item:focus-visible,
 .ghost-button:focus-visible,
 input:focus-visible {

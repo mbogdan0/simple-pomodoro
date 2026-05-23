@@ -25,6 +25,7 @@ function createSessionHarness(stateOverrides = {}) {
     backgroundNotice: '',
     focusHistory: [],
     focusNoteDraft: '',
+    historyNoteEditEntryId: '',
     historyTagEditEntryId: '',
     isNtfyTesting: false,
     lastCompletionKey: '',
@@ -528,6 +529,112 @@ describe('app runtime integration', () => {
     expect(state.focusHistory[0].focusTag).toBe('study');
     expect(state.historyTagEditEntryId).toBe('');
     expect(persistFocusHistory).toHaveBeenCalledTimes(1);
+    expect(renderApp).toHaveBeenCalledTimes(2);
+  });
+
+  it('toggles and autosaves inline history note edit actions', () => {
+    class FakeHTMLInputElement {
+      constructor() {
+        this.dataset = {};
+        this.value = '';
+      }
+
+      matches(selector) {
+        return selector === '[data-history-entry-focus-note-input]';
+      }
+    }
+
+    globalThis.HTMLInputElement = FakeHTMLInputElement;
+
+    const persistFocusHistory = vi.fn();
+    const renderApp = vi.fn();
+    const { state } = createSessionHarness({
+      focusHistory: [
+        {
+          completedAt: 1_720_000_000_000,
+          durationMs: 25 * 60 * 1000,
+          focusTag: 'none',
+          id: 'focus-1',
+          stepId: 'focus-1',
+          stepType: 'work'
+        }
+      ]
+    });
+
+    const rootEvents = createRootEvents({
+      audioService: {
+        playCompletionTone: vi.fn(() => true),
+        playUiActionTone: vi.fn()
+      },
+      commitSession: vi.fn(),
+      notificationService: {
+        requestNotificationPermission: vi.fn(async () => ''),
+        testNotification: vi.fn(async () => ''),
+        testNtfy: vi.fn(async () => '')
+      },
+      persistFocusHistory,
+      persistFocusNoteDraft: vi.fn(),
+      persistSettings: vi.fn(),
+      postWorkerAction: vi.fn(),
+      renderApp,
+      root: {
+        addEventListener: vi.fn(),
+        querySelectorAll() {
+          return [];
+        }
+      },
+      state,
+      toggleManualPipWindow: vi.fn(async () => {})
+    });
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'toggle-history-entry-note-edit',
+                entryId: 'focus-1'
+              }
+            };
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyNoteEditEntryId).toBe('focus-1');
+    expect(persistFocusHistory).not.toHaveBeenCalled();
+
+    const noteInput = new FakeHTMLInputElement();
+    noteInput.dataset.entryId = 'focus-1';
+    noteInput.value = 'Draft API migration summary and release checklist';
+    rootEvents.handleRootInput({ target: noteInput });
+
+    expect(state.focusHistory[0].focusNote).toBe('Draft API migration summary an');
+    expect(noteInput.value).toBe('Draft API migration summary an');
+    expect(persistFocusHistory).toHaveBeenCalledTimes(1);
+    expect(renderApp).toHaveBeenCalledTimes(1);
+
+    rootEvents.handleRootClick({
+      target: {
+        closest(selector) {
+          if (selector === '[data-action]') {
+            return {
+              dataset: {
+                action: 'toggle-history-entry-note-edit',
+                entryId: 'focus-1'
+              }
+            };
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyNoteEditEntryId).toBe('');
     expect(renderApp).toHaveBeenCalledTimes(2);
   });
 });
