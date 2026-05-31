@@ -95,6 +95,11 @@ export function createRootActionHandlers(deps) {
       persistFocusHistory(state);
       renderApp();
     },
+    [ROOT_ACTIONS.DISCARD_FREE_TIMER]: (button) => {
+      closeOverflowActionsMenu(button);
+      playUiActionTone();
+      postWorkerAction(WORKER_ACTIONS.DISCARD_FREE_TIMER, { settings: state.settings });
+    },
     [ROOT_ACTIONS.END_STEP_EARLY]: (button) => {
       closeOverflowActionsMenu(button);
 
@@ -104,6 +109,13 @@ export function createRootActionHandlers(deps) {
 
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.END_STEP_EARLY);
+    },
+    [ROOT_ACTIONS.FINISH_FREE_TIMER]: () => {
+      playUiActionTone();
+      postWorkerAction(WORKER_ACTIONS.FINISH_FREE_TIMER, {
+        focusNote: state.focusNoteDraft,
+        settings: state.settings
+      });
     },
     [ROOT_ACTIONS.PAUSE_STEP]: () => {
       playUiActionTone();
@@ -168,6 +180,11 @@ export function createRootActionHandlers(deps) {
         state.historyTagEditEntryId = '';
       }
       renderApp();
+    },
+    [ROOT_ACTIONS.START_FREE_TIMER]: (button) => {
+      closeOverflowActionsMenu(button);
+      playUiActionTone();
+      postWorkerAction(WORKER_ACTIONS.START_FREE_TIMER, { settings: state.settings });
     },
     [ROOT_ACTIONS.START_STEP]: () => {
       playUiActionTone();

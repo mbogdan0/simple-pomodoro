@@ -22,6 +22,7 @@ function createState(overrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
+    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: Date.now(),
     manualPipRequested: false,
     notificationNotice: '',

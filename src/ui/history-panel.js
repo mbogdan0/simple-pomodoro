@@ -152,7 +152,7 @@ function renderHistoryEditMenu(entryId) {
   return `
     <details class="history-edit-menu">
       <summary
-        class="history-edit-menu__trigger"
+        class="ghost-button history-edit-menu__trigger"
         aria-label="Edit history entry"
         title="Edit history entry"
       >
@@ -182,12 +182,29 @@ function renderHistoryEditMenu(entryId) {
   `;
 }
 
+function renderHistoryActionRow(entryId, isEditingTagOrNote) {
+  return `
+    <div class="history-item-actions">
+      ${isEditingTagOrNote ? '' : renderHistoryEditMenu(entryId)}
+      <button
+        class="ghost-button"
+        data-action="${ROOT_ACTIONS.CLEAR_HISTORY_ENTRY}"
+        data-entry-id="${entryId}"
+        type="button"
+      >
+        Clear
+      </button>
+    </div>
+  `;
+}
+
 function renderHistoryItem(entry, historyTagEditEntryId = '', historyNoteEditEntryId = '') {
   const date = new Date(entry.completedAt);
   const focusTag = resolveFocusTag(entry.focusTag);
   const focusNote = typeof entry.focusNote === 'string' ? entry.focusNote : '';
   const isEditingTag = entry.id === historyTagEditEntryId;
   const isEditingNote = entry.id === historyNoteEditEntryId;
+  const isEditingAny = isEditingTag || isEditingNote;
 
   return `
     <li class="history-item">
@@ -201,17 +218,9 @@ function renderHistoryItem(entry, historyTagEditEntryId = '', historyNoteEditEnt
               ? renderHistoryTagOptions(entry.id, focusTag)
               : renderHistoryTagReadOnly(focusTag)
           }
-          ${isEditingTag || isEditingNote ? '' : renderHistoryEditMenu(entry.id)}
         </div>
       </div>
-      <button
-        class="ghost-button"
-        data-action="${ROOT_ACTIONS.CLEAR_HISTORY_ENTRY}"
-        data-entry-id="${entry.id}"
-        type="button"
-      >
-        Clear
-      </button>
+      ${renderHistoryActionRow(entry.id, isEditingAny)}
     </li>
   `;
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_FOCUS_HISTORY_ENTRIES } from '../src/core/constants.js';
 import {
   appendFocusHistoryEntry,
+  createFreeTimerHistoryEntry,
   createFocusHistoryEntry,
   normalizeFocusHistoryEntry,
   removeFocusHistoryEntry,
@@ -13,6 +14,7 @@ import { createDefaultSettings } from '../src/core/settings.js';
 import {
   createInitialSession,
   forceCompleteCurrentStep,
+  startFreeTimer,
   setSessionFocusTag,
   startCurrentStep,
   syncSession
@@ -83,6 +85,28 @@ describe('focus history helpers', () => {
       durationMs: 60_000,
       stepType: 'work'
     });
+  });
+
+  it('creates focus history entry from free timer finish action', () => {
+    const settings = createDefaultSettings();
+    const taggedSession = setSessionFocusTag(createInitialSession(settings), 'work', 10_000);
+    const freeRunning = startFreeTimer(taggedSession, settings, 20_000);
+
+    const entry = createFreeTimerHistoryEntry({
+      finishedAt: 95_000,
+      focusNote: 'Handle production release checklist',
+      session: freeRunning
+    });
+
+    expect(entry).toMatchObject({
+      completedAt: 95_000,
+      durationMs: 75_000,
+      focusNote: 'Handle production release chec',
+      focusTag: 'work',
+      stepType: 'work'
+    });
+    expect(entry?.id).toBe('free-20000:95000');
+    expect(entry?.stepId).toBe('free-20000');
   });
 
   it('keeps full planned duration for naturally completed focus steps', () => {

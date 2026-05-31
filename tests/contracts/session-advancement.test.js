@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createSessionController } from '../../src/app/session/session-controller.js';
+import { createFreeTimerHistoryEntry } from '../../src/core/focus-history.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import { createInitialSession, startCurrentStep, syncSession } from '../../src/core/session.js';
+import {
+  createInitialSession,
+  startCurrentStep,
+  startFreeTimer,
+  syncSession
+} from '../../src/core/session.js';
 import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
 function createControllerHarness(stateOverrides = {}) {
@@ -13,6 +19,7 @@ function createControllerHarness(stateOverrides = {}) {
     lastCompletionKey: '',
     pauseStartedAt: null,
     settings: createDefaultSettings(),
+    lastFreeTimerReminderKey: '',
     ...stateOverrides
   };
   const dispatchCompletionAlerts = vi.fn();
@@ -220,5 +227,28 @@ describe('session advancement contracts', () => {
 
     expect(harness.state.activeSession.status).toBe('running');
     expect(harness.state.pauseStartedAt).toBeNull();
+  });
+
+  it('appends free timer history entry from action metadata', () => {
+    const settings = createDefaultSettings();
+    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 1_000);
+    const freeEntry = createFreeTimerHistoryEntry({
+      finishedAt: 31_000,
+      focusNote: 'Ship sprint fixes',
+      session: freeRunning
+    });
+    const harness = createControllerHarness({
+      activeSession: freeRunning,
+      settings
+    });
+
+    harness.controller.handleLocalAction(WORKER_ACTIONS.FINISH_FREE_TIMER, {
+      focusNote: 'Ship sprint fixes',
+      now: 31_000,
+      settings
+    });
+
+    expect(harness.state.focusHistory).toEqual([freeEntry]);
+    expect(harness.persistFocusHistory).toHaveBeenCalledTimes(1);
   });
 });

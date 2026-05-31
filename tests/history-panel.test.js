@@ -54,6 +54,7 @@ describe('history panel behavior', () => {
     expect((html.match(/class="history-day-group"/g) ?? []).length).toBe(2);
     expect((html.match(/data-action="clear-history-entry"/g) ?? []).length).toBe(3);
     expect((html.match(/class="history-edit-menu"/g) ?? []).length).toBe(3);
+    expect((html.match(/class="ghost-button history-edit-menu__trigger"/g) ?? []).length).toBe(3);
     expect((html.match(/data-action="toggle-history-entry-note-edit"/g) ?? []).length).toBe(3);
     expect((html.match(/data-action="toggle-history-entry-tag-edit"/g) ?? []).length).toBe(3);
     expect(html).toContain('data-entry-id="focus-1"');

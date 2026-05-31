@@ -213,11 +213,17 @@ self.onmessage = ({ data }) => {
         return;
       }
 
-      emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: actionResult.reason });
+      emit(WORKER_MESSAGE_TYPES.STATE, session, {
+        historyEntry: actionResult.historyEntry,
+        reason: actionResult.reason
+      });
       return;
     }
 
-    emit(WORKER_MESSAGE_TYPES.STATE, session, { reason: actionResult.reason });
+    emit(WORKER_MESSAGE_TYPES.STATE, session, {
+      historyEntry: actionResult.historyEntry,
+      reason: actionResult.reason
+    });
   } catch (error) {
     emit(WORKER_MESSAGE_TYPES.ERROR, session, {
       error: error instanceof Error ? error.message : String(error)

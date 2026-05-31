@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createNotificationService } from '../../src/app/alerts/notification-service.js';
+import { createDefaultSettings } from '../../src/core/settings.js';
+import { createInitialSession, startFreeTimer } from '../../src/core/session.js';
 
 const originalWindow = globalThis.window;
 const originalNavigator = globalThis.navigator;
@@ -45,6 +47,7 @@ function createState(overrides = {}) {
     },
     alertSettings: {},
     lastFocusMinuteReminderKey: '',
+    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: 0,
     notificationNotice: '',
     ntfyNotice: '',
@@ -274,5 +277,25 @@ describe('notification service contracts', () => {
 
     expect(playUiActionTone).not.toHaveBeenCalled();
     expect(sent).toHaveLength(0);
+  });
+
+  it('dispatches free timer reminder every five running minutes', () => {
+    const sent = installNotificationMock();
+    const state = createState();
+    const notificationService = createNotificationService({
+      ensureServiceWorkerRegistration: async () => null,
+      playCompletionTone: () => true,
+      state
+    });
+    const settings = createDefaultSettings();
+    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 1_000);
+
+    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 301_000);
+    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 330_000);
+    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 601_000);
+
+    expect(sent).toHaveLength(2);
+    expect(sent[0].title).toBe('Free timer is running ⏱');
+    expect(state.lastFreeTimerReminderKey).toBe('1000:2');
   });
 });

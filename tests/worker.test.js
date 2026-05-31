@@ -92,4 +92,55 @@ describe('timer worker message handling', () => {
     expect(lastMessage?.session.status).toBe('completed_waiting_next');
     expect(lastMessage?.session.remainingMsAtPause).toBe(settings.templateDurations.work - 1_500);
   });
+
+  it('handles START_FREE_TIMER and FINISH_FREE_TIMER actions', async () => {
+    const { emitted, harness } = await loadWorkerWithHarness();
+    const settings = createDefaultSettings();
+    const session = createInitialSession(settings);
+
+    harness.onmessage({
+      data: {
+        payload: {
+          session
+        },
+        type: 'INIT'
+      }
+    });
+
+    harness.onmessage({
+      data: {
+        payload: {
+          now: 2_000,
+          settings
+        },
+        type: 'START_FREE_TIMER'
+      }
+    });
+
+    const startedMessage = emitted.at(-1);
+    expect(startedMessage?.type).toBe('STATE');
+    expect(startedMessage?.reason).toBe('start-free-timer');
+    expect(startedMessage?.session.sessionMode).toBe('free');
+
+    harness.onmessage({
+      data: {
+        payload: {
+          focusNote: 'Prepare release notes',
+          now: 62_000,
+          settings
+        },
+        type: 'FINISH_FREE_TIMER'
+      }
+    });
+
+    const finishedMessage = emitted.at(-1);
+    expect(finishedMessage?.type).toBe('STATE');
+    expect(finishedMessage?.reason).toBe('finish-free-timer');
+    expect(finishedMessage?.historyEntry).toMatchObject({
+      durationMs: 60_000,
+      focusNote: 'Prepare release notes',
+      stepType: 'work'
+    });
+    expect(finishedMessage?.session.sessionMode).toBe('cycle');
+  });
 });

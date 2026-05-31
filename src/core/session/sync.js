@@ -1,6 +1,10 @@
 import { BACKGROUND_COMPLETION_THRESHOLD_MS } from '../constants.js';
 
 export function syncSession(session, now = Date.now()) {
+  if (session.sessionMode === 'free') {
+    return session;
+  }
+
   if (session.status !== 'running') {
     return session;
   }

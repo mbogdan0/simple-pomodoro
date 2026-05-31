@@ -21,10 +21,13 @@ import {
   getStepProgress
 } from '../../core/progress.js';
 import {
+  canStartFreeTimer,
   canResetSession,
+  getElapsedMs,
   getCurrentStep,
   getProgressRatio,
-  getRemainingMs
+  getRemainingMs,
+  isFreeTimerMode
 } from '../../core/session.js';
 import { renderHistoryPanel } from '../../ui/history-panel.js';
 import { renderSettingsPanel } from '../../ui/settings-panel.js';
@@ -81,7 +84,9 @@ function patchLiveTimerDom(refs, timerModel) {
   }
 
   if (refs.repeatMetaElement) {
-    refs.repeatMetaElement.textContent = formatRepeatMeta(timerModel);
+    refs.repeatMetaElement.textContent = timerModel.hideRepeatMeta
+      ? ''
+      : formatRepeatMeta(timerModel);
   }
 
   if (refs.cycleProgressElement) {
@@ -107,18 +112,20 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
   let liveRefs = collectLiveRefs(root);
   let liveUpdateHooks = {
     maybeDispatchFocusMinuteReminder: () => {},
+    maybeDispatchFreeTimerReminder: () => {},
     syncPictureInPicture: () => {}
   };
 
   function getTimerModel(now = Date.now()) {
     const session = state.activeSession;
+    const freeTimerMode = isFreeTimerMode(session);
     const step = getCurrentStep(session);
     const stepType = step?.type ?? 'work';
     const palette = STEP_PALETTE[stepType] ?? STEP_PALETTE.work;
     const running = session.status === 'running';
     const paused = session.status === 'paused';
     const pipSupported = pipController.isSupported();
-    const remainingMs = getRemainingMs(session, now);
+    const clockMs = freeTimerMode ? getElapsedMs(session, now) : getRemainingMs(session, now);
     const progress = getProgressRatio(session, now);
     const { focusRepeatCurrent, focusRepeatTotal } = getFocusRepeatProgress(session);
     const { stepCurrent, stepTotal } = getStepProgress(session);
@@ -136,9 +143,12 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
       accentOutline: palette.accentOutline,
       accentSoft: palette.accentSoft,
       backgroundNotice: state.backgroundNotice,
-      clock: formatClock(remainingMs),
-      cycleDots: getCycleRepeatDots(session),
-      endStepEarlyDisabled: !(running || paused),
+      clock: formatClock(clockMs),
+      cycleDots: freeTimerMode ? [] : getCycleRepeatDots(session),
+      endStepEarlyDisabled: freeTimerMode || !(running || paused),
+      freeTimerMode,
+      hideCycleProgress: freeTimerMode,
+      hideRepeatMeta: freeTimerMode,
       focusTag: session.focusTag,
       focusTagOptions: FOCUS_TAGS.map((tag) => ({
         id: tag,
@@ -149,6 +159,9 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
       focusRepeatTotal,
       pipToggleLabel: 'Toggle PiP',
       showPipToggle: pipSupported,
+      showStartFreeTimer: canStartFreeTimer(session),
+      showDiscardFreeTimer: freeTimerMode && (running || paused),
+      showFinishFreeTimer: freeTimerMode && (running || paused),
       primaryAction: running
         ? ROOT_ACTIONS.PAUSE_STEP
         : paused
@@ -162,7 +175,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
       statusText: formatStatusLabel(session.status),
       step,
       stepCurrent,
-      stepLabel: formatStepTypeLabel(step?.type),
+      stepLabel: freeTimerMode ? 'Free Timer' : formatStepTypeLabel(step?.type),
       stepTotal
     };
   }
@@ -239,6 +252,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
     patchLiveTimerDom(liveRefs, timerModel);
     liveUpdateHooks.syncPictureInPicture(timerModel, now);
     liveUpdateHooks.maybeDispatchFocusMinuteReminder(state.activeSession, now);
+    liveUpdateHooks.maybeDispatchFreeTimerReminder(state.activeSession, now);
   }
 
   function updatePageChrome(now = Date.now()) {

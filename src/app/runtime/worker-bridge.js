@@ -76,7 +76,7 @@ export function createWorkerBridge({
   }
 
   function handleWorkerMessage(event) {
-    const { completionKey, now, reason, session, type } = event.data ?? {};
+    const { completionKey, historyEntry, now, reason, session, type } = event.data ?? {};
 
     if (type === WORKER_MESSAGE_TYPES.ERROR) {
       disableWorkerAndSwitchToLocal(session ?? state.activeSession);
@@ -102,6 +102,7 @@ export function createWorkerBridge({
 
     onWorkerState({
       completionKey,
+      historyEntry,
       reason,
       session: normalized,
       type

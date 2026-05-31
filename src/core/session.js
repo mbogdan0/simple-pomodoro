@@ -6,11 +6,14 @@ export {
 export { applySessionAction } from './session/actions.js';
 export {
   canResetSession,
+  canStartFreeTimer,
   getCurrentStep,
   getCurrentStepDurationMs,
+  getElapsedMs,
   getProgressRatio,
   getRemainingMs,
-  hasNextStep
+  hasNextStep,
+  isFreeTimerMode
 } from './session/queries.js';
 export { syncSession } from './session/sync.js';
 export {
@@ -21,9 +24,11 @@ export {
   markAlertsDispatched,
   pauseSession,
   prepareSessionForStepStart,
+  resetFreeTimer,
   resetCurrentStep,
   resetSession,
   resumeSession,
+  startFreeTimer,
   setSessionFocusTag,
   startCurrentStep
 } from './session/transitions.js';

@@ -21,6 +21,7 @@ function createState(overrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
+    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: Date.now(),
     manualPipRequested: false,
     notificationNotice: '',
@@ -115,13 +116,16 @@ describe('root action handlers', () => {
     expect(Object.keys(handlers).sort()).toEqual(
       [
         'clear-history-entry',
+        'discard-free-timer',
         'end-step-early',
+        'finish-free-timer',
         'pause-step',
         'request-notification-permission',
         'reset-session',
         'resume-step',
         'set-focus-tag',
         'set-history-entry-focus-tag',
+        'start-free-timer',
         'start-step',
         'switch-tab',
         'test-notification',
@@ -141,26 +145,41 @@ describe('root action handlers', () => {
     const { handlers } = createRootActionHandlers(deps);
 
     handlers['start-step'](createActionButton());
+    handlers['start-free-timer'](createActionButton());
     handlers['pause-step'](createActionButton());
     handlers['resume-step'](createActionButton());
+    handlers['finish-free-timer'](createActionButton());
 
     const resetMenu = { open: true };
     handlers['reset-session'](createActionButton({}, resetMenu));
 
     const endStepMenu = { open: true };
     handlers['end-step-early'](createActionButton({}, endStepMenu));
+    const discardMenu = { open: true };
+    handlers['discard-free-timer'](createActionButton({}, discardMenu));
 
     expect(resetMenu.open).toBe(false);
     expect(endStepMenu.open).toBe(false);
+    expect(discardMenu.open).toBe(false);
     expect(spies.postWorkerAction).toHaveBeenNthCalledWith(1, WORKER_ACTIONS.START_STEP, {
       settings: deps.state.settings
     });
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(2, WORKER_ACTIONS.PAUSE);
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(3, WORKER_ACTIONS.RESUME);
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(4, WORKER_ACTIONS.RESET_ALL, {
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(2, WORKER_ACTIONS.START_FREE_TIMER, {
       settings: deps.state.settings
     });
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(5, WORKER_ACTIONS.END_STEP_EARLY);
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(3, WORKER_ACTIONS.PAUSE);
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(4, WORKER_ACTIONS.RESUME);
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(5, WORKER_ACTIONS.FINISH_FREE_TIMER, {
+      focusNote: 'Prepare launch notes',
+      settings: deps.state.settings
+    });
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(6, WORKER_ACTIONS.RESET_ALL, {
+      settings: deps.state.settings
+    });
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(7, WORKER_ACTIONS.END_STEP_EARLY);
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(8, WORKER_ACTIONS.DISCARD_FREE_TIMER, {
+      settings: deps.state.settings
+    });
     expect(globalThis.window.confirm).toHaveBeenCalledTimes(2);
     expect(state.focusNoteDraft).toBe('');
     expect(spies.persistFocusNoteDraft).toHaveBeenCalledTimes(1);

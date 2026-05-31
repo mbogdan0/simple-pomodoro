@@ -8,6 +8,7 @@ import {
   resolveCompletionNotificationBody,
   selectNotificationChannel,
   shouldDispatchCompletion,
+  shouldDispatchFreeTimerReminder,
   shouldDispatchFocusMinuteReminder
 } from '../src/core/alerts.js';
 import {
@@ -16,7 +17,12 @@ import {
   getStepProgress
 } from '../src/core/progress.js';
 import { createDefaultSettings } from '../src/core/settings.js';
-import { createInitialSession, startCurrentStep, syncSession } from '../src/core/session.js';
+import {
+  createInitialSession,
+  startCurrentStep,
+  startFreeTimer,
+  syncSession
+} from '../src/core/session.js';
 
 function pickChannelFromMockedApis(mockedEnvironment) {
   const mockedNotificationApi = mockedEnvironment.Notification;
@@ -277,5 +283,46 @@ describe('reliability helpers', () => {
     expect(duplicateAttempt.shouldDispatch).toBe(false);
     expect(disabledNotificationsAttempt.shouldDispatch).toBe(false);
     expect(breakAttempt.shouldDispatch).toBe(false);
+  });
+
+  it('dispatches free timer reminders every five running minutes', () => {
+    const settings = createDefaultSettings();
+    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 10_000);
+
+    const belowThreshold = shouldDispatchFreeTimerReminder({
+      notificationsEnabled: true,
+      now: 10_000 + 299_000,
+      previousKey: '',
+      session: freeRunning
+    });
+    const firstInterval = shouldDispatchFreeTimerReminder({
+      notificationsEnabled: true,
+      now: 10_000 + 300_000,
+      previousKey: '',
+      session: freeRunning
+    });
+    const duplicateInterval = shouldDispatchFreeTimerReminder({
+      notificationsEnabled: true,
+      now: 10_000 + 330_000,
+      previousKey: firstInterval.key,
+      session: freeRunning
+    });
+    const secondInterval = shouldDispatchFreeTimerReminder({
+      notificationsEnabled: true,
+      now: 10_000 + 600_000,
+      previousKey: firstInterval.key,
+      session: freeRunning
+    });
+
+    expect(belowThreshold.shouldDispatch).toBe(false);
+    expect(firstInterval).toEqual({
+      key: '10000:1',
+      shouldDispatch: true
+    });
+    expect(duplicateInterval.shouldDispatch).toBe(false);
+    expect(secondInterval).toEqual({
+      key: '10000:2',
+      shouldDispatch: true
+    });
   });
 });

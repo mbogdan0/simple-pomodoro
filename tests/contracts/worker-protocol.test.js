@@ -38,12 +38,15 @@ describe('worker protocol contracts', () => {
   it('declares a strict set of known action and message types', () => {
     expect(Object.values(WORKER_ACTIONS)).toEqual([
       'INIT',
+      'DISCARD_FREE_TIMER',
       'END_STEP_EARLY',
+      'FINISH_FREE_TIMER',
       'PAUSE',
       'RESET_ALL',
       'RESUME',
       'SET_FOCUS_TAG',
       'SET_IDLE_REMINDER',
+      'START_FREE_TIMER',
       'START_STEP',
       'SYNC_NOW'
     ]);

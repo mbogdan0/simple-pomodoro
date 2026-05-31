@@ -2,6 +2,7 @@ import {
   buildNotificationTag,
   createCompletionAlertPayload,
   selectNotificationChannel,
+  shouldDispatchFreeTimerReminder,
   shouldDispatchFocusMinuteReminder
 } from '../../core/alerts.js';
 import { getCurrentStep } from '../../core/session.js';
@@ -156,6 +157,27 @@ export function createNotificationService({
     });
   }
 
+  function maybeDispatchFreeTimerReminder(session, now = Date.now()) {
+    const { key, shouldDispatch } = shouldDispatchFreeTimerReminder({
+      notificationsEnabled: state.settings.alertSettings.notificationsEnabled,
+      now,
+      previousKey: state.lastFreeTimerReminderKey,
+      session
+    });
+
+    if (!shouldDispatch) {
+      return;
+    }
+
+    state.lastFreeTimerReminderKey = key;
+    void sendNotificationWithFallback({
+      body: 'Focus session is still active.',
+      silent: true,
+      tag: buildNotificationTag('free-timer-reminder', key),
+      title: 'Free timer is running ⏱'
+    });
+  }
+
   function dispatchIdleReminder(now = Date.now()) {
     if (state.activeSession?.status !== 'idle' || !state.settings.idleReminderEnabled) {
       return;
@@ -243,6 +265,7 @@ export function createNotificationService({
     dispatchCompletionAlerts,
     dispatchIdleReminder,
     getNotificationSupportModel,
+    maybeDispatchFreeTimerReminder,
     maybeDispatchFocusMinuteReminder,
     maybeDispatchIdleReminder,
     requestNotificationPermission,

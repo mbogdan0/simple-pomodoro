@@ -14,6 +14,8 @@ function createTimerModel(overrides = {}) {
       { breakState: 'done', focusState: 'done', id: 'focus-2' }
     ],
     endStepEarlyDisabled: false,
+    freeTimerMode: false,
+    hideCycleProgress: false,
     focusNoteDraft: '',
     focusTag: 'work',
     focusTagOptions: [
@@ -29,7 +31,10 @@ function createTimerModel(overrides = {}) {
     progressPercent: 30,
     progressTrack: '#ede7de',
     resetDisabled: false,
+    showDiscardFreeTimer: false,
+    showFinishFreeTimer: false,
     showPipToggle: true,
+    showStartFreeTimer: false,
     statusDetailText: '',
     statusText: 'Ready',
     stepCurrent: 1,
@@ -74,6 +79,22 @@ describe('timer panel behavior', () => {
     const html = renderTimerPanel(createTimerModel({ endStepEarlyDisabled: true }));
 
     expect(html).toMatch(/data-action="end-step-early"[^>]*disabled/);
+  });
+
+  it('renders free timer controls based on model flags', () => {
+    const html = renderTimerPanel(
+      createTimerModel({
+        hideCycleProgress: true,
+        showDiscardFreeTimer: true,
+        showFinishFreeTimer: true,
+        showStartFreeTimer: true
+      })
+    );
+
+    expect(html).toContain('data-action="start-free-timer"');
+    expect(html).toContain('data-action="finish-free-timer"');
+    expect(html).toContain('data-action="discard-free-timer"');
+    expect(html).toContain('cycle-progress is-hidden');
   });
 
   it('renders status detail only when the model provides it', () => {

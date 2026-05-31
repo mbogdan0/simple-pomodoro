@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRenderer } from '../../src/app/view/render-app.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import { createInitialSession, pauseSession, startCurrentStep } from '../../src/core/session.js';
+import {
+  createInitialSession,
+  pauseSession,
+  startCurrentStep,
+  startFreeTimer
+} from '../../src/core/session.js';
 
 const originalDocument = globalThis.document;
 
@@ -192,6 +197,50 @@ describe('render app integration', () => {
 
     expect(root.innerHTML).toMatch(/data-action="reset-session"[^>]*disabled/);
     expect(root.innerHTML).toMatch(/data-action="end-step-early"[^>]*disabled/);
+    expect(root.innerHTML).toContain('data-action="start-free-timer"');
+  });
+
+  it('renders free timer mode with hidden cycle progress and finish actions', () => {
+    const documentStub = createDocumentStub();
+    setDocument(documentStub);
+
+    const root = {
+      innerHTML: '',
+      querySelector() {
+        return null;
+      }
+    };
+    const settings = createDefaultSettings();
+    const state = {
+      activeSession: startFreeTimer(createInitialSession(settings), settings, 1_000),
+      backgroundNotice: '',
+      focusHistory: [],
+      isNtfyTesting: false,
+      manualPipRequested: false,
+      notificationNotice: '',
+      ntfyNotice: '',
+      settings
+    };
+    const renderer = createAppRenderer({
+      getNotificationSupportModel: () => ({
+        hasNotificationApi: true,
+        hasServiceWorker: true,
+        permissionState: 'granted',
+        unsupported: false
+      }),
+      pipController: {
+        isSupported: vi.fn(() => true)
+      },
+      root,
+      state
+    });
+
+    renderer.renderApp();
+
+    expect(root.innerHTML).toContain('Free Timer');
+    expect(root.innerHTML).toContain('cycle-progress is-hidden');
+    expect(root.innerHTML).toContain('data-action="finish-free-timer"');
+    expect(root.innerHTML).toContain('data-action="discard-free-timer"');
   });
 
   it('updates idle delay detail during live timer updates', () => {

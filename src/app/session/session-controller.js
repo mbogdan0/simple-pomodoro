@@ -4,6 +4,7 @@ import {
   advanceAfterCompletion,
   applySessionAction,
   getCurrentStep,
+  isFreeTimerMode,
   markAlertsDispatched,
   normalizeSession,
   syncSession
@@ -30,6 +31,7 @@ function reduceCommittedSession({
   dispatchAlerts = false,
   focusHistory = [],
   focusNoteDraft = '',
+  historyEntryHint = null,
   idleStartedAt = null,
   lastCompletionKey = '',
   nextSession,
@@ -42,6 +44,15 @@ function reduceCommittedSession({
   let nextLastCompletionKey = lastCompletionKey;
   let shouldPersistFocusHistory = false;
   const completionAlerts = [];
+
+  if (historyEntryHint) {
+    const appendedHistory = appendFocusHistoryEntry(nextFocusHistory, historyEntryHint);
+
+    if (appendedHistory.length !== nextFocusHistory.length) {
+      nextFocusHistory = appendedHistory;
+      shouldPersistFocusHistory = true;
+    }
+  }
 
   if (session.status === 'completed_waiting_next') {
     const completionKey = completionKeyHint || createCompletionKey(session);
@@ -119,6 +130,7 @@ export function createSessionController({
       completionKeyHint = '',
       completionReason = '',
       dispatchAlerts = false,
+      historyEntryHint = null,
       persist = false,
       render = true,
       syncWorker = false
@@ -133,6 +145,7 @@ export function createSessionController({
       dispatchAlerts,
       focusHistory: state.focusHistory,
       focusNoteDraft: state.focusNoteDraft,
+      historyEntryHint,
       idleStartedAt: state.idleStartedAt,
       lastCompletionKey: state.lastCompletionKey,
       nextSession,
@@ -146,6 +159,15 @@ export function createSessionController({
     state.idleStartedAt = reduced.idleStartedAt;
     state.lastCompletionKey = reduced.lastCompletionKey;
     state.pauseStartedAt = reduced.pauseStartedAt;
+
+    const previousWasFree = isFreeTimerMode(previousSession);
+    const nextIsFree = isFreeTimerMode(state.activeSession);
+    const freeTimerRunChanged =
+      previousSession?.freeTimerStartedAt !== state.activeSession?.freeTimerStartedAt;
+
+    if (!previousWasFree || !nextIsFree || freeTimerRunChanged) {
+      state.lastFreeTimerReminderKey = '';
+    }
 
     if (reduced.shouldPersistFocusHistory) {
       persistFocusHistory(state);
@@ -233,6 +255,7 @@ export function createSessionController({
     commitSession(actionResult.nextSession, {
       completionReason: actionResult.completionReason,
       dispatchAlerts: true,
+      historyEntryHint: actionResult.historyEntry,
       persist: true,
       render: true,
       syncWorker: false

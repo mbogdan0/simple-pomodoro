@@ -1,5 +1,5 @@
 import { APP_NAME, STATUS_LABELS, STEP_TYPE_LABELS } from './constants.js';
-import { getCurrentStep, getRemainingMs } from './session.js';
+import { getCurrentStep, getElapsedMs, getRemainingMs, isFreeTimerMode } from './session.js';
 import { clamp } from './utils.js';
 
 export function formatClock(totalMs) {
@@ -97,6 +97,10 @@ export function formatNotificationPermissionLabel(permissionState) {
 }
 
 export function formatDocumentTitle(session, now = Date.now(), appName = APP_NAME) {
+  if (isFreeTimerMode(session)) {
+    return `${formatClock(getElapsedMs(session, now))} · Free Timer`;
+  }
+
   const step = getCurrentStep(session);
 
   if (!step) {

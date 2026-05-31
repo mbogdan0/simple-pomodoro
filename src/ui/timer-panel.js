@@ -136,7 +136,7 @@ export function renderTimerPanel(timerModel) {
       >
         ${timerModel.clock}
       </div>
-      <div class="cycle-progress" data-live-cycle-progress aria-hidden="true">
+      <div class="cycle-progress ${timerModel.hideCycleProgress ? 'is-hidden' : ''}" data-live-cycle-progress aria-hidden="true">
         ${renderCycleProgressMarkup(timerModel.cycleDots)}
       </div>
       ${renderFocusTagsMarkup(timerModel)}
@@ -212,6 +212,20 @@ export function renderTimerPanel(timerModel) {
               >
                 Reset all steps
               </button>
+              ${
+                timerModel.showStartFreeTimer
+                  ? `
+                    <button
+                      class="overflow-actions__item"
+                      data-action="${ROOT_ACTIONS.START_FREE_TIMER}"
+                      role="menuitem"
+                      type="button"
+                    >
+                      Start Free Timer
+                    </button>
+                  `
+                  : ''
+              }
               <button
                 class="overflow-actions__item"
                 data-action="${ROOT_ACTIONS.END_STEP_EARLY}"
@@ -221,8 +235,35 @@ export function renderTimerPanel(timerModel) {
               >
                 End step early
               </button>
+              ${
+                timerModel.showDiscardFreeTimer
+                  ? `
+                    <button
+                      class="overflow-actions__item"
+                      data-action="${ROOT_ACTIONS.DISCARD_FREE_TIMER}"
+                      role="menuitem"
+                      type="button"
+                    >
+                      Finish Timer Without Saving
+                    </button>
+                  `
+                  : ''
+              }
             </div>
           </details>
+          ${
+            timerModel.showFinishFreeTimer
+              ? `
+                <button
+                  class="action-button"
+                  data-action="${ROOT_ACTIONS.FINISH_FREE_TIMER}"
+                  type="button"
+                >
+                  Finish
+                </button>
+              `
+              : ''
+          }
         </div>
         <div class="action-row__right">
           ${

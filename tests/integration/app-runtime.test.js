@@ -30,6 +30,7 @@ function createSessionHarness(stateOverrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
+    lastFreeTimerReminderKey: '',
     manualPipRequested: false,
     notificationNotice: '',
     ntfyNotice: '',

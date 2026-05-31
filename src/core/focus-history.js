@@ -2,6 +2,7 @@ import { createCompletionKey } from './alerts.js';
 import { FOCUS_TAGS, MAX_FOCUS_HISTORY_ENTRIES, STEP_TYPES } from './constants.js';
 import { normalizeFocusNote } from './focus-note.js';
 import { getCurrentStep } from './session.js';
+import { getElapsedMs, isFreeTimerMode } from './session/queries.js';
 
 function normalizeHistoryId(value) {
   return typeof value === 'string' && value ? value : '';
@@ -110,6 +111,49 @@ export function createFocusHistoryEntry(session, completionKeyHint = '', focusNo
 
   const entry = {
     completedAt,
+    durationMs,
+    focusTag: normalizeFocusTag(session.focusTag),
+    id,
+    stepId,
+    stepType: 'work'
+  };
+
+  if (normalizedFocusNote) {
+    entry.focusNote = normalizedFocusNote;
+  }
+
+  return entry;
+}
+
+export function createFreeTimerHistoryEntry({ session, finishedAt, focusNote = '' }) {
+  if (!isFreeTimerMode(session)) {
+    return null;
+  }
+
+  if (session?.status !== 'running' && session?.status !== 'paused') {
+    return null;
+  }
+
+  const startedAt = normalizeTimestamp(session?.freeTimerStartedAt);
+  const completedAt = normalizeTimestamp(finishedAt);
+
+  if (!Number.isFinite(startedAt) || !Number.isFinite(completedAt)) {
+    return null;
+  }
+
+  const safeCompletedAt = Math.max(completedAt, startedAt);
+  const durationMs = normalizeDurationMs(getElapsedMs(session, safeCompletedAt));
+  const stepId = normalizeHistoryId(`free-${startedAt}`);
+  const id = normalizeHistoryId(`${stepId}:${safeCompletedAt}`);
+
+  if (!id || !stepId || !Number.isFinite(durationMs)) {
+    return null;
+  }
+
+  const normalizedFocusNote = normalizeFocusNote(focusNote);
+
+  const entry = {
+    completedAt: safeCompletedAt,
     durationMs,
     focusTag: normalizeFocusTag(session.focusTag),
     id,

@@ -1,4 +1,6 @@
 import {
+  startFreeTimer,
+  resetFreeTimer,
   forceCompleteCurrentStep,
   pauseSession,
   prepareSessionForStepStart,
@@ -8,6 +10,7 @@ import {
 } from './transitions.js';
 import { syncIdleSessionWithSettings } from './normalize.js';
 import { WORKER_ACTIONS } from '../worker-protocol.js';
+import { createFreeTimerHistoryEntry } from '../focus-history.js';
 
 /**
  * @typedef {'keep' | 'start' | 'stop'} ActionTimerMode
@@ -17,6 +20,7 @@ import { WORKER_ACTIONS } from '../worker-protocol.js';
  * @typedef {{
  *   completionReason: string,
  *   handled: boolean,
+ *   historyEntry: object | null,
  *   nextSession: object,
  *   reason: string,
  *   timerMode: ActionTimerMode
@@ -42,14 +46,63 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
       return {
         completionReason: 'manual_early',
         handled: true,
+        historyEntry: null,
         nextSession: forceCompleteCurrentStep(session, now),
         reason: 'end-step-early',
         timerMode: 'stop'
       };
+    case WORKER_ACTIONS.DISCARD_FREE_TIMER:
+      if (session?.sessionMode !== 'free') {
+        return {
+          completionReason: '',
+          handled: true,
+          historyEntry: null,
+          nextSession: session,
+          reason: 'discard-free-timer-ignored',
+          timerMode: 'keep'
+        };
+      }
+
+      return {
+        completionReason: '',
+        handled: true,
+        historyEntry: null,
+        nextSession: resetFreeTimer(session, settings, now),
+        reason: 'discard-free-timer',
+        timerMode: 'stop'
+      };
+    case WORKER_ACTIONS.FINISH_FREE_TIMER: {
+      if (session?.sessionMode !== 'free') {
+        return {
+          completionReason: '',
+          handled: true,
+          historyEntry: null,
+          nextSession: session,
+          reason: 'finish-free-timer-ignored',
+          timerMode: 'keep'
+        };
+      }
+
+      const historyEntry = createFreeTimerHistoryEntry({
+        finishedAt: now,
+        focusNote: payload.focusNote,
+        session
+      });
+
+      return {
+        completionReason: '',
+        handled: true,
+        historyEntry,
+        nextSession: resetFreeTimer(session, settings, now),
+        reason: 'finish-free-timer',
+        timerMode: 'stop'
+      };
+    }
     case WORKER_ACTIONS.PAUSE:
       return {
         completionReason: '',
         handled: true,
+        historyEntry: null,
         nextSession: pauseSession(session, now),
         reason: 'pause',
         timerMode: 'stop'
@@ -59,6 +112,7 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
       return {
         completionReason: '',
         handled: true,
+        historyEntry: null,
         nextSession: settings ? syncIdleSessionWithSettings(reset, settings, now) : reset,
         reason: 'reset-all',
         timerMode: 'stop'
@@ -68,14 +122,39 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
       return {
         completionReason: '',
         handled: true,
+        historyEntry: null,
         nextSession: resumeSession(session, now),
         reason: 'resume',
         timerMode: 'start'
       };
+    case WORKER_ACTIONS.START_FREE_TIMER: {
+      const nextSession = startFreeTimer(session, settings, now);
+
+      if (nextSession === session) {
+        return {
+          completionReason: '',
+          handled: true,
+          historyEntry: null,
+          nextSession: session,
+          reason: 'start-free-timer-ignored',
+          timerMode: 'keep'
+        };
+      }
+
+      return {
+        completionReason: '',
+        handled: true,
+        historyEntry: null,
+        nextSession,
+        reason: 'start-free-timer',
+        timerMode: 'start'
+      };
+    }
     case WORKER_ACTIONS.START_STEP:
       return {
         completionReason: '',
         handled: true,
+        historyEntry: null,
         nextSession: prepareSessionForStepStart(session, settings, now),
         reason: 'start',
         timerMode: 'start'
@@ -84,6 +163,7 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
       return {
         completionReason: '',
         handled: true,
+        historyEntry: null,
         nextSession: setSessionFocusTag(session, payload.focusTag, now),
         reason: 'set-focus-tag',
         timerMode: 'keep'
@@ -92,6 +172,7 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
       return {
         completionReason: '',
         handled: false,
+        historyEntry: null,
         nextSession: session,
         reason: '',
         timerMode: 'keep'

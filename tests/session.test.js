@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultSettings } from '../src/core/settings.js';
 import {
   advanceAfterCompletion,
+  canStartFreeTimer,
+  getElapsedMs,
   canResetSession,
   createInitialSession,
   forceCompleteCurrentStep,
@@ -13,8 +15,10 @@ import {
   pauseSession,
   prepareSessionForStepStart,
   resetSession,
+  resetFreeTimer,
   resumeSession,
   setSessionFocusTag,
+  startFreeTimer,
   startCurrentStep,
   syncSession
 } from '../src/core/session.js';
@@ -309,5 +313,45 @@ describe('timer session engine', () => {
     expect(canResetSession(initial)).toBe(false);
     expect(canResetSession(running)).toBe(true);
     expect(canResetSession(idleOnNextStep)).toBe(true);
+  });
+
+  it('starts free timer only from fresh idle cycle state', () => {
+    const initial = createInitialSession(settings);
+    const running = startCurrentStep(initial, 1_000);
+    const shiftedIdle = {
+      ...initial,
+      currentStepIndex: 1
+    };
+
+    expect(canStartFreeTimer(initial)).toBe(true);
+    expect(canStartFreeTimer(running)).toBe(false);
+    expect(canStartFreeTimer(shiftedIdle)).toBe(false);
+  });
+
+  it('tracks free timer elapsed time across pause and resume', () => {
+    const initial = createInitialSession(settings);
+    const freeRunning = startFreeTimer(initial, settings, 10_000);
+
+    expect(freeRunning.sessionMode).toBe('free');
+    expect(getElapsedMs(freeRunning, 70_000)).toBe(60_000);
+
+    const freePaused = pauseSession(freeRunning, 70_000);
+    expect(freePaused.status).toBe('paused');
+    expect(getElapsedMs(freePaused, 120_000)).toBe(60_000);
+
+    const freeResumed = resumeSession(freePaused, 200_000);
+    expect(freeResumed.status).toBe('running');
+    expect(getElapsedMs(freeResumed, 260_000)).toBe(120_000);
+  });
+
+  it('resets free timer back to cycle mode idle state', () => {
+    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 5_000);
+    const reset = resetFreeTimer(freeRunning, settings, 10_000);
+
+    expect(reset.sessionMode).toBe('cycle');
+    expect(reset.status).toBe('idle');
+    expect(reset.currentStepIndex).toBe(0);
+    expect(reset.freeTimerStartedAt).toBeNull();
+    expect(reset.freeAccumulatedMs).toBe(0);
   });
 });

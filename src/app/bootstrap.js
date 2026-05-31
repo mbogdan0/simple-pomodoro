@@ -133,6 +133,7 @@ export function startApp(root) {
     state
   });
   renderer.setLiveUpdateHooks({
+    maybeDispatchFreeTimerReminder: notificationService.maybeDispatchFreeTimerReminder,
     maybeDispatchFocusMinuteReminder: notificationService.maybeDispatchFocusMinuteReminder,
     syncPictureInPicture: pipSync.syncPictureInPicture
   });
@@ -152,11 +153,12 @@ export function startApp(root) {
     handleLocalAction: sessionController.handleLocalAction,
     onIdleReminder: (now) => notificationService.dispatchIdleReminder(now),
     onWorkerMissing: renderer.renderApp,
-    onWorkerState({ completionKey, reason, session, type }) {
+    onWorkerState({ completionKey, historyEntry, reason, session, type }) {
       sessionController.commitSession(session, {
         completionKeyHint: completionKey,
         completionReason: reason,
         dispatchAlerts: true,
+        historyEntryHint: historyEntry,
         persist: true,
         render: true,
         syncWorker: type === WORKER_MESSAGE_TYPES.STEP_FINISHED

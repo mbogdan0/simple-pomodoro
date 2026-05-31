@@ -1,5 +1,11 @@
 import { STEP_TYPE_LABELS } from './constants.js';
-import { getCurrentStep, getRemainingMs, hasNextStep } from './session.js';
+import {
+  getCurrentStep,
+  getElapsedMs,
+  getRemainingMs,
+  hasNextStep,
+  isFreeTimerMode
+} from './session.js';
 
 export function createCompletionKey(session) {
   const step = getCurrentStep(session);
@@ -89,6 +95,13 @@ export function shouldDispatchFocusMinuteReminder({
     };
   }
 
+  if (isFreeTimerMode(session)) {
+    return {
+      key: '',
+      shouldDispatch: false
+    };
+  }
+
   const remainingMs = getRemainingMs(session, now);
 
   if (remainingMs <= 0 || remainingMs > 60_000) {
@@ -101,6 +114,53 @@ export function shouldDispatchFocusMinuteReminder({
   const key = createFocusMinuteReminderKey(session);
 
   if (!key || key === previousKey) {
+    return {
+      key,
+      shouldDispatch: false
+    };
+  }
+
+  return {
+    key,
+    shouldDispatch: true
+  };
+}
+
+const FREE_TIMER_REMINDER_INTERVAL_MS = 5 * 60_000;
+
+export function shouldDispatchFreeTimerReminder({
+  session,
+  now = Date.now(),
+  notificationsEnabled = true,
+  previousKey = ''
+}) {
+  if (!notificationsEnabled || session?.status !== 'running' || !isFreeTimerMode(session)) {
+    return {
+      key: '',
+      shouldDispatch: false
+    };
+  }
+
+  const elapsedMs = getElapsedMs(session, now);
+  const intervalIndex = Math.floor(elapsedMs / FREE_TIMER_REMINDER_INTERVAL_MS);
+
+  if (intervalIndex < 1) {
+    return {
+      key: '',
+      shouldDispatch: false
+    };
+  }
+
+  if (!Number.isFinite(session?.freeTimerStartedAt)) {
+    return {
+      key: '',
+      shouldDispatch: false
+    };
+  }
+
+  const key = `${session.freeTimerStartedAt}:${intervalIndex}`;
+
+  if (key === previousKey) {
     return {
       key,
       shouldDispatch: false

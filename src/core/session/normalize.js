@@ -3,6 +3,7 @@ import { createDefaultScenario, normalizeScenarioStep } from '../settings.js';
 import { clamp } from '../utils.js';
 
 const VALID_SESSION_STATUSES = ['idle', 'running', 'paused', 'completed_waiting_next'];
+const VALID_SESSION_MODES = ['cycle', 'free'];
 
 function normalizeTimestamp(value) {
   return Number.isFinite(value) ? value : null;
@@ -10,6 +11,18 @@ function normalizeTimestamp(value) {
 
 function normalizeFocusTag(value) {
   return FOCUS_TAGS.includes(value) ? value : 'none';
+}
+
+function normalizeSessionMode(value) {
+  return VALID_SESSION_MODES.includes(value) ? value : 'cycle';
+}
+
+function normalizeFreeAccumulatedMs(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round(value));
 }
 
 function ensureScenarioSnapshot(rawScenario, settings) {
@@ -37,15 +50,54 @@ export function normalizeSession(rawSession = {}, settings) {
     currentStepIndex,
     endsAt: normalizeTimestamp(rawSession.endsAt),
     finishedAt: normalizeTimestamp(rawSession.finishedAt),
+    freeAccumulatedMs: normalizeFreeAccumulatedMs(rawSession.freeAccumulatedMs),
+    freeSegmentStartedAt: normalizeTimestamp(rawSession.freeSegmentStartedAt),
+    freeTimerStartedAt: normalizeTimestamp(rawSession.freeTimerStartedAt),
     focusTag: normalizeFocusTag(rawSession.focusTag),
     remainingMsAtPause: normalizeTimestamp(rawSession.remainingMsAtPause),
     scenario,
+    sessionMode: normalizeSessionMode(rawSession.sessionMode),
     status,
     stepStartedAt: normalizeTimestamp(rawSession.stepStartedAt),
     updatedAt: normalizeTimestamp(rawSession.updatedAt) ?? Date.now()
   };
 
-  if (normalized.status === 'running' && (!normalized.stepStartedAt || !normalized.endsAt)) {
+  if (normalized.sessionMode === 'cycle') {
+    normalized.freeAccumulatedMs = 0;
+    normalized.freeSegmentStartedAt = null;
+    normalized.freeTimerStartedAt = null;
+  } else {
+    normalized.endsAt = null;
+    normalized.finishedAt = null;
+    normalized.remainingMsAtPause = null;
+    normalized.stepStartedAt = null;
+    normalized.completedInBackground = false;
+
+    if (
+      normalized.status === 'completed_waiting_next' ||
+      (normalized.status === 'running' &&
+        (!Number.isFinite(normalized.freeTimerStartedAt) ||
+          !Number.isFinite(normalized.freeSegmentStartedAt)))
+    ) {
+      normalized.status = 'idle';
+    }
+
+    if (normalized.status === 'paused' && !Number.isFinite(normalized.freeTimerStartedAt)) {
+      normalized.status = 'idle';
+    }
+
+    if (normalized.status === 'idle') {
+      normalized.freeAccumulatedMs = 0;
+      normalized.freeSegmentStartedAt = null;
+      normalized.freeTimerStartedAt = null;
+    }
+  }
+
+  if (
+    normalized.sessionMode === 'cycle' &&
+    normalized.status === 'running' &&
+    (!normalized.stepStartedAt || !normalized.endsAt)
+  ) {
     return normalizeSession(
       {
         ...normalized,
@@ -62,7 +114,11 @@ export function normalizeSession(rawSession = {}, settings) {
     );
   }
 
-  if (normalized.status === 'paused' && !normalized.remainingMsAtPause) {
+  if (
+    normalized.sessionMode === 'cycle' &&
+    normalized.status === 'paused' &&
+    !normalized.remainingMsAtPause
+  ) {
     return normalizeSession(
       {
         ...normalized,
@@ -79,7 +135,7 @@ export function normalizeSession(rawSession = {}, settings) {
     );
   }
 
-  if (normalized.status === 'completed_waiting_next') {
+  if (normalized.sessionMode === 'cycle' && normalized.status === 'completed_waiting_next') {
     normalized.finishedAt = normalized.finishedAt ?? normalized.endsAt ?? Date.now();
   }
 
