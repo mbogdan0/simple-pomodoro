@@ -1,8 +1,10 @@
 import { createAudioService } from './alerts/audio-service.js';
 import { createNotificationService } from './alerts/notification-service.js';
 import { createRootEvents } from './events/root-events.js';
+import { createPipActionHandler } from './pip/pip-action-handler.js';
 import { createPipSync } from './pip/pip-sync.js';
 import { createLifecycleSync } from './runtime/lifecycle-sync.js';
+import { createPageClockSync } from './runtime/page-clock-sync.js';
 import { createSafetyLoop } from './runtime/safety-loop.js';
 import { createServiceWorkerRuntime } from './runtime/service-worker-runtime.js';
 import { createWorkerBridge } from './runtime/worker-bridge.js';
@@ -43,28 +45,14 @@ export function startApp(root) {
     playUiActionTone: (soundEnabled) => audioService.playUiActionTone(soundEnabled),
     state
   });
+  const pipActionHandler = createPipActionHandler({
+    audioService,
+    postWorkerAction: workerCommandBus.postWorkerAction,
+    state
+  });
 
   const pipController = createTimerPipController({
-    onAction(action) {
-      if (action === 'START') {
-        audioService.playUiActionTone(state.settings.alertSettings.soundEnabled);
-        workerCommandBus.postWorkerAction(WORKER_ACTIONS.START_STEP, {
-          settings: state.settings
-        });
-        return;
-      }
-
-      if (action === 'PAUSE') {
-        audioService.playUiActionTone(state.settings.alertSettings.soundEnabled);
-        workerCommandBus.postWorkerAction(WORKER_ACTIONS.PAUSE);
-        return;
-      }
-
-      if (action === 'RESUME') {
-        audioService.playUiActionTone(state.settings.alertSettings.soundEnabled);
-        workerCommandBus.postWorkerAction(WORKER_ACTIONS.RESUME);
-      }
-    },
+    onAction: pipActionHandler,
     onWindowClosed(reason) {
       if (reason === 'user') {
         state.manualPipRequested = false;
@@ -83,6 +71,10 @@ export function startApp(root) {
     pipController,
     renderApp: renderer.renderApp,
     state
+  });
+  const pageClockSync = createPageClockSync({
+    updatePageChrome: renderer.updatePageChrome,
+    updateTimerLiveRegion: renderer.updateTimerLiveRegion
   });
   renderer.setLiveUpdateHooks({
     maybeDispatchFreeTimerReminder: notificationService.maybeDispatchFreeTimerReminder,
@@ -116,9 +108,7 @@ export function startApp(root) {
       });
     },
     onWorkerTick() {
-      const now = Date.now();
-      renderer.updateTimerLiveRegion(now);
-      renderer.updatePageChrome(now);
+      pageClockSync.syncNow();
     },
     onWorkerUnavailable(nextSession) {
       const fallbackSession = syncSession(
@@ -166,10 +156,8 @@ export function startApp(root) {
   });
   const safetyLoop = createSafetyLoop({
     onTick() {
-      const now = Date.now();
       sessionController.reconcileSession();
-      renderer.updateTimerLiveRegion(now);
-      renderer.updatePageChrome(now);
+      const now = pageClockSync.syncNow();
       notificationService.maybeDispatchIdleReminder(now);
     }
   });
