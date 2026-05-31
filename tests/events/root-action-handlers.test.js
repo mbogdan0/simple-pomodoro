@@ -259,6 +259,7 @@ describe('root action handlers', () => {
         stepType: 'work'
       }
     ]);
+    expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
     expect(state.historyNoteEditEntryId).toBe('');
     expect(spies.persistFocusHistory).toHaveBeenCalledTimes(2);
     expect(spies.renderApp).toHaveBeenCalledTimes(5);
@@ -266,12 +267,23 @@ describe('root action handlers', () => {
 
   it('keeps no-op behavior for missing datasets and declined confirmations', () => {
     globalThis.window.confirm = vi.fn(() => false);
-    const { deps, spies, state } = createDeps();
+    const { deps, spies, state } = createDeps({
+      focusHistory: [
+        {
+          completedAt: 1_720_000_000_000,
+          durationMs: 25 * 60 * 1000,
+          focusTag: 'none',
+          id: 'focus-1',
+          stepId: 'step-1',
+          stepType: 'work'
+        }
+      ]
+    });
     const { handlers } = createRootActionHandlers(deps);
 
     handlers['set-focus-tag'](createActionButton());
     handlers['switch-tab'](createActionButton({ tab: 'invalid-tab' }));
-    handlers['clear-history-entry'](createActionButton());
+    handlers['clear-history-entry'](createActionButton({ entryId: 'focus-1' }));
     handlers['toggle-history-entry-note-edit'](createActionButton());
     handlers['toggle-history-entry-tag-edit'](createActionButton());
     handlers['set-history-entry-focus-tag'](createActionButton({ entryId: 'focus-1' }));
@@ -281,6 +293,17 @@ describe('root action handlers', () => {
     expect(spies.persistSettings).not.toHaveBeenCalled();
     expect(spies.persistFocusHistory).not.toHaveBeenCalled();
     expect(spies.persistFocusNoteDraft).not.toHaveBeenCalled();
+    expect(globalThis.window.confirm).toHaveBeenCalledTimes(2);
+    expect(state.focusHistory).toEqual([
+      {
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: 'focus-1',
+        stepId: 'step-1',
+        stepType: 'work'
+      }
+    ]);
     expect(state.historyNoteEditEntryId).toBe('');
     expect(state.historyTagEditEntryId).toBe('');
   });

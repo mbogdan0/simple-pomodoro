@@ -241,6 +241,9 @@ describe('render app integration', () => {
     expect(root.innerHTML).toContain('cycle-progress is-hidden');
     expect(root.innerHTML).toContain('data-action="finish-free-timer"');
     expect(root.innerHTML).toContain('data-action="discard-free-timer"');
+    expect(root.innerHTML).not.toContain('data-action="reset-session"');
+    expect(root.innerHTML).not.toContain('data-action="end-step-early"');
+    expect(root.innerHTML).not.toContain('data-action="start-free-timer"');
   });
 
   it('updates idle delay detail during live timer updates', () => {

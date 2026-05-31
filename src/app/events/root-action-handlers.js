@@ -9,6 +9,7 @@ import { ROOT_ACTIONS, ROOT_TABS } from './root-contracts.js';
 
 const RESET_CONFIRMATION_MESSAGE = 'Reset all steps and return to the first step?';
 const END_STEP_EARLY_CONFIRMATION_MESSAGE = 'End the current step now?';
+const CLEAR_HISTORY_ENTRY_CONFIRMATION_MESSAGE = 'Clear this history entry?';
 
 function closeOverflowActionsMenu(button) {
   const parentDetails = button.closest?.('details');
@@ -80,6 +81,10 @@ export function createRootActionHandlers(deps) {
       const entryId = button?.dataset?.entryId;
 
       if (!entryId) {
+        return;
+      }
+
+      if (!window.confirm(CLEAR_HISTORY_ENTRY_CONFIRMATION_MESSAGE)) {
         return;
       }
 

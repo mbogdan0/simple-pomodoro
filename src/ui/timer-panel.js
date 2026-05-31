@@ -117,6 +117,67 @@ export function renderTimerPanel(timerModel) {
   const pipToggleLabel = timerModel.pipToggleLabel ?? 'Toggle PiP';
   const progressTrack = timerModel.progressTrack ?? '#ede7de';
   const showPipToggle = Boolean(timerModel.showPipToggle);
+  const overflowMenuItems = timerModel.freeTimerMode
+    ? timerModel.showDiscardFreeTimer
+      ? `
+          <button
+            class="overflow-actions__item"
+            data-action="${ROOT_ACTIONS.DISCARD_FREE_TIMER}"
+            role="menuitem"
+            type="button"
+          >
+            Finish without saving
+          </button>
+        `
+      : ''
+    : `
+        <button
+          class="overflow-actions__item"
+          data-action="${ROOT_ACTIONS.RESET_SESSION}"
+          role="menuitem"
+          type="button"
+          ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
+        >
+          Reset all steps
+        </button>
+        ${
+          timerModel.showStartFreeTimer
+            ? `
+              <button
+                class="overflow-actions__item"
+                data-action="${ROOT_ACTIONS.START_FREE_TIMER}"
+                role="menuitem"
+                type="button"
+              >
+                Start Free Timer
+              </button>
+            `
+            : ''
+        }
+        <button
+          class="overflow-actions__item"
+          data-action="${ROOT_ACTIONS.END_STEP_EARLY}"
+          role="menuitem"
+          type="button"
+          ${endStepEarlyDisabled ? 'disabled aria-disabled="true"' : ''}
+        >
+          End step early
+        </button>
+        ${
+          timerModel.showDiscardFreeTimer
+            ? `
+              <button
+                class="overflow-actions__item"
+                data-action="${ROOT_ACTIONS.DISCARD_FREE_TIMER}"
+                role="menuitem"
+                type="button"
+              >
+                Finish without saving
+              </button>
+            `
+            : ''
+        }
+      `;
 
   return `
     <section
@@ -203,52 +264,7 @@ export function renderTimerPanel(timerModel) {
               <span class="sr-only">More actions</span>
             </summary>
             <div class="overflow-actions__menu" aria-label="Timer actions" role="menu">
-              <button
-                class="overflow-actions__item"
-                data-action="${ROOT_ACTIONS.RESET_SESSION}"
-                role="menuitem"
-                type="button"
-                ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
-              >
-                Reset all steps
-              </button>
-              ${
-                timerModel.showStartFreeTimer
-                  ? `
-                    <button
-                      class="overflow-actions__item"
-                      data-action="${ROOT_ACTIONS.START_FREE_TIMER}"
-                      role="menuitem"
-                      type="button"
-                    >
-                      Start Free Timer
-                    </button>
-                  `
-                  : ''
-              }
-              <button
-                class="overflow-actions__item"
-                data-action="${ROOT_ACTIONS.END_STEP_EARLY}"
-                role="menuitem"
-                type="button"
-                ${endStepEarlyDisabled ? 'disabled aria-disabled="true"' : ''}
-              >
-                End step early
-              </button>
-              ${
-                timerModel.showDiscardFreeTimer
-                  ? `
-                    <button
-                      class="overflow-actions__item"
-                      data-action="${ROOT_ACTIONS.DISCARD_FREE_TIMER}"
-                      role="menuitem"
-                      type="button"
-                    >
-                      Finish Timer Without Saving
-                    </button>
-                  `
-                  : ''
-              }
+              ${overflowMenuItems}
             </div>
           </details>
           ${

@@ -84,6 +84,7 @@ describe('timer panel behavior', () => {
   it('renders free timer controls based on model flags', () => {
     const html = renderTimerPanel(
       createTimerModel({
+        freeTimerMode: true,
         hideCycleProgress: true,
         showDiscardFreeTimer: true,
         showFinishFreeTimer: true,
@@ -91,9 +92,11 @@ describe('timer panel behavior', () => {
       })
     );
 
-    expect(html).toContain('data-action="start-free-timer"');
     expect(html).toContain('data-action="finish-free-timer"');
     expect(html).toContain('data-action="discard-free-timer"');
+    expect(html).not.toContain('data-action="start-free-timer"');
+    expect(html).not.toContain('data-action="reset-session"');
+    expect(html).not.toContain('data-action="end-step-early"');
     expect(html).toContain('cycle-progress is-hidden');
   });
 
