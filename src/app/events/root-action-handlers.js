@@ -19,6 +19,17 @@ function closeOverflowActionsMenu(button) {
   }
 }
 
+function runAsyncAction(task, { onAfter = null, onBefore = null } = {}) {
+  onBefore?.();
+
+  void Promise.resolve()
+    .then(task)
+    .catch(() => {})
+    .finally(() => {
+      onAfter?.();
+    });
+}
+
 /**
  * @param {import('./root-event-types.js').RootEventDeps} deps
  */
@@ -52,7 +63,7 @@ export function createRootActionHandlers(deps) {
     renderApp();
   }
 
-  async function testNtfy() {
+  function testNtfy() {
     if (state.isNtfyTesting) {
       return;
     }
@@ -63,16 +74,16 @@ export function createRootActionHandlers(deps) {
       return;
     }
 
-    state.isNtfyTesting = true;
-    renderApp();
-
-    try {
-      await notificationService.testNtfy();
-    } finally {
-      state.isNtfyTesting = false;
-    }
-
-    renderApp();
+    runAsyncAction(() => notificationService.testNtfy(), {
+      onAfter: () => {
+        state.isNtfyTesting = false;
+        renderApp();
+      },
+      onBefore: () => {
+        state.isNtfyTesting = true;
+        renderApp();
+      }
+    });
   }
 
   /** @type {Record<import('./root-event-types.js').RootActionName, (button: import('./root-event-types.js').RootActionElement) => void>} */
@@ -127,8 +138,8 @@ export function createRootActionHandlers(deps) {
       postWorkerAction(WORKER_ACTIONS.PAUSE);
     },
     [ROOT_ACTIONS.REQUEST_NOTIFICATION_PERMISSION]: () => {
-      void notificationService.requestNotificationPermission().then(() => {
-        renderApp();
+      runAsyncAction(() => notificationService.requestNotificationPermission(), {
+        onAfter: renderApp
       });
     },
     [ROOT_ACTIONS.RESET_SESSION]: (button) => {
@@ -208,8 +219,8 @@ export function createRootActionHandlers(deps) {
       renderApp();
     },
     [ROOT_ACTIONS.TEST_NOTIFICATION]: () => {
-      void notificationService.testNotification().then(() => {
-        renderApp();
+      runAsyncAction(() => notificationService.testNotification(), {
+        onAfter: renderApp
       });
     },
     [ROOT_ACTIONS.TEST_NTFY]: () => {
@@ -235,7 +246,7 @@ export function createRootActionHandlers(deps) {
     },
     [ROOT_ACTIONS.TOGGLE_PIP_WINDOW]: () => {
       playUiActionTone();
-      void toggleManualPipWindow();
+      runAsyncAction(() => toggleManualPipWindow());
     }
   };
 

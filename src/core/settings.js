@@ -13,16 +13,16 @@ import {
 } from './constants.js';
 import { asFiniteNumber, clamp, createId } from './utils.js';
 
-export function sanitizeDurationMs(value, fallbackMs) {
+function sanitizeDurationMs(value, fallbackMs) {
   const parsed = asFiniteNumber(value, fallbackMs);
   return clamp(Math.round(parsed), MIN_STEP_DURATION_MS, MAX_STEP_DURATION_MS);
 }
 
-export function normalizeStepType(type) {
+function normalizeStepType(type) {
   return STEP_TYPES.includes(type) ? type : 'work';
 }
 
-export function createScenarioStep(
+function createScenarioStep(
   type = 'work',
   durationMs = DEFAULT_TEMPLATE_DURATIONS_MS[normalizeStepType(type)]
 ) {
@@ -75,7 +75,7 @@ export function createDefaultScenario(
   return scenario;
 }
 
-export function normalizeTemplateDurations(rawDurations = {}) {
+function normalizeTemplateDurations(rawDurations = {}) {
   return {
     longBreak: sanitizeDurationMs(rawDurations.longBreak, DEFAULT_TEMPLATE_DURATIONS_MS.longBreak),
     shortBreak: sanitizeDurationMs(
@@ -86,7 +86,7 @@ export function normalizeTemplateDurations(rawDurations = {}) {
   };
 }
 
-export function normalizeAlertSettings(rawAlerts = {}) {
+function normalizeAlertSettings(rawAlerts = {}) {
   return {
     notificationsEnabled:
       typeof rawAlerts.notificationsEnabled === 'boolean'

@@ -97,6 +97,12 @@ function createDeps(stateOverrides = {}) {
   };
 }
 
+async function flushPromises(cycles = 4) {
+  for (let index = 0; index < cycles; index += 1) {
+    await Promise.resolve();
+  }
+}
+
 describe('root action handlers', () => {
   beforeEach(() => {
     globalThis.window = {
@@ -192,6 +198,7 @@ describe('root action handlers', () => {
 
     handlers['switch-tab'](createActionButton({ tab: 'history' }));
     handlers['toggle-pip-window'](createActionButton());
+    await flushPromises();
 
     expect(state.settings.lastOpenTab).toBe('history');
     expect(spies.persistSettings).toHaveBeenCalledTimes(1);
@@ -306,5 +313,39 @@ describe('root action handlers', () => {
     ]);
     expect(state.historyNoteEditEntryId).toBe('');
     expect(state.historyTagEditEntryId).toBe('');
+  });
+
+  it('contains async action failures and restores transient state', async () => {
+    const { deps, spies, state } = createDeps();
+    state.settings.ntfyPublishUrl = 'https://ntfy.sh/demo-topic';
+    deps.notificationService.requestNotificationPermission = vi.fn(async () => {
+      throw new Error('permission failed');
+    });
+    deps.notificationService.testNotification = vi.fn(async () => {
+      throw new Error('notification failed');
+    });
+    deps.notificationService.testNtfy = vi.fn(async () => {
+      throw new Error('ntfy failed');
+    });
+    spies.toggleManualPipWindow.mockImplementation(async () => {
+      throw new Error('pip failed');
+    });
+
+    const { handlers } = createRootActionHandlers(deps);
+
+    expect(() => handlers['request-notification-permission'](createActionButton())).not.toThrow();
+    expect(() => handlers['test-notification'](createActionButton())).not.toThrow();
+    expect(() => handlers['test-ntfy'](createActionButton())).not.toThrow();
+    expect(() => handlers['toggle-pip-window'](createActionButton())).not.toThrow();
+    expect(state.isNtfyTesting).toBe(true);
+
+    await flushPromises();
+
+    expect(deps.notificationService.requestNotificationPermission).toHaveBeenCalledTimes(1);
+    expect(deps.notificationService.testNotification).toHaveBeenCalledTimes(1);
+    expect(deps.notificationService.testNtfy).toHaveBeenCalledTimes(1);
+    expect(spies.toggleManualPipWindow).toHaveBeenCalledTimes(1);
+    expect(state.isNtfyTesting).toBe(false);
+    expect(spies.renderApp).toHaveBeenCalledTimes(4);
   });
 });

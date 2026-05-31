@@ -1,114 +1,15 @@
-import {
-  APP_NAME,
-  FOCUS_TAG_LABELS,
-  FOCUS_TAGS,
-  PROGRESS_TRACK_COLOR,
-  STEP_PALETTE,
-  TAB_LABELS
-} from '../../core/constants.js';
-import { createFaviconModel, renderFaviconDataUrl } from '../../core/favicon.js';
-import {
-  formatClock,
-  formatCompactElapsed,
-  formatDocumentTitle,
-  formatNotificationPermissionLabel,
-  formatStepTypeLabel,
-  formatStatusLabel
-} from '../../core/format.js';
-import {
-  getCycleRepeatDots,
-  getFocusRepeatProgress,
-  getStepProgress
-} from '../../core/progress.js';
-import {
-  canStartFreeTimer,
-  canResetSession,
-  getElapsedMs,
-  getCurrentStep,
-  getProgressRatio,
-  getRemainingMs,
-  isFreeTimerMode
-} from '../../core/session.js';
+import { TAB_LABELS } from '../../core/constants.js';
+import { formatNotificationPermissionLabel } from '../../core/format.js';
 import { renderHistoryPanel } from '../../ui/history-panel.js';
 import { renderSettingsPanel } from '../../ui/settings-panel.js';
-import { renderCycleProgressMarkup, renderTimerPanel } from '../../ui/timer-panel.js';
+import { renderTimerPanel } from '../../ui/timer-panel.js';
 import { ROOT_ACTIONS, ROOT_TABS } from '../events/root-contracts.js';
-
-function ensureFaviconLink() {
-  let link = document.querySelector('link[rel="icon"]');
-
-  if (!link) {
-    link = document.createElement('link');
-    link.rel = 'icon';
-    document.head.append(link);
-  }
-
-  return link;
-}
-
-function formatRepeatMeta(timerModel) {
-  return `Focus repeat ${timerModel.focusRepeatCurrent}/${timerModel.focusRepeatTotal} · Step ${timerModel.stepCurrent}/${timerModel.stepTotal}`;
-}
-
-function collectLiveRefs(root) {
-  return {
-    clockElement: root.querySelector('[data-live-clock]'),
-    cycleProgressElement: root.querySelector('[data-live-cycle-progress]'),
-    progressBarElement: root.querySelector('[data-live-progress]'),
-    progressFillElement: root.querySelector('[data-live-progress-fill]'),
-    repeatMetaElement: root.querySelector('[data-live-repeat-meta]'),
-    statusDetailElement: root.querySelector('[data-live-status-detail]'),
-    statusElement: root.querySelector('[data-live-status]'),
-    statusTextElement: root.querySelector('[data-live-status-text]'),
-    stepLabelElement: root.querySelector('[data-live-step-label]')
-  };
-}
-
-function patchLiveTimerDom(refs, timerModel) {
-  if (refs.clockElement) {
-    refs.clockElement.textContent = timerModel.clock;
-  }
-
-  if (refs.statusTextElement) {
-    refs.statusTextElement.textContent = timerModel.statusText;
-  } else if (refs.statusElement) {
-    refs.statusElement.textContent = timerModel.statusText;
-  }
-
-  if (refs.statusDetailElement) {
-    refs.statusDetailElement.textContent = timerModel.statusDetailText;
-  }
-
-  if (refs.stepLabelElement) {
-    refs.stepLabelElement.textContent = timerModel.stepLabel;
-  }
-
-  if (refs.repeatMetaElement) {
-    refs.repeatMetaElement.textContent = timerModel.hideRepeatMeta
-      ? ''
-      : formatRepeatMeta(timerModel);
-  }
-
-  if (refs.cycleProgressElement) {
-    refs.cycleProgressElement.innerHTML = renderCycleProgressMarkup(timerModel.cycleDots);
-  }
-
-  if (refs.progressBarElement) {
-    refs.progressBarElement.setAttribute('aria-valuenow', String(timerModel.progressPercent));
-    refs.progressBarElement.setAttribute(
-      'aria-valuetext',
-      `${timerModel.progressPercent}% complete in current step`
-    );
-  }
-
-  if (refs.progressFillElement) {
-    refs.progressFillElement.style.width = `${timerModel.progressPercent}%`;
-  }
-}
+import { collectLiveRefs, patchLiveTimerDom } from './live-timer-dom.js';
+import { createPageChromeUpdater } from './page-chrome.js';
+import { createTimerModel } from './timer-model.js';
 
 export function createAppRenderer({ root, state, pipController, getNotificationSupportModel }) {
-  const faviconLink = ensureFaviconLink();
-  let chromeSignature = '';
+  const { updatePageChrome } = createPageChromeUpdater({ state });
   let liveRefs = collectLiveRefs(root);
   let liveUpdateHooks = {
     maybeDispatchFocusMinuteReminder: () => {},
@@ -117,67 +18,11 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
   };
 
   function getTimerModel(now = Date.now()) {
-    const session = state.activeSession;
-    const freeTimerMode = isFreeTimerMode(session);
-    const step = getCurrentStep(session);
-    const stepType = step?.type ?? 'work';
-    const palette = STEP_PALETTE[stepType] ?? STEP_PALETTE.work;
-    const running = session.status === 'running';
-    const paused = session.status === 'paused';
-    const pipSupported = pipController.isSupported();
-    const clockMs = freeTimerMode ? getElapsedMs(session, now) : getRemainingMs(session, now);
-    const progress = getProgressRatio(session, now);
-    const { focusRepeatCurrent, focusRepeatTotal } = getFocusRepeatProgress(session);
-    const { stepCurrent, stepTotal } = getStepProgress(session);
-    const statusDetailText =
-      state.settings.idleReminderEnabled &&
-      session.status === 'idle' &&
-      Number.isFinite(state.idleStartedAt)
-        ? formatCompactElapsed(now - state.idleStartedAt)
-        : paused && Number.isFinite(state.pauseStartedAt)
-          ? formatCompactElapsed(now - state.pauseStartedAt)
-          : '';
-
-    return {
-      accent: palette.accent,
-      accentOutline: palette.accentOutline,
-      accentSoft: palette.accentSoft,
-      backgroundNotice: state.backgroundNotice,
-      clock: formatClock(clockMs),
-      cycleDots: freeTimerMode ? [] : getCycleRepeatDots(session),
-      endStepEarlyDisabled: freeTimerMode || !(running || paused),
-      freeTimerMode,
-      hideCycleProgress: freeTimerMode,
-      hideRepeatMeta: freeTimerMode,
-      focusTag: session.focusTag,
-      focusTagOptions: FOCUS_TAGS.map((tag) => ({
-        id: tag,
-        label: FOCUS_TAG_LABELS[tag]
-      })),
-      focusNoteDraft: state.focusNoteDraft,
-      focusRepeatCurrent,
-      focusRepeatTotal,
-      pipToggleLabel: 'Toggle PiP',
-      showPipToggle: pipSupported,
-      showStartFreeTimer: canStartFreeTimer(session),
-      showDiscardFreeTimer: freeTimerMode && (running || paused),
-      showFinishFreeTimer: freeTimerMode && (running || paused),
-      primaryAction: running
-        ? ROOT_ACTIONS.PAUSE_STEP
-        : paused
-          ? ROOT_ACTIONS.RESUME_STEP
-          : ROOT_ACTIONS.START_STEP,
-      primaryActionLabel: running ? 'Pause' : paused ? 'Resume' : 'Start',
-      progressTrack: PROGRESS_TRACK_COLOR,
-      progressPercent: Math.round(progress * 100),
-      resetDisabled: !canResetSession(session),
-      statusDetailText,
-      statusText: formatStatusLabel(session.status),
-      step,
-      stepCurrent,
-      stepLabel: freeTimerMode ? 'Free Timer' : formatStepTypeLabel(step?.type),
-      stepTotal
-    };
+    return createTimerModel({
+      now,
+      pipController,
+      state
+    });
   }
 
   function renderApp() {
@@ -253,21 +98,6 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
     liveUpdateHooks.syncPictureInPicture(timerModel, now);
     liveUpdateHooks.maybeDispatchFocusMinuteReminder(state.activeSession, now);
     liveUpdateHooks.maybeDispatchFreeTimerReminder(state.activeSession, now);
-  }
-
-  function updatePageChrome(now = Date.now()) {
-    const title = formatDocumentTitle(state.activeSession, now, APP_NAME);
-    const faviconModel = createFaviconModel(state.activeSession, now);
-    const signature = `${title}|${state.activeSession.status}|${Math.ceil(
-      getRemainingMs(state.activeSession, now) / 1000
-    )}`;
-
-    document.title = title;
-
-    if (signature !== chromeSignature) {
-      chromeSignature = signature;
-      faviconLink.href = renderFaviconDataUrl(faviconModel);
-    }
   }
 
   function setLiveUpdateHooks(nextHooks) {

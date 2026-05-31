@@ -1,6 +1,6 @@
 export const NTFY_PRIORITY = '4';
 export const NTFY_TEST_TITLE = '🧪 ntfy test';
-export const NTFY_TEST_BODY = 'Manual ntfy test.';
+const NTFY_TEST_BODY = 'Manual ntfy test.';
 
 const NTFY_TITLE_EMOJI_BY_STEP_TYPE = {
   longBreak: '🌴',

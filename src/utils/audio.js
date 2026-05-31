@@ -1,4 +1,4 @@
-export const UI_ACTION_TONE_DURATION_SECONDS = 0.06;
+const UI_ACTION_TONE_DURATION_SECONDS = 0.06;
 
 export function playCompletionToneOnContext(audioContext) {
   const startAt = audioContext.currentTime;

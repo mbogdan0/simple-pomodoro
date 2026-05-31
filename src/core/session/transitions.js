@@ -199,7 +199,7 @@ export function forceCompleteCurrentStep(session, now = Date.now()) {
   };
 }
 
-export function resetCurrentStep(session, now = Date.now()) {
+function resetCurrentStep(session, now = Date.now()) {
   const cycleSession = clearFreeTimerFields(session);
 
   return {
@@ -225,7 +225,7 @@ export function resetSession(session, now = Date.now()) {
   );
 }
 
-export function goToStep(session, nextStepIndex, now = Date.now()) {
+function goToStep(session, nextStepIndex, now = Date.now()) {
   return resetCurrentStep(
     {
       ...clearFreeTimerFields(session),

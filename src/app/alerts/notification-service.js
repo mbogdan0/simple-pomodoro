@@ -1,11 +1,11 @@
 import {
   buildNotificationTag,
   createCompletionAlertPayload,
-  selectNotificationChannel,
   shouldDispatchFreeTimerReminder,
   shouldDispatchFocusMinuteReminder
 } from '../../core/alerts.js';
 import { getCurrentStep } from '../../core/session.js';
+import { createNotificationRuntime } from './notification-runtime.js';
 import {
   createNtfyCompletionPayload,
   createNtfyTestPayload,
@@ -20,83 +20,18 @@ export function createNotificationService({
   playCompletionTone,
   playUiActionTone = () => false
 }) {
+  const notificationRuntime = createNotificationRuntime({
+    ensureServiceWorkerRegistration
+  });
+
   function getNotificationSupportModel() {
-    const hasNotificationApi = typeof window.Notification === 'function';
-    const hasServiceWorker = 'serviceWorker' in navigator;
-    const permissionState = hasNotificationApi ? Notification.permission : 'unsupported';
-
-    return {
-      hasNotificationApi,
-      hasServiceWorker,
-      permissionState,
-      unsupported: !hasNotificationApi && !hasServiceWorker
-    };
+    return notificationRuntime.getNotificationSupportModel();
   }
 
-  async function sendNotificationViaServiceWorker(payload) {
-    const registration = await ensureServiceWorkerRegistration();
-
-    if (!registration) {
-      return false;
-    }
-
-    const worker = registration.active ?? registration.waiting ?? registration.installing;
-
-    if (!worker) {
-      return false;
-    }
-
-    try {
-      const channel = new MessageChannel();
-      const responsePromise = new Promise((resolve) => {
-        const timeoutId = setTimeout(() => resolve(false), 1_000);
-
-        channel.port1.onmessage = (event) => {
-          clearTimeout(timeoutId);
-          resolve(Boolean(event.data?.ok));
-        };
-      });
-
-      worker.postMessage(
-        {
-          payload,
-          type: 'SHOW_NOTIFICATION'
-        },
-        [channel.port2]
-      );
-
-      return await responsePromise;
-    } catch {
-      return false;
-    }
-  }
-
-  async function sendNotificationWithFallback(payload) {
-    const notificationSupport = getNotificationSupportModel();
-    const channel = selectNotificationChannel({
-      hasNotificationApi: notificationSupport.hasNotificationApi,
-      hasServiceWorker: state.serviceWorkerReady || notificationSupport.hasServiceWorker,
-      notificationPermission: notificationSupport.permissionState
+  function sendNotificationWithFallback(payload) {
+    return notificationRuntime.sendNotificationWithFallback(payload, {
+      serviceWorkerReady: state.serviceWorkerReady
     });
-
-    if (channel === 'window') {
-      try {
-        new Notification(payload.title, {
-          body: payload.body,
-          silent: payload.silent,
-          tag: payload.tag
-        });
-        return true;
-      } catch {
-        return sendNotificationViaServiceWorker(payload);
-      }
-    }
-
-    if (channel === 'service-worker') {
-      return sendNotificationViaServiceWorker(payload);
-    }
-
-    return false;
   }
 
   function dispatchCompletionAlerts(session, completionKey = '') {
@@ -216,7 +151,7 @@ export function createNotificationService({
       return Promise.resolve(state.notificationNotice);
     }
 
-    return Notification.requestPermission().then((permission) => {
+    return notificationRuntime.requestNotificationPermission().then((permission) => {
       state.notificationNotice =
         permission === 'granted'
           ? 'Notifications are now allowed.'

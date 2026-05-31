@@ -26,19 +26,13 @@ export const ROOT_TABS = Object.freeze({
   TIMER: 'timer'
 });
 
-export const ROOT_TAB_VALUES = Object.freeze(Object.values(ROOT_TABS));
-
 export const ALERT_SETTING_KEYS = Object.freeze({
   NOTIFICATIONS_ENABLED: 'notificationsEnabled',
   SOUND_ENABLED: 'soundEnabled'
 });
-
-export const ALERT_SETTING_VALUES = Object.freeze(Object.values(ALERT_SETTING_KEYS));
 
 export const SETTING_TOGGLE_KEYS = Object.freeze({
   AUTO_START_NEXT_STEP: 'autoStartNextStep',
   IDLE_REMINDER_ENABLED: 'idleReminderEnabled',
   PIP_CLOCK_TICK_EVERY_10S: 'pipClockTickEvery10s'
 });
-
-export const SETTING_TOGGLE_VALUES = Object.freeze(Object.values(SETTING_TOGGLE_KEYS));
