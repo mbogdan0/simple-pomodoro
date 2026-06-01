@@ -105,9 +105,10 @@ export function createNotificationService({
     }
 
     state.lastFreeTimerReminderKey = key;
+    playUiActionTone(state.settings.alertSettings.soundEnabled);
     void sendNotificationWithFallback({
       body: 'Focus session is still active.',
-      silent: true,
+      silent: !state.settings.alertSettings.soundEnabled,
       tag: buildNotificationTag('free-timer-reminder', key),
       title: 'Free timer is running ⏱'
     });

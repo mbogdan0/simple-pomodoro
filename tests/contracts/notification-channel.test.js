@@ -281,10 +281,12 @@ describe('notification service contracts', () => {
 
   it('dispatches free timer reminder every five running minutes', () => {
     const sent = installNotificationMock();
+    const playUiActionTone = vi.fn();
     const state = createState();
     const notificationService = createNotificationService({
       ensureServiceWorkerRegistration: async () => null,
       playCompletionTone: () => true,
+      playUiActionTone,
       state
     });
     const settings = createDefaultSettings();
@@ -296,6 +298,39 @@ describe('notification service contracts', () => {
 
     expect(sent).toHaveLength(2);
     expect(sent[0].title).toBe('Free timer is running ⏱');
+    expect(sent[0].options.silent).toBe(false);
+    expect(sent[1].options.silent).toBe(false);
+    expect(playUiActionTone).toHaveBeenCalledTimes(2);
+    expect(playUiActionTone).toHaveBeenNthCalledWith(1, true);
+    expect(playUiActionTone).toHaveBeenNthCalledWith(2, true);
     expect(state.lastFreeTimerReminderKey).toBe('1000:2');
+  });
+
+  it('keeps free timer reminder notifications silent when sound is disabled', () => {
+    const sent = installNotificationMock();
+    const playUiActionTone = vi.fn();
+    const state = createState({
+      settings: {
+        alertSettings: {
+          soundEnabled: false
+        }
+      }
+    });
+    const notificationService = createNotificationService({
+      ensureServiceWorkerRegistration: async () => null,
+      playCompletionTone: () => true,
+      playUiActionTone,
+      state
+    });
+    const settings = createDefaultSettings();
+    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 1_000);
+
+    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 301_000);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].title).toBe('Free timer is running ⏱');
+    expect(sent[0].options.silent).toBe(true);
+    expect(playUiActionTone).toHaveBeenCalledTimes(1);
+    expect(playUiActionTone).toHaveBeenCalledWith(false);
   });
 });
