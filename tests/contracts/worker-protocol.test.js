@@ -37,16 +37,14 @@ describe('worker protocol contracts', () => {
 
   it('declares a strict set of known action and message types', () => {
     expect(Object.values(WORKER_ACTIONS)).toEqual([
+      'ADVANCE_BREAK',
+      'ADVANCE_FOCUS',
       'INIT',
-      'DISCARD_FREE_TIMER',
-      'END_STEP_EARLY',
-      'FINISH_FREE_TIMER',
       'PAUSE',
-      'RESET_ALL',
+      'RESET_RUN',
       'RESUME',
       'SET_FOCUS_TAG',
       'SET_IDLE_REMINDER',
-      'START_FREE_TIMER',
       'START_STEP',
       'SYNC_NOW'
     ]);
@@ -59,7 +57,7 @@ describe('worker protocol contracts', () => {
     ]);
 
     expect(isWorkerActionType('START_STEP')).toBe(true);
-    expect(isWorkerActionType('END_STEP_EARLY')).toBe(true);
+    expect(isWorkerActionType('ADVANCE_FOCUS')).toBe(true);
     expect(isWorkerActionType('START')).toBe(false);
     expect(isWorkerMessageType('STEP_FINISHED')).toBe(true);
     expect(isWorkerMessageType('DONE')).toBe(false);
@@ -96,7 +94,7 @@ describe('worker protocol contracts', () => {
     expect(lastMessage?.session.focusTag).toBe('study');
   });
 
-  it('emits manual_early completion for END_STEP_EARLY action', async () => {
+  it('advances focus with explicit history metadata', async () => {
     const { emitted, harness } = await loadWorkerWithHarness();
     const startedAt = Date.now();
     const session = startCurrentStep(createInitialSession(createDefaultSettings()), startedAt);
@@ -113,16 +111,23 @@ describe('worker protocol contracts', () => {
     harness.onmessage({
       data: {
         payload: {
-          now: startedAt + 1_000
+          focusNote: 'Prepare release notes',
+          historySaveMode: 'actual',
+          now: startedAt + 60_000
         },
-        type: WORKER_ACTIONS.END_STEP_EARLY
+        type: WORKER_ACTIONS.ADVANCE_FOCUS
       }
     });
 
     const lastMessage = emitted.at(-1);
-    expect(lastMessage?.type).toBe(WORKER_MESSAGE_TYPES.STEP_FINISHED);
-    expect(lastMessage?.reason).toBe('manual_early');
-    expect(lastMessage?.completionKey).toBeTypeOf('string');
-    expect(lastMessage?.session.status).toBe('completed_waiting_next');
+    expect(lastMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
+    expect(lastMessage?.reason).toBe('advance-focus');
+    expect(lastMessage?.historyEntry).toMatchObject({
+      durationMs: 60_000,
+      focusNote: 'Prepare release notes',
+      stepType: 'work'
+    });
+    expect(lastMessage?.session.status).toBe('running');
+    expect(lastMessage?.session.currentStepIndex).toBe(1);
   });
 });

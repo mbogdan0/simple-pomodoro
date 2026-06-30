@@ -50,16 +50,16 @@ export function createRootSettingsPolicy(deps) {
   /** @type {Map<string, (checked: boolean) => void>} */
   const toggleMutations = new Map([
     [
-      SETTING_TOGGLE_KEYS.AUTO_START_NEXT_STEP,
-      (checked) => (state.settings.autoStartNextStep = checked)
-    ],
-    [
       SETTING_TOGGLE_KEYS.PIP_CLOCK_TICK_EVERY_10S,
       (checked) => (state.settings.pipClockTickEvery10s = checked)
     ],
     [
       SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED,
       (checked) => (state.settings.idleReminderEnabled = checked)
+    ],
+    [
+      SETTING_TOGGLE_KEYS.INFINITE_CYCLE_ENABLED,
+      (checked) => (state.settings.infiniteCycleEnabled = checked)
     ]
   ]);
 
@@ -77,6 +77,10 @@ export function createRootSettingsPolicy(deps) {
 
   function shouldSyncIdleReminderToggle(settingKey) {
     return settingKey === SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED;
+  }
+
+  function shouldRebuildIdleSessionToggle(settingKey) {
+    return settingKey === SETTING_TOGGLE_KEYS.INFINITE_CYCLE_ENABLED;
   }
 
   function applyTemplateDurationChange(type, value) {
@@ -135,6 +139,7 @@ export function createRootSettingsPolicy(deps) {
         mutate(checked);
       },
       {
+        rebuildIdleSession: shouldRebuildIdleSessionToggle(key),
         syncWorker: shouldSyncIdleReminderToggle(key)
       }
     );

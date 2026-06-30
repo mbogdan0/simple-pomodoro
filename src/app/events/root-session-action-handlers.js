@@ -1,10 +1,22 @@
 // @ts-check
 
+import { isBreakStep, isWorkStep } from '../../core/session.js';
 import { WORKER_ACTIONS } from '../../core/worker-protocol.js';
 import { ROOT_ACTIONS, ROOT_TABS } from './root-contracts.js';
 
-const END_STEP_EARLY_CONFIRMATION_MESSAGE = 'End the current step now?';
-const RESET_CONFIRMATION_MESSAGE = 'Reset all steps and return to the first step?';
+function openModal(state, renderApp, modal) {
+  state.modal = modal;
+  renderApp();
+}
+
+function closeModal(state, renderApp) {
+  if (!state.modal) {
+    return;
+  }
+
+  state.modal = null;
+  renderApp();
+}
 
 export function createRootSessionActionHandlers({
   clearFocusNoteDraft,
@@ -15,48 +27,78 @@ export function createRootSessionActionHandlers({
   renderApp,
   state
 }) {
-  return {
-    [ROOT_ACTIONS.DISCARD_FREE_TIMER]: (button) => {
-      closeOverflowActionsMenu(button);
-      playUiActionTone();
-      postWorkerAction(WORKER_ACTIONS.DISCARD_FREE_TIMER, { settings: state.settings });
-    },
-    [ROOT_ACTIONS.END_STEP_EARLY]: (button) => {
-      closeOverflowActionsMenu(button);
+  function postAdvanceFocus(historySaveMode) {
+    const focusNote = state.focusNoteDraft;
+    state.modal = null;
+    clearFocusNoteDraft();
+    renderApp();
+    playUiActionTone();
+    postWorkerAction(WORKER_ACTIONS.ADVANCE_FOCUS, {
+      focusNote,
+      historySaveMode,
+      settings: state.settings
+    });
+  }
 
-      if (!window.confirm(END_STEP_EARLY_CONFIRMATION_MESSAGE)) {
+  function postResetRun() {
+    state.modal = null;
+    clearFocusNoteDraft();
+    renderApp();
+    playUiActionTone();
+    postWorkerAction(WORKER_ACTIONS.RESET_RUN, { settings: state.settings });
+  }
+
+  return {
+    [ROOT_ACTIONS.ADVANCE_BREAK]: () => {
+      if (!isBreakStep(state.activeSession)) {
         return;
       }
 
       playUiActionTone();
-      postWorkerAction(WORKER_ACTIONS.END_STEP_EARLY);
+      postWorkerAction(WORKER_ACTIONS.ADVANCE_BREAK, { settings: state.settings });
     },
-    [ROOT_ACTIONS.FINISH_FREE_TIMER]: () => {
-      playUiActionTone();
-      postWorkerAction(WORKER_ACTIONS.FINISH_FREE_TIMER, {
-        focusNote: state.focusNoteDraft,
-        settings: state.settings
-      });
+    [ROOT_ACTIONS.CANCEL_MODAL]: () => {
+      closeModal(state, renderApp);
+    },
+    [ROOT_ACTIONS.CONFIRM_RESET_RUN]: () => {
+      if (state.modal?.type !== 'reset-run') {
+        return;
+      }
+
+      postResetRun();
+    },
+    [ROOT_ACTIONS.CONFIRM_STALE_SESSION_RESET]: () => {
+      if (state.modal?.type !== 'stale-session') {
+        return;
+      }
+
+      postResetRun();
     },
     [ROOT_ACTIONS.PAUSE_STEP]: () => {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.PAUSE);
     },
-    [ROOT_ACTIONS.RESET_SESSION]: (button) => {
+    [ROOT_ACTIONS.RESET_RUN]: (button) => {
       closeOverflowActionsMenu(button);
-
-      if (!window.confirm(RESET_CONFIRMATION_MESSAGE)) {
-        return;
-      }
-
-      clearFocusNoteDraft();
-      renderApp();
-      playUiActionTone();
-      postWorkerAction(WORKER_ACTIONS.RESET_ALL, { settings: state.settings });
+      openModal(state, renderApp, { type: 'reset-run' });
     },
     [ROOT_ACTIONS.RESUME_STEP]: () => {
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.RESUME);
+    },
+    [ROOT_ACTIONS.SAVE_FOCUS_ACTUAL]: () => {
+      if (state.modal?.type !== 'focus-save') {
+        return;
+      }
+
+      postAdvanceFocus('actual');
+    },
+    [ROOT_ACTIONS.SAVE_FOCUS_PLANNED]: () => {
+      if (state.modal?.type !== 'focus-save') {
+        return;
+      }
+
+      postAdvanceFocus('planned');
     },
     [ROOT_ACTIONS.SET_FOCUS_TAG]: (button) => {
       const focusTag = button?.dataset?.focusTag;
@@ -68,10 +110,19 @@ export function createRootSessionActionHandlers({
       playUiActionTone();
       postWorkerAction(WORKER_ACTIONS.SET_FOCUS_TAG, { focusTag });
     },
-    [ROOT_ACTIONS.START_FREE_TIMER]: (button) => {
-      closeOverflowActionsMenu(button);
-      playUiActionTone();
-      postWorkerAction(WORKER_ACTIONS.START_FREE_TIMER, { settings: state.settings });
+    [ROOT_ACTIONS.SKIP_FOCUS_HISTORY]: () => {
+      if (state.modal?.type !== 'focus-save') {
+        return;
+      }
+
+      postAdvanceFocus('skip');
+    },
+    [ROOT_ACTIONS.START_BREAK]: () => {
+      if (!isWorkStep(state.activeSession)) {
+        return;
+      }
+
+      openModal(state, renderApp, { type: 'focus-save' });
     },
     [ROOT_ACTIONS.START_STEP]: () => {
       playUiActionTone();

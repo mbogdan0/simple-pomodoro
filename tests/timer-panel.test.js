@@ -13,8 +13,6 @@ function createTimerModel(overrides = {}) {
       { breakState: 'pending', focusState: 'active', id: 'focus-1' },
       { breakState: 'done', focusState: 'done', id: 'focus-2' }
     ],
-    endStepEarlyDisabled: false,
-    freeTimerMode: false,
     hideCycleProgress: false,
     focusNoteDraft: '',
     focusTag: 'work',
@@ -27,14 +25,12 @@ function createTimerModel(overrides = {}) {
     focusRepeatTotal: 4,
     pipToggleLabel: 'Toggle PiP',
     primaryAction: 'start-step',
-    primaryActionLabel: 'Start',
+    primaryActionLabel: 'Start Focus',
     progressPercent: 30,
     progressTrack: '#ede7de',
     resetDisabled: false,
-    showDiscardFreeTimer: false,
-    showFinishFreeTimer: false,
     showPipToggle: true,
-    showStartFreeTimer: false,
+    secondaryAction: null,
     statusDetailText: '',
     statusText: 'Ready',
     stepCurrent: 1,
@@ -54,7 +50,7 @@ describe('timer panel behavior', () => {
     expect(html).toContain('data-action="set-focus-tag"');
     expect(html).toContain('focus-tag-button--work is-active');
     expect(html).toContain('class="overflow-actions"');
-    expect(html).toContain('data-action="end-step-early"');
+    expect(html).toContain('data-action="reset-run"');
     expect(html).toContain('data-focus-note-input');
     expect(html).toContain('maxlength="30"');
     expect(html).toContain('role="timer"');
@@ -66,38 +62,41 @@ describe('timer panel behavior', () => {
     const html = renderTimerPanel(createTimerModel({ showPipToggle: false }));
 
     expect(html).not.toContain('data-action="toggle-pip-window"');
-    expect(html).toContain('data-action="reset-session"');
+    expect(html).toContain('data-action="reset-run"');
   });
 
   it('disables reset action when no reset is available', () => {
     const html = renderTimerPanel(createTimerModel({ resetDisabled: true }));
 
-    expect(html).toMatch(/data-action="reset-session"[^>]*disabled/);
+    expect(html).toMatch(/data-action="reset-run"[^>]*disabled/);
   });
 
-  it('disables end-step-early action when model marks it unavailable', () => {
-    const html = renderTimerPanel(createTimerModel({ endStepEarlyDisabled: true }));
-
-    expect(html).toMatch(/data-action="end-step-early"[^>]*disabled/);
-  });
-
-  it('renders free timer controls based on model flags', () => {
+  it('renders secondary pause or resume action when provided', () => {
     const html = renderTimerPanel(
       createTimerModel({
-        freeTimerMode: true,
-        hideCycleProgress: true,
-        showDiscardFreeTimer: true,
-        showFinishFreeTimer: true,
-        showStartFreeTimer: true
+        secondaryAction: {
+          action: 'pause-step',
+          label: 'Pause Timer'
+        }
       })
     );
 
-    expect(html).toContain('data-action="finish-free-timer"');
-    expect(html).toContain('data-action="discard-free-timer"');
-    expect(html).not.toContain('data-action="start-free-timer"');
-    expect(html).not.toContain('data-action="reset-session"');
-    expect(html).not.toContain('data-action="end-step-early"');
+    expect(html).toContain('data-action="pause-step"');
+    expect(html).toContain('Pause Timer');
+  });
+
+  it('renders infinite round progress and hides cycle progress', () => {
+    const html = renderTimerPanel(
+      createTimerModel({
+        hideCycleProgress: true,
+        roundLabel: 'Focus #7'
+      })
+    );
+
     expect(html).toContain('cycle-progress is-hidden');
+    expect(html).toContain('data-live-round-label');
+    expect(html).toContain('Focus #7');
+    expect(html).not.toContain('free-timer');
   });
 
   it('renders status detail only when the model provides it', () => {

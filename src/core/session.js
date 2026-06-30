@@ -6,27 +6,29 @@ export {
 export { applySessionAction } from './session/actions.js';
 export {
   canResetSession,
-  canStartFreeTimer,
   getCurrentStep,
   getCurrentStepDurationMs,
   getElapsedMs,
+  getOverrunMs,
   getProgressRatio,
   getRemainingMs,
   hasNextStep,
-  isFreeTimerMode
+  isBreakStep,
+  isInfiniteSession,
+  isWorkStep
 } from './session/queries.js';
 export { syncSession } from './session/sync.js';
 export {
-  advanceAfterCompletion,
+  advanceBreakStep,
+  advanceFocusStep,
   forceCompleteCurrentStep,
   goToNextStep,
   markAlertsDispatched,
   pauseSession,
   prepareSessionForStepStart,
-  resetFreeTimer,
+  resetRun,
   resetSession,
   resumeSession,
-  startFreeTimer,
   setSessionFocusTag,
   startCurrentStep
 } from './session/transitions.js';

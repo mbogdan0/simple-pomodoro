@@ -1,5 +1,5 @@
-import { formatClock, formatPipClock } from '../../core/format.js';
-import { getRemainingMs, isFreeTimerMode } from '../../core/session.js';
+import { formatPipClock } from '../../core/format.js';
+import { getRemainingMs } from '../../core/session.js';
 
 export function createPipSync({ state, pipController, getTimerModel, renderApp }) {
   function syncPictureInPicture(timerModel, now = Date.now()) {
@@ -12,14 +12,15 @@ export function createPipSync({ state, pipController, getTimerModel, renderApp }
     }
 
     const remainingMs = getRemainingMs(state.activeSession, now);
-    const pipClock = isFreeTimerMode(state.activeSession)
-      ? formatClock(remainingMs)
-      : formatPipClock({
-          remainingMs,
-          status,
-          stepDurationMs: timerModel.step?.durationMs,
-          tickEvery10Seconds: state.settings.pipClockTickEvery10s
-        });
+    const pipClock =
+      state.activeSession.status === 'completed_waiting_next'
+        ? timerModel.clock
+        : formatPipClock({
+            remainingMs,
+            status,
+            stepDurationMs: timerModel.step?.durationMs,
+            tickEvery10Seconds: state.settings.pipClockTickEvery10s
+          });
 
     pipController.update({
       accent: timerModel.accent,

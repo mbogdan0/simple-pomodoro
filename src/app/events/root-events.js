@@ -22,6 +22,15 @@ export function createRootEvents(deps) {
   });
   let isBound = false;
 
+  function handleDocumentKeydown(event) {
+    if (event?.key !== 'Escape' || !deps.state.modal) {
+      return;
+    }
+
+    deps.state.modal = null;
+    deps.renderApp();
+  }
+
   function bindRootEvents() {
     if (isBound) {
       return;
@@ -31,6 +40,7 @@ export function createRootEvents(deps) {
     root.addEventListener('change', settingsHandlers.handleRootChange);
     root.addEventListener('input', inputHandlers.handleRootInput);
     document.addEventListener('click', clickHandlers.handleDocumentClick);
+    document.addEventListener('keydown', handleDocumentKeydown);
     isBound = true;
   }
 
@@ -43,6 +53,7 @@ export function createRootEvents(deps) {
     root.removeEventListener?.('change', settingsHandlers.handleRootChange);
     root.removeEventListener?.('input', inputHandlers.handleRootInput);
     document.removeEventListener?.('click', clickHandlers.handleDocumentClick);
+    document.removeEventListener?.('keydown', handleDocumentKeydown);
     isBound = false;
   }
 

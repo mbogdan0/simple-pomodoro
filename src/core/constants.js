@@ -58,7 +58,7 @@ export const DEFAULT_TEMPLATE_DURATIONS_MS = {
 export const DEFAULT_REPEAT_COUNT = 4;
 export const MIN_REPEAT_COUNT = 1;
 export const MAX_REPEAT_COUNT = 24;
-export const DEFAULT_AUTO_START_NEXT_STEP = false;
+export const DEFAULT_INFINITE_CYCLE_ENABLED = false;
 export const DEFAULT_PIP_CLOCK_TICK_EVERY_10S = false;
 export const DEFAULT_IDLE_REMINDER_ENABLED = false;
 
@@ -68,10 +68,10 @@ export const DEFAULT_ALERT_SETTINGS = {
 };
 
 export const STORAGE_KEYS = {
-  focusHistory: 'timer.focus-history.v1',
-  focusNoteDraft: 'timer.focus-note-draft.v1',
-  settings: 'timer.settings.v2',
-  activeSession: 'timer.active-session.v2'
+  focusHistory: 'timer.focus-history.v2',
+  focusNoteDraft: 'timer.focus-note-draft.v2',
+  settings: 'timer.settings.v3',
+  activeSession: 'timer.active-session.v3'
 };
 export const MAX_FOCUS_HISTORY_ENTRIES = 500;
 

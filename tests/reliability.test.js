@@ -8,7 +8,7 @@ import {
   resolveCompletionNotificationBody,
   selectNotificationChannel,
   shouldDispatchCompletion,
-  shouldDispatchFreeTimerReminder,
+  shouldDispatchFocusOvertimeReminder,
   shouldDispatchFocusMinuteReminder
 } from '../src/core/alerts.js';
 import {
@@ -17,12 +17,7 @@ import {
   getStepProgress
 } from '../src/core/progress.js';
 import { createDefaultSettings } from '../src/core/settings.js';
-import {
-  createInitialSession,
-  startCurrentStep,
-  startFreeTimer,
-  syncSession
-} from '../src/core/session.js';
+import { createInitialSession, startCurrentStep, syncSession } from '../src/core/session.js';
 
 function pickChannelFromMockedApis(mockedEnvironment) {
   const mockedNotificationApi = mockedEnvironment.Notification;
@@ -126,26 +121,31 @@ describe('reliability helpers', () => {
     expect(shouldDispatchCompletion(completionKey, completionKey)).toBe(false);
   });
 
-  it('resolves completion notification body for auto-start and cycle-end states', () => {
+  it('resolves completion notification body for explicit transition states', () => {
     const settings = createDefaultSettings();
     const running = startCurrentStep(createInitialSession(settings), 1_000);
     const completed = syncSession(running, running.endsAt + 1_500);
 
     expect(
       resolveCompletionNotificationBody({
-        autoStartNextStep: false,
         session: completed
       })
-    ).toBe('Next step is ready. Press Start to continue.');
-
-    expect(
-      resolveCompletionNotificationBody({
-        autoStartNextStep: true,
-        session: completed
-      })
-    ).toBe('Next step started automatically.');
+    ).toBe('Break is ready. Choose how to save this focus session.');
 
     const base = createInitialSession(settings);
+    const runningBreak = startCurrentStep(
+      {
+        ...base,
+        currentStepIndex: 1
+      },
+      2_000
+    );
+    const completedBreak = syncSession(runningBreak, runningBreak.endsAt + 1_500);
+
+    expect(resolveCompletionNotificationBody({ session: completedBreak })).toBe(
+      'Next focus is ready. Press Start Focus to continue.'
+    );
+
     const runningLastStep = startCurrentStep(
       {
         ...base,
@@ -157,10 +157,9 @@ describe('reliability helpers', () => {
 
     expect(
       resolveCompletionNotificationBody({
-        autoStartNextStep: true,
         session: completedLastStep
       })
-    ).toBe('Cycle finished. Press Start to begin a new cycle.');
+    ).toBe('Cycle finished. Press Start New Cycle to begin again.');
   });
 
   it('maps completion titles and payload for focus and break steps', () => {
@@ -187,21 +186,19 @@ describe('reliability helpers', () => {
 
     expect(
       createCompletionAlertPayload({
-        autoStartNextStep: false,
         session: focusSession
       })
     ).toEqual({
-      body: 'Next step is ready. Press Start to continue.',
+      body: 'Break is ready. Choose how to save this focus session.',
       title: 'Focus done ✅'
     });
 
     expect(
       createCompletionAlertPayload({
-        autoStartNextStep: false,
         session: longBreakSession
       })
     ).toEqual({
-      body: 'Cycle finished. Press Start to begin a new cycle.',
+      body: 'Cycle finished. Press Start New Cycle to begin again.',
       title: 'Long Break done ✅'
     });
   });
@@ -285,43 +282,45 @@ describe('reliability helpers', () => {
     expect(breakAttempt.shouldDispatch).toBe(false);
   });
 
-  it('dispatches free timer reminders every five running minutes', () => {
+  it('dispatches focus overtime reminders every five overdue minutes', () => {
     const settings = createDefaultSettings();
-    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 10_000);
+    const running = startCurrentStep(createInitialSession(settings), 10_000);
+    const completed = syncSession(running, running.endsAt + 1_000);
 
-    const belowThreshold = shouldDispatchFreeTimerReminder({
+    const belowThreshold = shouldDispatchFocusOvertimeReminder({
       notificationsEnabled: true,
-      now: 10_000 + 299_000,
+      now: completed.finishedAt + 299_000,
       previousKey: '',
-      session: freeRunning
+      session: completed
     });
-    const firstInterval = shouldDispatchFreeTimerReminder({
+    const firstInterval = shouldDispatchFocusOvertimeReminder({
       notificationsEnabled: true,
-      now: 10_000 + 300_000,
+      now: completed.finishedAt + 300_000,
       previousKey: '',
-      session: freeRunning
+      session: completed
     });
-    const duplicateInterval = shouldDispatchFreeTimerReminder({
+    const duplicateInterval = shouldDispatchFocusOvertimeReminder({
       notificationsEnabled: true,
-      now: 10_000 + 330_000,
+      now: completed.finishedAt + 330_000,
       previousKey: firstInterval.key,
-      session: freeRunning
+      session: completed
     });
-    const secondInterval = shouldDispatchFreeTimerReminder({
+    const secondInterval = shouldDispatchFocusOvertimeReminder({
       notificationsEnabled: true,
-      now: 10_000 + 600_000,
+      now: completed.finishedAt + 600_000,
       previousKey: firstInterval.key,
-      session: freeRunning
+      session: completed
     });
+    const stepId = completed.scenario[completed.currentStepIndex].id;
 
     expect(belowThreshold.shouldDispatch).toBe(false);
     expect(firstInterval).toEqual({
-      key: '10000:1',
+      key: `${stepId}:${completed.finishedAt}:1`,
       shouldDispatch: true
     });
     expect(duplicateInterval.shouldDispatch).toBe(false);
     expect(secondInterval).toEqual({
-      key: '10000:2',
+      key: `${stepId}:${completed.finishedAt}:2`,
       shouldDispatch: true
     });
   });

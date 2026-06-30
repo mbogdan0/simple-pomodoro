@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createRootActionHandlers } from '../../src/app/events/root-action-handlers.js';
-import { createInitialSession } from '../../src/core/session.js';
+import { createInitialSession, startCurrentStep } from '../../src/core/session.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
 import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
@@ -21,9 +21,10 @@ function createState(overrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
-    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: Date.now(),
+    lastOvertimeReminderKey: '',
     manualPipRequested: false,
+    modal: null,
     notificationNotice: '',
     ntfyNotice: '',
     pauseStartedAt: null,
@@ -121,17 +122,22 @@ describe('root action handlers', () => {
 
     expect(Object.keys(handlers).sort()).toEqual(
       [
+        'advance-break',
+        'cancel-modal',
         'clear-history-entry',
-        'discard-free-timer',
-        'end-step-early',
-        'finish-free-timer',
+        'confirm-clear-history-entry',
+        'confirm-reset-run',
+        'confirm-stale-session-reset',
         'pause-step',
         'request-notification-permission',
-        'reset-session',
+        'reset-run',
         'resume-step',
+        'save-focus-actual',
+        'save-focus-planned',
         'set-focus-tag',
         'set-history-entry-focus-tag',
-        'start-free-timer',
+        'skip-focus-history',
+        'start-break',
         'start-step',
         'switch-tab',
         'test-notification',
@@ -145,51 +151,39 @@ describe('root action handlers', () => {
   });
 
   it('dispatches timer command actions through the worker bridge', () => {
+    const settings = createDefaultSettings();
     const { deps, spies, state } = createDeps({
+      activeSession: startCurrentStep(createInitialSession(settings), 1_000),
       focusNoteDraft: 'Prepare launch notes'
     });
+    state.settings = settings;
     const { handlers } = createRootActionHandlers(deps);
 
     handlers['start-step'](createActionButton());
-    handlers['start-free-timer'](createActionButton());
     handlers['pause-step'](createActionButton());
     handlers['resume-step'](createActionButton());
-    handlers['finish-free-timer'](createActionButton());
 
     const resetMenu = { open: true };
-    handlers['reset-session'](createActionButton({}, resetMenu));
+    handlers['reset-run'](createActionButton({}, resetMenu));
 
-    const endStepMenu = { open: true };
-    handlers['end-step-early'](createActionButton({}, endStepMenu));
-    const discardMenu = { open: true };
-    handlers['discard-free-timer'](createActionButton({}, discardMenu));
+    handlers['start-break'](createActionButton());
+    expect(state.modal).toEqual({ type: 'focus-save' });
+    handlers['save-focus-actual'](createActionButton());
 
     expect(resetMenu.open).toBe(false);
-    expect(endStepMenu.open).toBe(false);
-    expect(discardMenu.open).toBe(false);
     expect(spies.postWorkerAction).toHaveBeenNthCalledWith(1, WORKER_ACTIONS.START_STEP, {
       settings: deps.state.settings
     });
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(2, WORKER_ACTIONS.START_FREE_TIMER, {
-      settings: deps.state.settings
-    });
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(3, WORKER_ACTIONS.PAUSE);
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(4, WORKER_ACTIONS.RESUME);
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(5, WORKER_ACTIONS.FINISH_FREE_TIMER, {
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(2, WORKER_ACTIONS.PAUSE);
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(3, WORKER_ACTIONS.RESUME);
+    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(4, WORKER_ACTIONS.ADVANCE_FOCUS, {
       focusNote: 'Prepare launch notes',
+      historySaveMode: 'actual',
       settings: deps.state.settings
     });
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(6, WORKER_ACTIONS.RESET_ALL, {
-      settings: deps.state.settings
-    });
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(7, WORKER_ACTIONS.END_STEP_EARLY);
-    expect(spies.postWorkerAction).toHaveBeenNthCalledWith(8, WORKER_ACTIONS.DISCARD_FREE_TIMER, {
-      settings: deps.state.settings
-    });
-    expect(globalThis.window.confirm).toHaveBeenCalledTimes(2);
     expect(state.focusNoteDraft).toBe('');
     expect(spies.persistFocusNoteDraft).toHaveBeenCalledTimes(1);
-    expect(spies.renderApp).toHaveBeenCalledTimes(1);
+    expect(spies.renderApp).toHaveBeenCalledTimes(3);
   });
 
   it('handles tab and pip actions with persisted state updates', async () => {
@@ -255,6 +249,11 @@ describe('root action handlers', () => {
     expect(state.historyNoteEditEntryId).toBe('');
 
     handlers['clear-history-entry'](createActionButton({ entryId: 'focus-2' }));
+    expect(state.modal).toEqual({
+      entryId: 'focus-2',
+      type: 'clear-history-entry'
+    });
+    handlers['confirm-clear-history-entry'](createActionButton());
 
     expect(state.focusHistory).toEqual([
       {
@@ -266,14 +265,12 @@ describe('root action handlers', () => {
         stepType: 'work'
       }
     ]);
-    expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
     expect(state.historyNoteEditEntryId).toBe('');
     expect(spies.persistFocusHistory).toHaveBeenCalledTimes(2);
-    expect(spies.renderApp).toHaveBeenCalledTimes(5);
+    expect(spies.renderApp).toHaveBeenCalledTimes(6);
   });
 
-  it('keeps no-op behavior for missing datasets and declined confirmations', () => {
-    globalThis.window.confirm = vi.fn(() => false);
+  it('keeps no-op behavior for missing datasets and unrelated modal confirmations', () => {
     const { deps, spies, state } = createDeps({
       focusHistory: [
         {
@@ -290,17 +287,17 @@ describe('root action handlers', () => {
 
     handlers['set-focus-tag'](createActionButton());
     handlers['switch-tab'](createActionButton({ tab: 'invalid-tab' }));
-    handlers['clear-history-entry'](createActionButton({ entryId: 'focus-1' }));
+    handlers['clear-history-entry'](createActionButton());
     handlers['toggle-history-entry-note-edit'](createActionButton());
     handlers['toggle-history-entry-tag-edit'](createActionButton());
     handlers['set-history-entry-focus-tag'](createActionButton({ entryId: 'focus-1' }));
-    handlers['reset-session'](createActionButton({}, { open: true }));
+    handlers['confirm-clear-history-entry'](createActionButton());
+    handlers['confirm-reset-run'](createActionButton());
 
     expect(spies.postWorkerAction).not.toHaveBeenCalled();
     expect(spies.persistSettings).not.toHaveBeenCalled();
     expect(spies.persistFocusHistory).not.toHaveBeenCalled();
     expect(spies.persistFocusNoteDraft).not.toHaveBeenCalled();
-    expect(globalThis.window.confirm).toHaveBeenCalledTimes(2);
     expect(state.focusHistory).toEqual([
       {
         completedAt: 1_720_000_000_000,

@@ -27,6 +27,23 @@ describe('settings panel behavior', () => {
     expect(html).toContain('Changes apply after reset or after starting a new cycle.');
     expect(html).toContain('data-template-duration="work"');
     expect(html).toContain('data-repeat-count');
+    expect(html).toContain('Infinite focus loop');
+  });
+
+  it('hides finite-only settings when infinite mode is enabled', () => {
+    const html = renderSettingsPanel(
+      createModel({
+        settings: {
+          ...createDefaultSettings(),
+          infiniteCycleEnabled: true
+        }
+      })
+    );
+
+    expect(html).toContain('data-template-duration="work"');
+    expect(html).toContain('data-template-duration="shortBreak"');
+    expect(html).not.toContain('data-template-duration="longBreak"');
+    expect(html).not.toContain('data-repeat-count');
   });
 
   it('hides notification permission action when notifications are already allowed', () => {

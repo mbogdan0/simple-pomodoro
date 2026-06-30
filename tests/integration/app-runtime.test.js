@@ -30,8 +30,9 @@ function createSessionHarness(stateOverrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
-    lastFreeTimerReminderKey: '',
+    lastOvertimeReminderKey: '',
     manualPipRequested: false,
+    modal: null,
     notificationNotice: '',
     ntfyNotice: '',
     serviceWorkerReady: false,
@@ -80,7 +81,7 @@ describe('app runtime integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('runs start/pause/resume/end-early/reset flow through worker bridge local fallback', () => {
+  it('runs start/pause/resume/advance/reset flow through worker bridge local fallback', () => {
     const { sessionController, state } = createSessionHarness();
     const workerBridge = createWorkerBridge({
       handleLocalAction: sessionController.handleLocalAction,
@@ -99,11 +100,15 @@ describe('app runtime integration', () => {
     workerBridge.postWorkerAction(WORKER_ACTIONS.RESUME);
     expect(state.activeSession.status).toBe('running');
 
-    workerBridge.postWorkerAction(WORKER_ACTIONS.END_STEP_EARLY, { now: 2_000 });
-    expect(state.activeSession.status).toBe('idle');
+    workerBridge.postWorkerAction(WORKER_ACTIONS.ADVANCE_FOCUS, {
+      historySaveMode: 'skip',
+      now: 2_000,
+      settings: state.settings
+    });
+    expect(state.activeSession.status).toBe('running');
     expect(state.activeSession.currentStepIndex).toBe(1);
 
-    workerBridge.postWorkerAction(WORKER_ACTIONS.RESET_ALL, { settings: state.settings });
+    workerBridge.postWorkerAction(WORKER_ACTIONS.RESET_RUN, { settings: state.settings });
     expect(state.activeSession.status).toBe('idle');
     expect(state.activeSession.currentStepIndex).toBe(0);
   });
@@ -259,10 +264,16 @@ describe('app runtime integration', () => {
     expect(renderApp).toHaveBeenCalledTimes(1);
   });
 
-  it('confirms end-step-early action and dispatches worker command', () => {
+  it('opens focus-save modal and dispatches selected save command', () => {
     const postWorkerAction = vi.fn();
-    const confirmSpy = vi.fn(() => true);
-    globalThis.window.confirm = confirmSpy;
+    const renderApp = vi.fn();
+    const persistFocusNoteDraft = vi.fn();
+    const settings = createDefaultSettings();
+    const state = createSessionHarness({
+      activeSession: startCurrentStep(createInitialSession(settings), 1_000),
+      focusNoteDraft: 'Write notes',
+      settings
+    }).state;
 
     const rootEvents = createRootEvents({
       audioService: {
@@ -276,38 +287,58 @@ describe('app runtime integration', () => {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
-      persistFocusNoteDraft: vi.fn(),
+      persistFocusNoteDraft,
       persistSettings: vi.fn(),
       postWorkerAction,
-      renderApp: vi.fn(),
+      renderApp,
       root: {
         addEventListener: vi.fn()
       },
-      state: createSessionHarness().state,
+      state,
       toggleManualPipWindow: vi.fn(async () => {})
     });
 
-    const menu = { open: true };
-    const actionButton = {
+    const startBreakButton = {
       dataset: {
-        action: 'end-step-early'
+        action: 'start-break'
       },
-      closest(selector) {
-        return selector === 'details' ? menu : null;
-      }
+      closest: () => null
     };
 
     rootEvents.handleRootClick({
       target: {
         closest() {
-          return actionButton;
+          return startBreakButton;
         }
       }
     });
 
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(postWorkerAction).toHaveBeenCalledWith(WORKER_ACTIONS.END_STEP_EARLY);
-    expect(menu.open).toBe(false);
+    expect(state.modal).toEqual({ type: 'focus-save' });
+
+    const saveActualButton = {
+      dataset: {
+        action: 'save-focus-actual'
+      },
+      closest: () => null
+    };
+
+    rootEvents.handleRootClick({
+      target: {
+        closest() {
+          return saveActualButton;
+        }
+      }
+    });
+
+    expect(state.modal).toBeNull();
+    expect(state.focusNoteDraft).toBe('');
+    expect(persistFocusNoteDraft).toHaveBeenCalledTimes(1);
+    expect(postWorkerAction).toHaveBeenCalledWith(WORKER_ACTIONS.ADVANCE_FOCUS, {
+      focusNote: 'Write notes',
+      historySaveMode: 'actual',
+      settings
+    });
+    expect(renderApp).toHaveBeenCalledTimes(2);
   });
 
   it('closes open overflow menu on click outside actions area', () => {

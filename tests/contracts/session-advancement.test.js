@@ -1,14 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createSessionController } from '../../src/app/session/session-controller.js';
-import { createFreeTimerHistoryEntry } from '../../src/core/focus-history.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import {
-  createInitialSession,
-  startCurrentStep,
-  startFreeTimer,
-  syncSession
-} from '../../src/core/session.js';
+import { createInitialSession, startCurrentStep, syncSession } from '../../src/core/session.js';
 import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
 function createControllerHarness(stateOverrides = {}) {
@@ -17,9 +11,9 @@ function createControllerHarness(stateOverrides = {}) {
     focusHistory: [],
     idleStartedAt: null,
     lastCompletionKey: '',
+    lastOvertimeReminderKey: '',
     pauseStartedAt: null,
     settings: createDefaultSettings(),
-    lastFreeTimerReminderKey: '',
     ...stateOverrides
   };
   const dispatchCompletionAlerts = vi.fn();
@@ -77,35 +71,11 @@ describe('session advancement contracts', () => {
     });
 
     expect(harness.dispatchCompletionAlerts).toHaveBeenCalledTimes(1);
+    expect(harness.state.focusHistory).toHaveLength(0);
+    expect(harness.state.activeSession.status).toBe('completed_waiting_next');
   });
 
-  it('writes completed focus history entry once for duplicate completion commit', () => {
-    const settings = createDefaultSettings();
-    const running = startCurrentStep(createInitialSession(settings), 5_000);
-    const completed = syncSession(running, running.endsAt + 200);
-    const harness = createControllerHarness({
-      activeSession: running,
-      settings
-    });
-
-    harness.controller.commitSession(completed, {
-      dispatchAlerts: true,
-      persist: true,
-      render: false,
-      syncWorker: false
-    });
-    harness.controller.commitSession(completed, {
-      dispatchAlerts: true,
-      persist: true,
-      render: false,
-      syncWorker: false
-    });
-
-    expect(harness.state.focusHistory).toHaveLength(1);
-    expect(harness.persistFocusHistory).toHaveBeenCalledTimes(1);
-  });
-
-  it('suppresses completion alerts for manual early completion action', () => {
+  it('appends focus history only when ADVANCE_FOCUS provides action metadata', () => {
     const settings = createDefaultSettings();
     const running = startCurrentStep(createInitialSession(settings), 10_000);
     const harness = createControllerHarness({
@@ -113,14 +83,50 @@ describe('session advancement contracts', () => {
       settings
     });
 
-    harness.controller.handleLocalAction(WORKER_ACTIONS.END_STEP_EARLY, {
-      now: 70_000
+    harness.controller.handleLocalAction(WORKER_ACTIONS.ADVANCE_FOCUS, {
+      focusNote: 'Ship sprint fixes',
+      historySaveMode: 'actual',
+      now: 70_000,
+      settings
     });
 
     expect(harness.dispatchCompletionAlerts).not.toHaveBeenCalled();
     expect(harness.state.focusHistory).toHaveLength(1);
-    expect(harness.state.focusHistory[0]?.durationMs).toBe(60_000);
-    expect(harness.state.activeSession.status).toBe('idle');
+    expect(harness.state.focusHistory[0]).toMatchObject({
+      durationMs: 60_000,
+      focusNote: 'Ship sprint fixes',
+      stepType: 'work'
+    });
+    expect(harness.persistFocusHistory).toHaveBeenCalledTimes(1);
+    expect(harness.state.activeSession.status).toBe('running');
+    expect(harness.state.activeSession.currentStepIndex).toBe(1);
+  });
+
+  it('can save planned focus duration or skip focus history', () => {
+    const settings = createDefaultSettings();
+    const plannedHarness = createControllerHarness({
+      activeSession: startCurrentStep(createInitialSession(settings), 10_000),
+      settings
+    });
+    const skipHarness = createControllerHarness({
+      activeSession: startCurrentStep(createInitialSession(settings), 10_000),
+      settings
+    });
+
+    plannedHarness.controller.handleLocalAction(WORKER_ACTIONS.ADVANCE_FOCUS, {
+      historySaveMode: 'planned',
+      now: 70_000,
+      settings
+    });
+    skipHarness.controller.handleLocalAction(WORKER_ACTIONS.ADVANCE_FOCUS, {
+      historySaveMode: 'skip',
+      now: 70_000,
+      settings
+    });
+
+    expect(plannedHarness.state.focusHistory[0]?.durationMs).toBe(settings.templateDurations.work);
+    expect(skipHarness.state.focusHistory).toHaveLength(0);
+    expect(skipHarness.persistFocusHistory).not.toHaveBeenCalled();
   });
 
   it('tracks idle delay as transient app state only', () => {
@@ -168,13 +174,15 @@ describe('session advancement contracts', () => {
     expect(harness.state.idleStartedAt).toBeNull();
 
     vi.setSystemTime(4_000);
-    harness.controller.handleLocalAction(WORKER_ACTIONS.END_STEP_EARLY, {
-      now: 4_000
+    harness.controller.handleLocalAction(WORKER_ACTIONS.ADVANCE_FOCUS, {
+      historySaveMode: 'skip',
+      now: 4_000,
+      settings
     });
 
-    expect(harness.state.activeSession.status).toBe('idle');
+    expect(harness.state.activeSession.status).toBe('running');
     expect(harness.state.activeSession.currentStepIndex).toBe(1);
-    expect(harness.state.idleStartedAt).toBe(4_000);
+    expect(harness.state.idleStartedAt).toBeNull();
     expect(harness.state.activeSession).not.toHaveProperty('idleStartedAt');
   });
 
@@ -227,28 +235,5 @@ describe('session advancement contracts', () => {
 
     expect(harness.state.activeSession.status).toBe('running');
     expect(harness.state.pauseStartedAt).toBeNull();
-  });
-
-  it('appends free timer history entry from action metadata', () => {
-    const settings = createDefaultSettings();
-    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 1_000);
-    const freeEntry = createFreeTimerHistoryEntry({
-      finishedAt: 31_000,
-      focusNote: 'Ship sprint fixes',
-      session: freeRunning
-    });
-    const harness = createControllerHarness({
-      activeSession: freeRunning,
-      settings
-    });
-
-    harness.controller.handleLocalAction(WORKER_ACTIONS.FINISH_FREE_TIMER, {
-      focusNote: 'Ship sprint fixes',
-      now: 31_000,
-      settings
-    });
-
-    expect(harness.state.focusHistory).toEqual([freeEntry]);
-    expect(harness.persistFocusHistory).toHaveBeenCalledTimes(1);
   });
 });

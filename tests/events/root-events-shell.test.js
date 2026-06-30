@@ -22,9 +22,10 @@ function createState(overrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
-    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: Date.now(),
+    lastOvertimeReminderKey: '',
     manualPipRequested: false,
+    modal: null,
     notificationNotice: '',
     ntfyNotice: '',
     pauseStartedAt: null,
@@ -150,6 +151,7 @@ describe('root events shell', () => {
 
     expect(root.addEventListener).toHaveBeenCalledTimes(3);
     expect(documentHandlers.click).toBeTypeOf('function');
+    expect(documentHandlers.keydown).toBeTypeOf('function');
 
     documentHandlers.click({
       target: {
@@ -256,7 +258,33 @@ describe('root events shell', () => {
 
     expect(root.addEventListener).toHaveBeenCalledTimes(3);
     expect(rootRemovals).toHaveBeenCalledTimes(3);
-    expect(documentRemovals).toHaveBeenCalledTimes(1);
+    expect(documentRemovals).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes the active modal on Escape', () => {
+    const documentHandlers = {};
+    const { deps, state } = createDeps(
+      {},
+      {
+        modal: {
+          type: 'reset-run'
+        }
+      }
+    );
+
+    globalThis.document = {
+      addEventListener(type, handler) {
+        documentHandlers[type] = handler;
+      }
+    };
+
+    const rootEvents = createRootEvents(deps);
+    rootEvents.bindRootEvents();
+
+    documentHandlers.keydown({ key: 'Escape' });
+
+    expect(state.modal).toBeNull();
+    expect(deps.renderApp).toHaveBeenCalledTimes(1);
   });
 
   it('normalizes and persists focus note draft on input without re-rendering', () => {

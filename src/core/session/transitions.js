@@ -1,68 +1,20 @@
 import { clamp } from '../utils.js';
 import { normalizeSessionFocusTag, syncIdleSessionWithSettings } from './normalize.js';
 import {
-  canStartFreeTimer,
   getCurrentStepDurationMs,
-  getElapsedMs,
   getRemainingMs,
   hasNextStep,
-  isFreeTimerMode
+  isBreakStep,
+  isInfiniteSession,
+  isWorkStep
 } from './queries.js';
 import { syncSession } from './sync.js';
-
-function clearFreeTimerFields(session) {
-  return {
-    ...session,
-    freeAccumulatedMs: 0,
-    freeSegmentStartedAt: null,
-    freeTimerStartedAt: null,
-    sessionMode: 'cycle'
-  };
-}
-
-function clearCycleTimerFields(session) {
-  return {
-    ...session,
-    completedInBackground: false,
-    endsAt: null,
-    finishedAt: null,
-    remainingMsAtPause: null,
-    stepStartedAt: null
-  };
-}
-
-export function startFreeTimer(session, settings, now = Date.now()) {
-  if (!canStartFreeTimer(session)) {
-    return session;
-  }
-
-  const syncedCycle = syncIdleSessionWithSettings(session, settings, now);
-
-  return {
-    ...clearCycleTimerFields(syncedCycle),
-    freeAccumulatedMs: 0,
-    freeSegmentStartedAt: now,
-    freeTimerStartedAt: now,
-    sessionMode: 'free',
-    status: 'running',
-    updatedAt: now
-  };
-}
-
-export function resetFreeTimer(session, settings, now = Date.now()) {
-  if (!isFreeTimerMode(session)) {
-    return session;
-  }
-
-  const cycleReset = clearFreeTimerFields(resetSession(session, now));
-  return settings ? syncIdleSessionWithSettings(cycleReset, settings, now) : cycleReset;
-}
 
 export function startCurrentStep(session, now = Date.now()) {
   const durationMs = getCurrentStepDurationMs(session);
 
   return {
-    ...clearFreeTimerFields(session),
+    ...session,
     alertsDispatched: false,
     completedInBackground: false,
     endsAt: now + durationMs,
@@ -75,18 +27,14 @@ export function startCurrentStep(session, now = Date.now()) {
 }
 
 export function prepareSessionForStepStart(session, settings, now = Date.now()) {
-  if (isFreeTimerMode(session)) {
-    return session;
-  }
-
   if (session.status === 'running') {
     return session;
   }
 
   let nextSession = session;
 
-  if (nextSession.status === 'completed_waiting_next') {
-    nextSession = goToNextStep(nextSession, now);
+  if (nextSession.status !== 'idle') {
+    return session;
   }
 
   if (nextSession.status === 'idle' && nextSession.currentStepIndex === 0) {
@@ -96,38 +44,9 @@ export function prepareSessionForStepStart(session, settings, now = Date.now()) 
   return startCurrentStep(nextSession, now);
 }
 
-export function advanceAfterCompletion(session, settings, now = Date.now()) {
-  if (isFreeTimerMode(session)) {
-    return session;
-  }
-
-  if (session.status !== 'completed_waiting_next') {
-    return session;
-  }
-
-  const hasUpcomingStep = hasNextStep(session);
-  let nextSession = goToNextStep(session, now);
-
-  if (settings?.autoStartNextStep && hasUpcomingStep) {
-    nextSession = startCurrentStep(nextSession, now);
-  }
-
-  return nextSession;
-}
-
 export function pauseSession(session, now = Date.now()) {
   if (session.status !== 'running') {
     return session;
-  }
-
-  if (isFreeTimerMode(session)) {
-    return {
-      ...session,
-      freeAccumulatedMs: getElapsedMs(session, now),
-      freeSegmentStartedAt: null,
-      status: 'paused',
-      updatedAt: now
-    };
   }
 
   const remainingMs = getRemainingMs(session, now);
@@ -150,19 +69,6 @@ export function resumeSession(session, now = Date.now()) {
     return session;
   }
 
-  if (isFreeTimerMode(session)) {
-    if (!Number.isFinite(session.freeTimerStartedAt)) {
-      return resetFreeTimer(session, null, now);
-    }
-
-    return {
-      ...session,
-      freeSegmentStartedAt: now,
-      status: 'running',
-      updatedAt: now
-    };
-  }
-
   return {
     ...session,
     endsAt: now + (session.remainingMsAtPause ?? getCurrentStepDurationMs(session)),
@@ -174,10 +80,6 @@ export function resumeSession(session, now = Date.now()) {
 
 export function forceCompleteCurrentStep(session, now = Date.now()) {
   if (!session || (session.status !== 'running' && session.status !== 'paused')) {
-    return session;
-  }
-
-  if (isFreeTimerMode(session)) {
     return session;
   }
 
@@ -200,10 +102,8 @@ export function forceCompleteCurrentStep(session, now = Date.now()) {
 }
 
 function resetCurrentStep(session, now = Date.now()) {
-  const cycleSession = clearFreeTimerFields(session);
-
   return {
-    ...cycleSession,
+    ...session,
     alertsDispatched: false,
     completedInBackground: false,
     endsAt: null,
@@ -219,16 +119,22 @@ export function resetSession(session, now = Date.now()) {
   return resetCurrentStep(
     {
       ...session,
-      currentStepIndex: 0
+      currentStepIndex: 0,
+      roundIndex: 1
     },
     now
   );
 }
 
+export function resetRun(session, settings, now = Date.now()) {
+  const reset = resetSession(session, now);
+  return settings ? syncIdleSessionWithSettings(reset, settings, now) : reset;
+}
+
 function goToStep(session, nextStepIndex, now = Date.now()) {
   return resetCurrentStep(
     {
-      ...clearFreeTimerFields(session),
+      ...session,
       currentStepIndex: clamp(nextStepIndex, 0, session.scenario.length - 1)
     },
     now
@@ -236,11 +142,52 @@ function goToStep(session, nextStepIndex, now = Date.now()) {
 }
 
 export function goToNextStep(session, now = Date.now()) {
+  if (isInfiniteSession(session)) {
+    const nextStepIndex = session.currentStepIndex === 0 ? 1 : 0;
+    const nextRoundIndex =
+      session.currentStepIndex === 1
+        ? Math.max(1, (session.roundIndex ?? 1) + 1)
+        : session.roundIndex;
+
+    return resetCurrentStep(
+      {
+        ...session,
+        currentStepIndex: nextStepIndex,
+        roundIndex: nextRoundIndex
+      },
+      now
+    );
+  }
+
   if (!hasNextStep(session)) {
     return resetSession(session, now);
   }
 
   return goToStep(session, session.currentStepIndex + 1, now);
+}
+
+function canAdvanceActiveStep(session) {
+  return ['running', 'paused', 'completed_waiting_next'].includes(session?.status);
+}
+
+export function advanceFocusStep(session, now = Date.now()) {
+  if (!canAdvanceActiveStep(session) || !isWorkStep(session)) {
+    return session;
+  }
+
+  const syncedSession = session.status === 'running' ? syncSession(session, now) : session;
+  const nextIdleStep = goToNextStep(syncedSession, now);
+  return startCurrentStep(nextIdleStep, now);
+}
+
+export function advanceBreakStep(session, now = Date.now()) {
+  if (!canAdvanceActiveStep(session) || !isBreakStep(session)) {
+    return session;
+  }
+
+  const syncedSession = session.status === 'running' ? syncSession(session, now) : session;
+  const nextIdleStep = goToNextStep(syncedSession, now);
+  return startCurrentStep(nextIdleStep, now);
 }
 
 export function setSessionFocusTag(session, focusTag, now = Date.now()) {

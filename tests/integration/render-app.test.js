@@ -2,12 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppRenderer } from '../../src/app/view/render-app.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import {
-  createInitialSession,
-  pauseSession,
-  startCurrentStep,
-  startFreeTimer
-} from '../../src/core/session.js';
+import { createInitialSession, pauseSession, startCurrentStep } from '../../src/core/session.js';
 
 const originalDocument = globalThis.document;
 
@@ -78,6 +73,7 @@ function createLiveElementMap() {
   return {
     '[data-live-clock]': { textContent: '' },
     '[data-live-cycle-progress]': { innerHTML: '' },
+    '[data-live-focus-save-actual]': { textContent: '' },
     '[data-live-progress]': {
       attrs,
       setAttribute(name, value) {
@@ -86,6 +82,7 @@ function createLiveElementMap() {
     },
     '[data-live-progress-fill]': { style: {} },
     '[data-live-repeat-meta]': { textContent: '' },
+    '[data-live-round-label]': { textContent: '' },
     '[data-live-status]': { textContent: '' },
     '[data-live-status-detail]': { textContent: '' },
     '[data-live-status-text]': { textContent: '' },
@@ -138,6 +135,7 @@ describe('render app integration', () => {
     const syncPictureInPicture = vi.fn();
     const maybeDispatchFocusMinuteReminder = vi.fn();
     renderer.setLiveUpdateHooks({
+      maybeDispatchFocusOvertimeReminder: vi.fn(),
       maybeDispatchFocusMinuteReminder,
       syncPictureInPicture
     });
@@ -147,8 +145,9 @@ describe('render app integration', () => {
     expect(root.innerHTML).toContain('class="shell"');
     expect(root.innerHTML).toContain('data-action="switch-tab"');
     expect(root.innerHTML).toContain('class="overflow-actions"');
-    expect(root.innerHTML).toMatch(/data-action="reset-session"(?![^>]*disabled)/);
-    expect(root.innerHTML).toMatch(/data-action="end-step-early"(?![^>]*disabled)/);
+    expect(root.innerHTML).toMatch(/data-action="reset-run"(?![^>]*disabled)/);
+    expect(root.innerHTML).toContain('data-action="start-break"');
+    expect(root.innerHTML).toContain('data-action="pause-step"');
     expect(liveElements['[data-live-clock]'].textContent).toMatch(/\d{2}:\d{2}/);
     expect(liveElements['[data-live-status-text]'].textContent).toBe('Running');
     expect(liveElements['[data-live-progress]'].attrs['aria-valuenow']).toBeDefined();
@@ -195,12 +194,12 @@ describe('render app integration', () => {
 
     renderer.renderApp();
 
-    expect(root.innerHTML).toMatch(/data-action="reset-session"[^>]*disabled/);
-    expect(root.innerHTML).toMatch(/data-action="end-step-early"[^>]*disabled/);
-    expect(root.innerHTML).toContain('data-action="start-free-timer"');
+    expect(root.innerHTML).toMatch(/data-action="reset-run"[^>]*disabled/);
+    expect(root.innerHTML).toContain('data-action="start-step"');
+    expect(root.innerHTML).not.toContain('data-action="start-free-timer"');
   });
 
-  it('renders free timer mode with hidden cycle progress and finish actions', () => {
+  it('renders infinite mode with hidden finite cycle progress and round label', () => {
     const documentStub = createDocumentStub();
     setDocument(documentStub);
 
@@ -210,9 +209,15 @@ describe('render app integration', () => {
         return null;
       }
     };
-    const settings = createDefaultSettings();
+    const settings = {
+      ...createDefaultSettings(),
+      infiniteCycleEnabled: true
+    };
     const state = {
-      activeSession: startFreeTimer(createInitialSession(settings), settings, 1_000),
+      activeSession: {
+        ...createInitialSession(settings),
+        roundIndex: 7
+      },
       backgroundNotice: '',
       focusHistory: [],
       isNtfyTesting: false,
@@ -237,12 +242,11 @@ describe('render app integration', () => {
 
     renderer.renderApp();
 
-    expect(root.innerHTML).toContain('Free Timer');
+    expect(root.innerHTML).toContain('Focus #7');
     expect(root.innerHTML).toContain('cycle-progress is-hidden');
-    expect(root.innerHTML).toContain('data-action="finish-free-timer"');
-    expect(root.innerHTML).toContain('data-action="discard-free-timer"');
-    expect(root.innerHTML).not.toContain('data-action="reset-session"');
-    expect(root.innerHTML).not.toContain('data-action="end-step-early"');
+    expect(root.innerHTML).toContain('data-action="reset-run"');
+    expect(root.innerHTML).not.toContain('data-action="finish-free-timer"');
+    expect(root.innerHTML).not.toContain('data-action="discard-free-timer"');
     expect(root.innerHTML).not.toContain('data-action="start-free-timer"');
   });
 

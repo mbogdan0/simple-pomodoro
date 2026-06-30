@@ -34,11 +34,6 @@ export function startApp(root) {
   const workerCommandBus = createWorkerCommandBus();
   let disposed = false;
 
-  function clearFocusNoteDraft() {
-    state.focusNoteDraft = '';
-    persistFocusNoteDraft(state);
-  }
-
   const notificationService = createNotificationService({
     ensureServiceWorkerRegistration: serviceWorkerRuntime.ensureServiceWorkerRegistration,
     playCompletionTone: () => audioService.playCompletionTone(),
@@ -77,7 +72,7 @@ export function startApp(root) {
     updateTimerLiveRegion: renderer.updateTimerLiveRegion
   });
   renderer.setLiveUpdateHooks({
-    maybeDispatchFreeTimerReminder: notificationService.maybeDispatchFreeTimerReminder,
+    maybeDispatchFocusOvertimeReminder: notificationService.maybeDispatchFocusOvertimeReminder,
     maybeDispatchFocusMinuteReminder: notificationService.maybeDispatchFocusMinuteReminder,
     syncPictureInPicture: pipSync.syncPictureInPicture
   });
@@ -179,8 +174,6 @@ export function startApp(root) {
   persistSettings(state);
   applyStartupSessionPolicy({
     commitSession: sessionController.commitSession,
-    clearFocusNoteDraft,
-    handleLocalAction: sessionController.handleLocalAction,
     state
   });
 

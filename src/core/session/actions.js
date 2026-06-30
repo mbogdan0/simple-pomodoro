@@ -1,16 +1,42 @@
 import {
-  startFreeTimer,
-  resetFreeTimer,
-  forceCompleteCurrentStep,
+  advanceBreakStep,
+  advanceFocusStep,
   pauseSession,
   prepareSessionForStepStart,
-  resetSession,
+  resetRun,
   resumeSession,
   setSessionFocusTag
 } from './transitions.js';
-import { syncIdleSessionWithSettings } from './normalize.js';
 import { WORKER_ACTIONS } from '../worker-protocol.js';
-import { createFreeTimerHistoryEntry } from '../focus-history.js';
+import { createFocusHistoryEntry } from '../focus-history.js';
+import { getCurrentStep, getCurrentStepDurationMs, getElapsedMs } from './queries.js';
+
+const FOCUS_HISTORY_SAVE_MODES = ['actual', 'planned', 'skip'];
+
+function normalizeFocusHistorySaveMode(value) {
+  return FOCUS_HISTORY_SAVE_MODES.includes(value) ? value : 'actual';
+}
+
+function createAdvanceFocusHistoryEntry(session, payload, now) {
+  const historySaveMode = normalizeFocusHistorySaveMode(payload.historySaveMode);
+
+  if (historySaveMode === 'skip') {
+    return null;
+  }
+
+  const durationMs =
+    historySaveMode === 'planned' ? getCurrentStepDurationMs(session) : getElapsedMs(session, now);
+  const step = getCurrentStep(session);
+  const idHint = `${step?.id ?? 'focus'}:${now}`;
+
+  return createFocusHistoryEntry({
+    completedAt: now,
+    durationMs,
+    focusNote: payload.focusNote,
+    idHint,
+    session
+  });
+}
 
 /**
  * @typedef {'keep' | 'start' | 'stop'} ActionTimerMode
@@ -42,62 +68,24 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
   const settings = payload.settings ?? options.settings;
 
   switch (type) {
-    case WORKER_ACTIONS.END_STEP_EARLY:
+    case WORKER_ACTIONS.ADVANCE_BREAK:
       return {
-        completionReason: 'manual_early',
         handled: true,
         historyEntry: null,
-        nextSession: forceCompleteCurrentStep(session, now),
-        reason: 'end-step-early',
-        timerMode: 'stop'
+        completionReason: '',
+        nextSession: advanceBreakStep(session, now),
+        reason: 'advance-break',
+        timerMode: 'start'
       };
-    case WORKER_ACTIONS.DISCARD_FREE_TIMER:
-      if (session?.sessionMode !== 'free') {
-        return {
-          completionReason: '',
-          handled: true,
-          historyEntry: null,
-          nextSession: session,
-          reason: 'discard-free-timer-ignored',
-          timerMode: 'keep'
-        };
-      }
-
+    case WORKER_ACTIONS.ADVANCE_FOCUS:
       return {
         completionReason: '',
         handled: true,
-        historyEntry: null,
-        nextSession: resetFreeTimer(session, settings, now),
-        reason: 'discard-free-timer',
-        timerMode: 'stop'
+        historyEntry: createAdvanceFocusHistoryEntry(session, payload, now),
+        nextSession: advanceFocusStep(session, now),
+        reason: 'advance-focus',
+        timerMode: 'start'
       };
-    case WORKER_ACTIONS.FINISH_FREE_TIMER: {
-      if (session?.sessionMode !== 'free') {
-        return {
-          completionReason: '',
-          handled: true,
-          historyEntry: null,
-          nextSession: session,
-          reason: 'finish-free-timer-ignored',
-          timerMode: 'keep'
-        };
-      }
-
-      const historyEntry = createFreeTimerHistoryEntry({
-        finishedAt: now,
-        focusNote: payload.focusNote,
-        session
-      });
-
-      return {
-        completionReason: '',
-        handled: true,
-        historyEntry,
-        nextSession: resetFreeTimer(session, settings, now),
-        reason: 'finish-free-timer',
-        timerMode: 'stop'
-      };
-    }
     case WORKER_ACTIONS.PAUSE:
       return {
         completionReason: '',
@@ -107,17 +95,15 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
         reason: 'pause',
         timerMode: 'stop'
       };
-    case WORKER_ACTIONS.RESET_ALL: {
-      const reset = resetSession(session, now);
+    case WORKER_ACTIONS.RESET_RUN:
       return {
         completionReason: '',
         handled: true,
         historyEntry: null,
-        nextSession: settings ? syncIdleSessionWithSettings(reset, settings, now) : reset,
-        reason: 'reset-all',
+        nextSession: resetRun(session, settings, now),
+        reason: 'reset-run',
         timerMode: 'stop'
       };
-    }
     case WORKER_ACTIONS.RESUME:
       return {
         completionReason: '',
@@ -127,29 +113,6 @@ export function applySessionAction(session, type, payload = {}, options = {}) {
         reason: 'resume',
         timerMode: 'start'
       };
-    case WORKER_ACTIONS.START_FREE_TIMER: {
-      const nextSession = startFreeTimer(session, settings, now);
-
-      if (nextSession === session) {
-        return {
-          completionReason: '',
-          handled: true,
-          historyEntry: null,
-          nextSession: session,
-          reason: 'start-free-timer-ignored',
-          timerMode: 'keep'
-        };
-      }
-
-      return {
-        completionReason: '',
-        handled: true,
-        historyEntry: null,
-        nextSession,
-        reason: 'start-free-timer',
-        timerMode: 'start'
-      };
-    }
     case WORKER_ACTIONS.START_STEP:
       return {
         completionReason: '',

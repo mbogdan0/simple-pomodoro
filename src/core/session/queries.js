@@ -8,28 +8,21 @@ function asNonNegativeNumber(value, fallback = 0) {
   return Math.max(0, value);
 }
 
-export function isFreeTimerMode(session) {
-  return session?.sessionMode === 'free';
-}
-
-function getFreeTimerElapsedMs(session, now = Date.now()) {
-  const accumulatedMs = asNonNegativeNumber(session?.freeAccumulatedMs, 0);
-
-  if (session?.status !== 'running') {
-    return accumulatedMs;
-  }
-
-  const segmentStartedAt = session?.freeSegmentStartedAt;
-
-  if (!Number.isFinite(segmentStartedAt)) {
-    return accumulatedMs;
-  }
-
-  return accumulatedMs + Math.max(0, now - segmentStartedAt);
+export function isInfiniteSession(session) {
+  return session?.cycleMode === 'infinite';
 }
 
 export function getCurrentStep(session) {
   return session.scenario[session.currentStepIndex];
+}
+
+export function isWorkStep(session) {
+  return getCurrentStep(session)?.type === 'work';
+}
+
+export function isBreakStep(session) {
+  const type = getCurrentStep(session)?.type;
+  return type === 'shortBreak' || type === 'longBreak';
 }
 
 export function getCurrentStepDurationMs(session) {
@@ -37,10 +30,6 @@ export function getCurrentStepDurationMs(session) {
 }
 
 export function getRemainingMs(session, now = Date.now()) {
-  if (isFreeTimerMode(session)) {
-    return getFreeTimerElapsedMs(session, now);
-  }
-
   if (session.status === 'running') {
     return Math.max(0, (session.endsAt ?? now) - now);
   }
@@ -57,18 +46,29 @@ export function getRemainingMs(session, now = Date.now()) {
 }
 
 export function getElapsedMs(session, now = Date.now()) {
-  if (isFreeTimerMode(session)) {
-    return getFreeTimerElapsedMs(session, now);
+  if (session.status === 'idle') {
+    return 0;
+  }
+
+  if (session.status === 'running' || session.status === 'completed_waiting_next') {
+    if (Number.isFinite(session.stepStartedAt)) {
+      return Math.max(0, now - session.stepStartedAt);
+    }
   }
 
   return Math.max(0, getCurrentStepDurationMs(session) - getRemainingMs(session, now));
 }
 
-export function getProgressRatio(session, now = Date.now()) {
-  if (isFreeTimerMode(session)) {
+export function getOverrunMs(session, now = Date.now()) {
+  if (session?.status !== 'completed_waiting_next') {
     return 0;
   }
 
+  const finishedAt = Number.isFinite(session.finishedAt) ? session.finishedAt : now;
+  return Math.max(0, now - finishedAt);
+}
+
+export function getProgressRatio(session, now = Date.now()) {
   const duration = getCurrentStepDurationMs(session);
 
   if (!duration) {
@@ -79,17 +79,17 @@ export function getProgressRatio(session, now = Date.now()) {
 }
 
 export function hasNextStep(session) {
+  if (isInfiniteSession(session)) {
+    return true;
+  }
+
   return session.currentStepIndex < session.scenario.length - 1;
 }
 
 export function canResetSession(session) {
-  return session.status !== 'idle' || session.currentStepIndex !== 0;
-}
-
-export function canStartFreeTimer(session) {
   return (
-    session?.sessionMode === 'cycle' &&
-    session?.status === 'idle' &&
-    session?.currentStepIndex === 0
+    session.status !== 'idle' ||
+    session.currentStepIndex !== 0 ||
+    asNonNegativeNumber(session.roundIndex, 1) !== 1
   );
 }

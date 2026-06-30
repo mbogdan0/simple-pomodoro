@@ -113,71 +113,21 @@ export function renderTimerPanel(timerModel) {
   const accent = timerModel.accent ?? '#c85a3a';
   const accentSoft = timerModel.accentSoft ?? '#f3e7e2';
   const accentOutline = timerModel.accentOutline ?? '#d0afa3';
-  const endStepEarlyDisabled = Boolean(timerModel.endStepEarlyDisabled);
   const pipToggleLabel = timerModel.pipToggleLabel ?? 'Toggle PiP';
   const progressTrack = timerModel.progressTrack ?? '#ede7de';
+  const secondaryAction = timerModel.secondaryAction;
   const showPipToggle = Boolean(timerModel.showPipToggle);
-  const overflowMenuItems = timerModel.freeTimerMode
-    ? timerModel.showDiscardFreeTimer
-      ? `
-          <button
-            class="overflow-actions__item"
-            data-action="${ROOT_ACTIONS.DISCARD_FREE_TIMER}"
-            role="menuitem"
-            type="button"
-          >
-            Finish without saving
-          </button>
-        `
-      : ''
-    : `
-        <button
-          class="overflow-actions__item"
-          data-action="${ROOT_ACTIONS.RESET_SESSION}"
-          role="menuitem"
-          type="button"
-          ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
-        >
-          Reset all steps
-        </button>
-        ${
-          timerModel.showStartFreeTimer
-            ? `
-              <button
-                class="overflow-actions__item"
-                data-action="${ROOT_ACTIONS.START_FREE_TIMER}"
-                role="menuitem"
-                type="button"
-              >
-                Start Free Timer
-              </button>
-            `
-            : ''
-        }
-        <button
-          class="overflow-actions__item"
-          data-action="${ROOT_ACTIONS.END_STEP_EARLY}"
-          role="menuitem"
-          type="button"
-          ${endStepEarlyDisabled ? 'disabled aria-disabled="true"' : ''}
-        >
-          End step early
-        </button>
-        ${
-          timerModel.showDiscardFreeTimer
-            ? `
-              <button
-                class="overflow-actions__item"
-                data-action="${ROOT_ACTIONS.DISCARD_FREE_TIMER}"
-                role="menuitem"
-                type="button"
-              >
-                Finish without saving
-              </button>
-            `
-            : ''
-        }
-      `;
+  const overflowMenuItems = `
+    <button
+      class="overflow-actions__item"
+      data-action="${ROOT_ACTIONS.RESET_RUN}"
+      role="menuitem"
+      type="button"
+      ${timerModel.resetDisabled ? 'disabled aria-disabled="true"' : ''}
+    >
+      Reset Current Run
+    </button>
+  `;
 
   return `
     <section
@@ -200,6 +150,11 @@ export function renderTimerPanel(timerModel) {
       <div class="cycle-progress ${timerModel.hideCycleProgress ? 'is-hidden' : ''}" data-live-cycle-progress aria-hidden="true">
         ${renderCycleProgressMarkup(timerModel.cycleDots)}
       </div>
+      ${
+        timerModel.roundLabel
+          ? `<p class="round-progress" data-live-round-label>${timerModel.roundLabel}</p>`
+          : ''
+      }
       ${renderFocusTagsMarkup(timerModel)}
       ${renderFocusNoteField(timerModel.focusNoteDraft)}
       <p class="timer-repeat-meta sr-only" data-live-repeat-meta>
@@ -248,6 +203,19 @@ export function renderTimerPanel(timerModel) {
           <button class="action-button primary" data-action="${timerModel.primaryAction}" type="button">
             ${timerModel.primaryActionLabel}
           </button>
+          ${
+            secondaryAction
+              ? `
+                <button
+                  class="action-button subtle"
+                  data-action="${secondaryAction.action}"
+                  type="button"
+                >
+                  ${secondaryAction.label}
+                </button>
+              `
+              : ''
+          }
           <details class="overflow-actions">
             <summary
               class="action-button subtle action-button--overflow"
@@ -267,19 +235,6 @@ export function renderTimerPanel(timerModel) {
               ${overflowMenuItems}
             </div>
           </details>
-          ${
-            timerModel.showFinishFreeTimer
-              ? `
-                <button
-                  class="action-button"
-                  data-action="${ROOT_ACTIONS.FINISH_FREE_TIMER}"
-                  type="button"
-                >
-                  Finish
-                </button>
-              `
-              : ''
-          }
         </div>
         <div class="action-row__right">
           ${

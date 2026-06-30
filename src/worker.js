@@ -79,6 +79,10 @@ function emitCompletionIfNeeded(completionReason = 'completed') {
     return false;
   }
 
+  if (session.alertsDispatched) {
+    return false;
+  }
+
   const completionKey = createCompletionKey(session);
 
   if (!completionKey || completionKey === lastCompletionKey) {
@@ -206,18 +210,6 @@ self.onmessage = ({ data }) => {
 
     if (actionResult.timerMode !== 'keep') {
       scheduleIdleReminder();
-    }
-
-    if (type === WORKER_ACTIONS.END_STEP_EARLY) {
-      if (emitCompletionIfNeeded(actionResult.completionReason || 'manual_early')) {
-        return;
-      }
-
-      emit(WORKER_MESSAGE_TYPES.STATE, session, {
-        historyEntry: actionResult.historyEntry,
-        reason: actionResult.reason
-      });
-      return;
     }
 
     emit(WORKER_MESSAGE_TYPES.STATE, session, {

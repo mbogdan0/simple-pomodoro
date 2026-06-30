@@ -8,9 +8,11 @@ export function collectLiveRefs(root) {
   return {
     clockElement: root.querySelector('[data-live-clock]'),
     cycleProgressElement: root.querySelector('[data-live-cycle-progress]'),
+    focusSaveActualElement: root.querySelector('[data-live-focus-save-actual]'),
     progressBarElement: root.querySelector('[data-live-progress]'),
     progressFillElement: root.querySelector('[data-live-progress-fill]'),
     repeatMetaElement: root.querySelector('[data-live-repeat-meta]'),
+    roundLabelElement: root.querySelector('[data-live-round-label]'),
     statusDetailElement: root.querySelector('[data-live-status-detail]'),
     statusElement: root.querySelector('[data-live-status]'),
     statusTextElement: root.querySelector('[data-live-status-text]'),
@@ -41,6 +43,14 @@ export function patchLiveTimerDom(refs, timerModel) {
     refs.repeatMetaElement.textContent = timerModel.hideRepeatMeta
       ? ''
       : formatRepeatMeta(timerModel);
+  }
+
+  if (refs.roundLabelElement) {
+    refs.roundLabelElement.textContent = timerModel.roundLabel;
+  }
+
+  if (refs.focusSaveActualElement) {
+    refs.focusSaveActualElement.textContent = timerModel.focusSaveActualText;
   }
 
   if (refs.cycleProgressElement) {

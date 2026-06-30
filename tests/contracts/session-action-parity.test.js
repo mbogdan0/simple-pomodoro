@@ -1,15 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createSessionController } from '../../src/app/session/session-controller.js';
-import { createFreeTimerHistoryEntry } from '../../src/core/focus-history.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import {
-  createInitialSession,
-  pauseSession,
-  startCurrentStep,
-  startFreeTimer
-} from '../../src/core/session.js';
-import { WORKER_ACTIONS, WORKER_MESSAGE_TYPES } from '../../src/core/worker-protocol.js';
+import { createInitialSession, pauseSession, startCurrentStep } from '../../src/core/session.js';
+import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
 const originalSelf = globalThis.self;
 
@@ -20,6 +14,7 @@ function createControllerHarness(initialSession, settings) {
     focusNoteDraft: '',
     idleStartedAt: null,
     lastCompletionKey: '',
+    lastOvertimeReminderKey: '',
     pauseStartedAt: null,
     settings
   };
@@ -77,7 +72,7 @@ async function runWorkerAction(initialSession, type, payload = {}) {
         now: (payload.now ?? Date.now()) + 1,
         settings: payload.settings
       },
-      type: WORKER_ACTIONS.RESET_ALL
+      type: WORKER_ACTIONS.RESET_RUN
     }
   });
 
@@ -107,6 +102,31 @@ function expectParity(localState, workerState) {
   expect(workerState.focusHistory).toEqual(localState.focusHistory);
 }
 
+async function expectActionParity(initialSession, type, payload, expectedMessageType = 'STATE') {
+  const settings = payload.settings ?? createDefaultSettings();
+  const localHarness = createControllerHarness(initialSession, settings);
+  const workerHarness = createControllerHarness(initialSession, settings);
+
+  localHarness.controller.handleLocalAction(type, payload);
+  const workerMessage = await runWorkerAction(initialSession, type, payload);
+
+  expect(workerMessage?.type).toBe(expectedMessageType);
+  workerHarness.controller.commitSession(workerMessage.session, {
+    completionKeyHint: workerMessage.completionKey,
+    dispatchAlerts: true,
+    historyEntryHint: workerMessage.historyEntry,
+    persist: true,
+    render: true,
+    syncWorker: false
+  });
+
+  expectParity(localHarness.state, workerHarness.state);
+  return {
+    localHarness,
+    workerMessage
+  };
+}
+
 describe('session action parity between local fallback and worker path', () => {
   afterEach(() => {
     globalThis.self = originalSelf;
@@ -115,256 +135,88 @@ describe('session action parity between local fallback and worker path', () => {
 
   it('keeps START_STEP parity', async () => {
     const settings = createDefaultSettings();
-    const initialSession = createInitialSession(settings);
-    const payload = {
+    await expectActionParity(createInitialSession(settings), WORKER_ACTIONS.START_STEP, {
       now: 2_000,
       settings
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
-
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.START_STEP, payload);
-    const workerMessage = await runWorkerAction(initialSession, WORKER_ACTIONS.START_STEP, payload);
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      persist: true,
-      render: true,
-      syncWorker: false
     });
-
-    expectParity(localHarness.state, workerHarness.state);
   });
 
-  it('keeps START_FREE_TIMER parity', async () => {
-    const settings = createDefaultSettings();
-    const initialSession = createInitialSession(settings);
-    const payload = {
-      now: 2_000,
-      settings
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
-
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.START_FREE_TIMER, payload);
-    const workerMessage = await runWorkerAction(
-      initialSession,
-      WORKER_ACTIONS.START_FREE_TIMER,
-      payload
-    );
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      historyEntryHint: workerMessage.historyEntry,
-      persist: true,
-      render: true,
-      syncWorker: false
-    });
-
-    expectParity(localHarness.state, workerHarness.state);
-  });
-
-  it('keeps PAUSE parity', async () => {
-    const settings = createDefaultSettings();
-    const startNow = Date.now();
-    const initialSession = startCurrentStep(createInitialSession(settings), startNow);
-    const payload = {
-      now: startNow + 2_000
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
-
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.PAUSE, payload);
-    const workerMessage = await runWorkerAction(initialSession, WORKER_ACTIONS.PAUSE, payload);
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      persist: true,
-      render: true,
-      syncWorker: false
-    });
-
-    expectParity(localHarness.state, workerHarness.state);
-  });
-
-  it('keeps RESUME parity', async () => {
+  it('keeps PAUSE and RESUME parity', async () => {
     const settings = createDefaultSettings();
     const startNow = Date.now();
     const running = startCurrentStep(createInitialSession(settings), startNow);
-    const initialSession = pauseSession(running, startNow + 1_000);
-    const payload = {
-      now: startNow + 2_000
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
+    const paused = pauseSession(running, startNow + 1_000);
 
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.RESUME, payload);
-    const workerMessage = await runWorkerAction(initialSession, WORKER_ACTIONS.RESUME, payload);
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      persist: true,
-      render: true,
-      syncWorker: false
-    });
-
-    expectParity(localHarness.state, workerHarness.state);
-  });
-
-  it('keeps RESET_ALL parity', async () => {
-    const settings = createDefaultSettings();
-    const startNow = Date.now();
-    const initialSession = startCurrentStep(createInitialSession(settings), startNow);
-    const payload = {
+    await expectActionParity(running, WORKER_ACTIONS.PAUSE, {
       now: startNow + 2_000,
       settings
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
-
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.RESET_ALL, payload);
-    const workerMessage = await runWorkerAction(initialSession, WORKER_ACTIONS.RESET_ALL, payload);
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      persist: true,
-      render: true,
-      syncWorker: false
     });
-
-    expectParity(localHarness.state, workerHarness.state);
+    await expectActionParity(paused, WORKER_ACTIONS.RESUME, {
+      now: startNow + 2_000,
+      settings
+    });
   });
 
-  it('keeps END_STEP_EARLY parity', async () => {
+  it('keeps RESET_RUN parity', async () => {
     const settings = createDefaultSettings();
     const startNow = Date.now();
-    const initialSession = startCurrentStep(createInitialSession(settings), startNow);
-    const payload = {
-      now: startNow + 2_000
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
+    const running = startCurrentStep(createInitialSession(settings), startNow);
 
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.END_STEP_EARLY, payload);
-    const workerMessage = await runWorkerAction(
-      initialSession,
-      WORKER_ACTIONS.END_STEP_EARLY,
-      payload
-    );
+    await expectActionParity(running, WORKER_ACTIONS.RESET_RUN, {
+      now: startNow + 2_000,
+      settings
+    });
+  });
 
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STEP_FINISHED);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      completionReason: workerMessage.reason,
-      dispatchAlerts: true,
-      persist: true,
-      render: true,
-      syncWorker: false
+  it('keeps ADVANCE_FOCUS parity with history metadata', async () => {
+    const settings = createDefaultSettings();
+    const startNow = Date.now();
+    const running = startCurrentStep(createInitialSession(settings), startNow);
+    const { localHarness } = await expectActionParity(running, WORKER_ACTIONS.ADVANCE_FOCUS, {
+      focusNote: 'Prepare release notes',
+      historySaveMode: 'actual',
+      now: startNow + 60_000,
+      settings
     });
 
-    expectParity(localHarness.state, workerHarness.state);
+    expect(localHarness.state.focusHistory).toHaveLength(1);
+    expect(localHarness.state.focusHistory[0]).toMatchObject({
+      durationMs: 60_000,
+      focusNote: 'Prepare release notes',
+      stepType: 'work'
+    });
+  });
+
+  it('keeps ADVANCE_BREAK parity without history metadata', async () => {
+    const settings = createDefaultSettings();
+    const startNow = Date.now();
+    const breakRunning = startCurrentStep(
+      {
+        ...createInitialSession(settings),
+        currentStepIndex: 1
+      },
+      startNow
+    );
+    const { localHarness, workerMessage } = await expectActionParity(
+      breakRunning,
+      WORKER_ACTIONS.ADVANCE_BREAK,
+      {
+        now: startNow + 1_000,
+        settings
+      }
+    );
+
+    expect(workerMessage?.historyEntry).toBe(null);
+    expect(localHarness.state.focusHistory).toHaveLength(0);
+    expect(localHarness.state.activeSession.currentStepIndex).toBe(2);
   });
 
   it('keeps SET_FOCUS_TAG parity', async () => {
     const settings = createDefaultSettings();
-    const initialSession = createInitialSession(settings);
-    const payload = {
+    await expectActionParity(createInitialSession(settings), WORKER_ACTIONS.SET_FOCUS_TAG, {
       focusTag: 'study',
-      now: 7_000
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
-
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.SET_FOCUS_TAG, payload);
-    const workerMessage = await runWorkerAction(
-      initialSession,
-      WORKER_ACTIONS.SET_FOCUS_TAG,
-      payload
-    );
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      persist: true,
-      render: true,
-      syncWorker: false
-    });
-
-    expectParity(localHarness.state, workerHarness.state);
-  });
-
-  it('keeps FINISH_FREE_TIMER parity', async () => {
-    const settings = createDefaultSettings();
-    const initialSession = startFreeTimer(createInitialSession(settings), settings, 3_000);
-    const payload = {
-      focusNote: 'Prepare release notes',
-      now: 63_000,
+      now: 7_000,
       settings
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
-
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.FINISH_FREE_TIMER, payload);
-    const workerMessage = await runWorkerAction(
-      initialSession,
-      WORKER_ACTIONS.FINISH_FREE_TIMER,
-      payload
-    );
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      historyEntryHint: workerMessage.historyEntry,
-      persist: true,
-      render: true,
-      syncWorker: false
     });
-
-    expectParity(localHarness.state, workerHarness.state);
-    expect(localHarness.state.focusHistory).toHaveLength(1);
-    expect(localHarness.state.focusHistory[0]).toEqual(
-      createFreeTimerHistoryEntry({
-        finishedAt: payload.now,
-        focusNote: payload.focusNote,
-        session: initialSession
-      })
-    );
-  });
-
-  it('keeps DISCARD_FREE_TIMER parity', async () => {
-    const settings = createDefaultSettings();
-    const initialSession = pauseSession(
-      startFreeTimer(createInitialSession(settings), settings, 3_000),
-      20_000
-    );
-    const payload = {
-      now: 63_000,
-      settings
-    };
-    const localHarness = createControllerHarness(initialSession, settings);
-    const workerHarness = createControllerHarness(initialSession, settings);
-
-    localHarness.controller.handleLocalAction(WORKER_ACTIONS.DISCARD_FREE_TIMER, payload);
-    const workerMessage = await runWorkerAction(
-      initialSession,
-      WORKER_ACTIONS.DISCARD_FREE_TIMER,
-      payload
-    );
-
-    expect(workerMessage?.type).toBe(WORKER_MESSAGE_TYPES.STATE);
-    workerHarness.controller.commitSession(workerMessage.session, {
-      dispatchAlerts: true,
-      historyEntryHint: workerMessage.historyEntry,
-      persist: true,
-      render: true,
-      syncWorker: false
-    });
-
-    expectParity(localHarness.state, workerHarness.state);
-    expect(localHarness.state.focusHistory).toHaveLength(0);
   });
 });

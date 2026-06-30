@@ -1,7 +1,7 @@
 import {
   DEFAULT_ALERT_SETTINGS,
-  DEFAULT_AUTO_START_NEXT_STEP,
   DEFAULT_IDLE_REMINDER_ENABLED,
+  DEFAULT_INFINITE_CYCLE_ENABLED,
   DEFAULT_PIP_CLOCK_TICK_EVERY_10S,
   DEFAULT_REPEAT_COUNT,
   DEFAULT_TEMPLATE_DURATIONS_MS,
@@ -58,8 +58,16 @@ export function sanitizeRepeatCount(value, fallbackCount = DEFAULT_REPEAT_COUNT)
 
 export function createDefaultScenario(
   templateDurations = DEFAULT_TEMPLATE_DURATIONS_MS,
-  repeatCount = DEFAULT_REPEAT_COUNT
+  repeatCount = DEFAULT_REPEAT_COUNT,
+  infiniteCycleEnabled = DEFAULT_INFINITE_CYCLE_ENABLED
 ) {
+  if (infiniteCycleEnabled) {
+    return [
+      createScenarioStep('work', templateDurations.work),
+      createScenarioStep('shortBreak', templateDurations.shortBreak)
+    ];
+  }
+
   const repeats = sanitizeRepeatCount(repeatCount, DEFAULT_REPEAT_COUNT);
   const scenario = [];
 
@@ -130,14 +138,14 @@ export function normalizeSettings(rawSettings = {}) {
 
   return {
     alertSettings: normalizeAlertSettings(rawSettings.alertSettings),
-    autoStartNextStep:
-      typeof rawSettings.autoStartNextStep === 'boolean'
-        ? rawSettings.autoStartNextStep
-        : DEFAULT_AUTO_START_NEXT_STEP,
     idleReminderEnabled:
       typeof rawSettings.idleReminderEnabled === 'boolean'
         ? rawSettings.idleReminderEnabled
         : DEFAULT_IDLE_REMINDER_ENABLED,
+    infiniteCycleEnabled:
+      typeof rawSettings.infiniteCycleEnabled === 'boolean'
+        ? rawSettings.infiniteCycleEnabled
+        : DEFAULT_INFINITE_CYCLE_ENABLED,
     lastOpenTab: supportedTabs.includes(rawSettings.lastOpenTab)
       ? rawSettings.lastOpenTab
       : 'timer',

@@ -61,7 +61,7 @@ describe('timer worker message handling', () => {
     expect(lastMessage?.session.updatedAt).toBe(2_500);
   });
 
-  it('emits completion message with manual_early reason for END_STEP_EARLY', async () => {
+  it('emits a passive completion message at the planned end time', async () => {
     const { emitted, harness } = await loadWorkerWithHarness();
     const settings = createDefaultSettings();
     const startedAt = Date.now();
@@ -79,24 +79,24 @@ describe('timer worker message handling', () => {
     harness.onmessage({
       data: {
         payload: {
-          now: startedAt + 1_500
+          now: session.endsAt + 1_500
         },
-        type: 'END_STEP_EARLY'
+        type: 'SYNC_NOW'
       }
     });
 
     const lastMessage = emitted.at(-1);
 
     expect(lastMessage?.type).toBe('STEP_FINISHED');
-    expect(lastMessage?.reason).toBe('manual_early');
+    expect(lastMessage?.reason).toBe('completed');
     expect(lastMessage?.session.status).toBe('completed_waiting_next');
-    expect(lastMessage?.session.remainingMsAtPause).toBe(settings.templateDurations.work - 1_500);
+    expect(lastMessage?.session.remainingMsAtPause).toBe(0);
   });
 
-  it('handles START_FREE_TIMER and FINISH_FREE_TIMER actions', async () => {
+  it('handles ADVANCE_FOCUS and ADVANCE_BREAK actions', async () => {
     const { emitted, harness } = await loadWorkerWithHarness();
     const settings = createDefaultSettings();
-    const session = createInitialSession(settings);
+    const session = startCurrentStep(createInitialSession(settings), 2_000);
 
     harness.onmessage({
       data: {
@@ -110,37 +110,40 @@ describe('timer worker message handling', () => {
     harness.onmessage({
       data: {
         payload: {
-          now: 2_000,
-          settings
-        },
-        type: 'START_FREE_TIMER'
-      }
-    });
-
-    const startedMessage = emitted.at(-1);
-    expect(startedMessage?.type).toBe('STATE');
-    expect(startedMessage?.reason).toBe('start-free-timer');
-    expect(startedMessage?.session.sessionMode).toBe('free');
-
-    harness.onmessage({
-      data: {
-        payload: {
           focusNote: 'Prepare release notes',
+          historySaveMode: 'actual',
           now: 62_000,
           settings
         },
-        type: 'FINISH_FREE_TIMER'
+        type: 'ADVANCE_FOCUS'
       }
     });
 
-    const finishedMessage = emitted.at(-1);
-    expect(finishedMessage?.type).toBe('STATE');
-    expect(finishedMessage?.reason).toBe('finish-free-timer');
-    expect(finishedMessage?.historyEntry).toMatchObject({
+    const breakMessage = emitted.at(-1);
+    expect(breakMessage?.type).toBe('STATE');
+    expect(breakMessage?.reason).toBe('advance-focus');
+    expect(breakMessage?.historyEntry).toMatchObject({
       durationMs: 60_000,
       focusNote: 'Prepare release notes',
       stepType: 'work'
     });
-    expect(finishedMessage?.session.sessionMode).toBe('cycle');
+    expect(breakMessage?.session.status).toBe('running');
+    expect(breakMessage?.session.currentStepIndex).toBe(1);
+
+    harness.onmessage({
+      data: {
+        payload: {
+          now: 63_000,
+          settings
+        },
+        type: 'ADVANCE_BREAK'
+      }
+    });
+
+    const focusMessage = emitted.at(-1);
+    expect(focusMessage?.type).toBe('STATE');
+    expect(focusMessage?.reason).toBe('advance-break');
+    expect(focusMessage?.historyEntry).toBe(null);
+    expect(focusMessage?.session.currentStepIndex).toBe(2);
   });
 });

@@ -1,10 +1,10 @@
 import { STEP_TYPE_LABELS } from './constants.js';
 import {
   getCurrentStep,
-  getElapsedMs,
+  getOverrunMs,
   getRemainingMs,
   hasNextStep,
-  isFreeTimerMode
+  isWorkStep
 } from './session.js';
 
 export function createCompletionKey(session) {
@@ -21,18 +21,19 @@ export function shouldDispatchCompletion(nextKey, previousKey) {
   return Boolean(nextKey) && nextKey !== previousKey;
 }
 
-export function resolveCompletionNotificationBody({ autoStartNextStep = false, session }) {
+export function resolveCompletionNotificationBody({ session }) {
   const hasUpcomingStep = Boolean(session) && hasNextStep(session);
+  const stepType = getCurrentStep(session)?.type;
 
-  if (autoStartNextStep && hasUpcomingStep) {
-    return 'Next step started automatically.';
+  if (stepType === 'work') {
+    return 'Break is ready. Choose how to save this focus session.';
   }
 
   if (hasUpcomingStep) {
-    return 'Next step is ready. Press Start to continue.';
+    return 'Next focus is ready. Press Start Focus to continue.';
   }
 
-  return 'Cycle finished. Press Start to begin a new cycle.';
+  return 'Cycle finished. Press Start New Cycle to begin again.';
 }
 
 export function resolveCompletionAlertTitle(session) {
@@ -42,12 +43,9 @@ export function resolveCompletionAlertTitle(session) {
   return `${stepLabel} done ✅`;
 }
 
-export function createCompletionAlertPayload({ autoStartNextStep = false, session }) {
+export function createCompletionAlertPayload({ session }) {
   return {
-    body: resolveCompletionNotificationBody({
-      autoStartNextStep,
-      session
-    }),
+    body: resolveCompletionNotificationBody({ session }),
     title: resolveCompletionAlertTitle(session)
   };
 }
@@ -95,13 +93,6 @@ export function shouldDispatchFocusMinuteReminder({
     };
   }
 
-  if (isFreeTimerMode(session)) {
-    return {
-      key: '',
-      shouldDispatch: false
-    };
-  }
-
   const remainingMs = getRemainingMs(session, now);
 
   if (remainingMs <= 0 || remainingMs > 60_000) {
@@ -126,23 +117,27 @@ export function shouldDispatchFocusMinuteReminder({
   };
 }
 
-const FREE_TIMER_REMINDER_INTERVAL_MS = 5 * 60_000;
+const FOCUS_OVERTIME_REMINDER_INTERVAL_MS = 5 * 60_000;
 
-export function shouldDispatchFreeTimerReminder({
+export function shouldDispatchFocusOvertimeReminder({
   session,
   now = Date.now(),
   notificationsEnabled = true,
   previousKey = ''
 }) {
-  if (!notificationsEnabled || session?.status !== 'running' || !isFreeTimerMode(session)) {
+  if (
+    !notificationsEnabled ||
+    session?.status !== 'completed_waiting_next' ||
+    !isWorkStep(session)
+  ) {
     return {
       key: '',
       shouldDispatch: false
     };
   }
 
-  const elapsedMs = getElapsedMs(session, now);
-  const intervalIndex = Math.floor(elapsedMs / FREE_TIMER_REMINDER_INTERVAL_MS);
+  const overrunMs = getOverrunMs(session, now);
+  const intervalIndex = Math.floor(overrunMs / FOCUS_OVERTIME_REMINDER_INTERVAL_MS);
 
   if (intervalIndex < 1) {
     return {
@@ -151,14 +146,14 @@ export function shouldDispatchFreeTimerReminder({
     };
   }
 
-  if (!Number.isFinite(session?.freeTimerStartedAt)) {
+  if (!Number.isFinite(session?.finishedAt)) {
     return {
       key: '',
       shouldDispatch: false
     };
   }
 
-  const key = `${session.freeTimerStartedAt}:${intervalIndex}`;
+  const key = `${getCurrentStep(session)?.id ?? 'focus'}:${session.finishedAt}:${intervalIndex}`;
 
   if (key === previousKey) {
     return {

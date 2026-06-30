@@ -10,7 +10,13 @@
  */
 
 /**
- * @typedef {object} WorkerResetAllPayload
+ * @typedef {'actual' | 'planned' | 'skip'} FocusHistorySaveMode
+ */
+
+/**
+ * @typedef {object} WorkerAdvanceFocusPayload
+ * @property {string} [focusNote]
+ * @property {FocusHistorySaveMode} [historySaveMode]
  * @property {SettingsModel} [settings]
  */
 
@@ -25,13 +31,7 @@
  */
 
 /**
- * @typedef {object} WorkerFinishFreeTimerPayload
- * @property {string} [focusNote]
- * @property {SettingsModel} [settings]
- */
-
-/**
- * @typedef {object} WorkerDiscardFreeTimerPayload
+ * @typedef {object} WorkerAdvanceBreakPayload
  * @property {SettingsModel} [settings]
  */
 
@@ -48,30 +48,26 @@
 /**
  * @typedef {object} WorkerActionPayloadByType
  * @property {WorkerInitPayload} INIT
- * @property {WorkerDiscardFreeTimerPayload} DISCARD_FREE_TIMER
- * @property {object} END_STEP_EARLY
- * @property {WorkerFinishFreeTimerPayload} FINISH_FREE_TIMER
+ * @property {WorkerAdvanceBreakPayload} ADVANCE_BREAK
+ * @property {WorkerAdvanceFocusPayload} ADVANCE_FOCUS
  * @property {object} PAUSE
- * @property {WorkerResetAllPayload} RESET_ALL
+ * @property {WorkerAdvanceBreakPayload} RESET_RUN
  * @property {object} RESUME
  * @property {WorkerSetFocusTagPayload} SET_FOCUS_TAG
  * @property {WorkerSetIdleReminderPayload} SET_IDLE_REMINDER
- * @property {WorkerStartStepPayload} START_FREE_TIMER
  * @property {WorkerStartStepPayload} START_STEP
  * @property {WorkerSyncNowPayload} SYNC_NOW
  */
 
 export const WORKER_ACTIONS = {
+  ADVANCE_BREAK: 'ADVANCE_BREAK',
+  ADVANCE_FOCUS: 'ADVANCE_FOCUS',
   INIT: 'INIT',
-  DISCARD_FREE_TIMER: 'DISCARD_FREE_TIMER',
-  END_STEP_EARLY: 'END_STEP_EARLY',
-  FINISH_FREE_TIMER: 'FINISH_FREE_TIMER',
   PAUSE: 'PAUSE',
-  RESET_ALL: 'RESET_ALL',
+  RESET_RUN: 'RESET_RUN',
   RESUME: 'RESUME',
   SET_FOCUS_TAG: 'SET_FOCUS_TAG',
   SET_IDLE_REMINDER: 'SET_IDLE_REMINDER',
-  START_FREE_TIMER: 'START_FREE_TIMER',
   START_STEP: 'START_STEP',
   SYNC_NOW: 'SYNC_NOW'
 };

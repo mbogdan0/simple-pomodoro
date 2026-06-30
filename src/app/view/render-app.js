@@ -1,6 +1,7 @@
 import { TAB_LABELS } from '../../core/constants.js';
 import { formatNotificationPermissionLabel } from '../../core/format.js';
 import { renderHistoryPanel } from '../../ui/history-panel.js';
+import { renderAppModal } from '../../ui/modal.js';
 import { renderSettingsPanel } from '../../ui/settings-panel.js';
 import { renderTimerPanel } from '../../ui/timer-panel.js';
 import { ROOT_ACTIONS, ROOT_TABS } from '../events/root-contracts.js';
@@ -13,7 +14,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
   let liveRefs = collectLiveRefs(root);
   let liveUpdateHooks = {
     maybeDispatchFocusMinuteReminder: () => {},
-    maybeDispatchFreeTimerReminder: () => {},
+    maybeDispatchFocusOvertimeReminder: () => {},
     syncPictureInPicture: () => {}
   };
 
@@ -81,11 +82,13 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
           }
         </section>
       </main>
+      ${renderAppModal(state.modal, timerModel)}
     `;
 
     liveRefs = collectLiveRefs(root);
     updateTimerLiveRegion();
     updatePageChrome();
+    root.querySelector('[data-modal-initial-focus]')?.focus?.();
   }
 
   function updateTimerLiveRegion(now = Date.now()) {
@@ -97,7 +100,7 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
     patchLiveTimerDom(liveRefs, timerModel);
     liveUpdateHooks.syncPictureInPicture(timerModel, now);
     liveUpdateHooks.maybeDispatchFocusMinuteReminder(state.activeSession, now);
-    liveUpdateHooks.maybeDispatchFreeTimerReminder(state.activeSession, now);
+    liveUpdateHooks.maybeDispatchFocusOvertimeReminder(state.activeSession, now);
   }
 
   function setLiveUpdateHooks(nextHooks) {

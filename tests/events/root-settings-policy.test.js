@@ -19,9 +19,10 @@ function createState(overrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
-    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: Date.now(),
+    lastOvertimeReminderKey: '',
     manualPipRequested: false,
+    modal: null,
     notificationNotice: '',
     ntfyNotice: 'old-notice',
     pauseStartedAt: null,
@@ -109,13 +110,13 @@ describe('root settings policy', () => {
     const { deps, spies, state } = createDeps();
     const policy = createRootSettingsPolicy(deps);
 
-    expect(policy.applySettingToggle(SETTING_TOGGLE_KEYS.AUTO_START_NEXT_STEP, true)).toBe(true);
+    expect(policy.applySettingToggle(SETTING_TOGGLE_KEYS.INFINITE_CYCLE_ENABLED, true)).toBe(true);
     expect(policy.applySettingToggle(SETTING_TOGGLE_KEYS.PIP_CLOCK_TICK_EVERY_10S, true)).toBe(
       true
     );
     expect(policy.applySettingToggle(SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED, false)).toBe(true);
 
-    expect(state.settings.autoStartNextStep).toBe(true);
+    expect(state.settings.infiniteCycleEnabled).toBe(true);
     expect(state.settings.pipClockTickEvery10s).toBe(true);
     expect(state.settings.idleReminderEnabled).toBe(false);
     expect(spies.postWorkerAction).toHaveBeenCalledTimes(1);
@@ -123,7 +124,8 @@ describe('root settings policy', () => {
       enabled: false
     });
     expect(spies.persistSettings).toHaveBeenCalledTimes(3);
-    expect(spies.renderApp).toHaveBeenCalledTimes(3);
+    expect(spies.commitSession).toHaveBeenCalledTimes(1);
+    expect(spies.renderApp).toHaveBeenCalledTimes(2);
   });
 
   it('normalizes ntfy URL and clears stale notice', () => {

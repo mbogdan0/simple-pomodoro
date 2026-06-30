@@ -7,7 +7,6 @@ import {
 } from '../../src/app/session/startup-session.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
 import { createInitialSession, syncSession } from '../../src/core/session.js';
-import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
 function createState(activeSessionOverrides = {}) {
   const settings = createDefaultSettings();
@@ -42,54 +41,44 @@ describe('startup session policy', () => {
     expect(shouldConfirmStaleSession(state.activeSession, now)).toBe(false);
   });
 
-  it('resets stale startup session when confirmation is accepted', () => {
+  it('opens stale-session modal while committing synced startup session', () => {
     const now = 1_000_000;
     const state = createState({
       currentStepIndex: 3,
       updatedAt: now - STALE_SESSION_THRESHOLD_MS - 10
     });
-    const clearFocusNoteDraft = vi.fn();
     const commitSession = vi.fn();
-    const handleLocalAction = vi.fn();
 
     applyStartupSessionPolicy({
-      clearFocusNoteDraft,
       commitSession,
-      confirmStaleSession: () => true,
-      handleLocalAction,
       now,
       state
     });
 
-    expect(clearFocusNoteDraft).toHaveBeenCalledTimes(1);
-    expect(handleLocalAction).toHaveBeenCalledWith(WORKER_ACTIONS.RESET_ALL, {
-      now,
-      settings: state.settings
+    expect(state.modal).toEqual({ type: 'stale-session' });
+    expect(commitSession).toHaveBeenCalledWith(syncSession(state.activeSession, now), {
+      dispatchAlerts: true,
+      persist: true,
+      render: false,
+      syncWorker: false
     });
-    expect(commitSession).not.toHaveBeenCalled();
   });
 
-  it('commits synced startup session when stale confirmation is declined', () => {
+  it('commits synced startup session without modal for fresh session', () => {
     const now = 1_000_000;
     const state = createState({
-      currentStepIndex: 2,
-      updatedAt: now - STALE_SESSION_THRESHOLD_MS - 10
+      currentStepIndex: 0,
+      updatedAt: now
     });
-    const clearFocusNoteDraft = vi.fn();
     const commitSession = vi.fn();
-    const handleLocalAction = vi.fn();
 
     applyStartupSessionPolicy({
-      clearFocusNoteDraft,
       commitSession,
-      confirmStaleSession: () => false,
-      handleLocalAction,
       now,
       state
     });
 
-    expect(clearFocusNoteDraft).not.toHaveBeenCalled();
-    expect(handleLocalAction).not.toHaveBeenCalled();
+    expect(state.modal).toBeUndefined();
     expect(commitSession).toHaveBeenCalledWith(syncSession(state.activeSession, now), {
       dispatchAlerts: true,
       persist: true,

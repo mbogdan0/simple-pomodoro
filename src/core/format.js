@@ -1,5 +1,5 @@
 import { APP_NAME, STATUS_LABELS, STEP_TYPE_LABELS } from './constants.js';
-import { getCurrentStep, getElapsedMs, getRemainingMs, isFreeTimerMode } from './session.js';
+import { getCurrentStep, getOverrunMs, getRemainingMs, isWorkStep } from './session.js';
 import { clamp } from './utils.js';
 
 export function formatClock(totalMs) {
@@ -13,6 +13,10 @@ export function formatClock(totalMs) {
   }
 
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+export function formatSignedClock(totalMs) {
+  return `+${formatClock(totalMs)}`;
 }
 
 export function formatCompactElapsed(totalMs) {
@@ -97,21 +101,18 @@ export function formatNotificationPermissionLabel(permissionState) {
 }
 
 export function formatDocumentTitle(session, now = Date.now(), appName = APP_NAME) {
-  if (isFreeTimerMode(session)) {
-    return `${formatClock(getElapsedMs(session, now))} · Free Timer`;
-  }
-
   const step = getCurrentStep(session);
 
   if (!step) {
     return appName;
   }
 
-  const base = `${formatClock(getRemainingMs(session, now))} · ${formatStepTypeLabel(step.type)}`;
-
   if (session.status === 'completed_waiting_next') {
-    return `${base} ready`;
+    const overdueLabel = isWorkStep(session) ? 'Overtime' : 'Over-break';
+    return `${formatSignedClock(getOverrunMs(session, now))} · ${overdueLabel}`;
   }
+
+  const base = `${formatClock(getRemainingMs(session, now))} · ${formatStepTypeLabel(step.type)}`;
 
   return base;
 }

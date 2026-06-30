@@ -22,9 +22,10 @@ function createState(overrides = {}) {
     isNtfyTesting: false,
     lastCompletionKey: '',
     lastFocusMinuteReminderKey: '',
-    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: Date.now(),
+    lastOvertimeReminderKey: '',
     manualPipRequested: false,
+    modal: null,
     notificationNotice: '',
     ntfyNotice: 'old-value',
     pauseStartedAt: null,
@@ -154,13 +155,13 @@ describe('root settings handlers', () => {
     const { deps, spies, state } = createDeps();
     const { handleRootChange } = createRootSettingsHandlers(deps);
 
-    const autoStartInput = new HTMLInputElement();
-    autoStartInput.dataset.settingToggle = 'autoStartNextStep';
-    autoStartInput.checked = true;
-    autoStartInput.matches = (selector) => selector === '[data-setting-toggle]';
+    const infiniteInput = new HTMLInputElement();
+    infiniteInput.dataset.settingToggle = 'infiniteCycleEnabled';
+    infiniteInput.checked = true;
+    infiniteInput.matches = (selector) => selector === '[data-setting-toggle]';
 
-    handleRootChange({ target: autoStartInput });
-    expect(state.settings.autoStartNextStep).toBe(true);
+    handleRootChange({ target: infiniteInput });
+    expect(state.settings.infiniteCycleEnabled).toBe(true);
 
     const pipTickInput = new HTMLInputElement();
     pipTickInput.dataset.settingToggle = 'pipClockTickEvery10s';
@@ -182,7 +183,8 @@ describe('root settings handlers', () => {
       enabled: false
     });
     expect(spies.persistSettings).toHaveBeenCalledTimes(3);
-    expect(spies.renderApp).toHaveBeenCalledTimes(3);
+    expect(spies.commitSession).toHaveBeenCalledTimes(1);
+    expect(spies.renderApp).toHaveBeenCalledTimes(2);
   });
 
   it('keeps invalid or non-matching input events as no-ops', () => {
@@ -228,20 +230,26 @@ describe('root settings handlers', () => {
   it('applies consistent side-effect matrix for supported toggle keys', () => {
     const toggleMatrix = [
       {
-        key: SETTING_TOGGLE_KEYS.AUTO_START_NEXT_STEP,
-        expectedSyncWorker: false
+        expectedCommitSession: true,
+        expectedRender: false,
+        expectedSyncWorker: false,
+        key: SETTING_TOGGLE_KEYS.INFINITE_CYCLE_ENABLED
       },
       {
+        expectedCommitSession: false,
+        expectedRender: true,
         key: SETTING_TOGGLE_KEYS.PIP_CLOCK_TICK_EVERY_10S,
         expectedSyncWorker: false
       },
       {
+        expectedCommitSession: false,
+        expectedRender: true,
         key: SETTING_TOGGLE_KEYS.IDLE_REMINDER_ENABLED,
         expectedSyncWorker: true
       }
     ];
 
-    toggleMatrix.forEach(({ key, expectedSyncWorker }) => {
+    toggleMatrix.forEach(({ expectedCommitSession, expectedRender, expectedSyncWorker, key }) => {
       const { deps, spies } = createDeps();
       const { handleRootChange } = createRootSettingsHandlers(deps);
       const toggleInput = new HTMLInputElement();
@@ -252,8 +260,8 @@ describe('root settings handlers', () => {
       handleRootChange({ target: toggleInput });
 
       expect(spies.persistSettings).toHaveBeenCalledTimes(1);
-      expect(spies.renderApp).toHaveBeenCalledTimes(1);
-      expect(spies.commitSession).not.toHaveBeenCalled();
+      expect(spies.renderApp).toHaveBeenCalledTimes(expectedRender ? 1 : 0);
+      expect(spies.commitSession).toHaveBeenCalledTimes(expectedCommitSession ? 1 : 0);
       expect(spies.postWorkerAction).toHaveBeenCalledTimes(expectedSyncWorker ? 1 : 0);
     });
   });

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { MAX_FOCUS_HISTORY_ENTRIES } from '../src/core/constants.js';
 import {
   appendFocusHistoryEntry,
-  createFreeTimerHistoryEntry,
   createFocusHistoryEntry,
   normalizeFocusHistoryEntry,
   removeFocusHistoryEntry,
@@ -11,118 +10,82 @@ import {
   updateFocusHistoryEntryFocusTag
 } from '../src/core/focus-history.js';
 import { createDefaultSettings } from '../src/core/settings.js';
-import {
-  createInitialSession,
-  forceCompleteCurrentStep,
-  startFreeTimer,
-  setSessionFocusTag,
-  startCurrentStep,
-  syncSession
-} from '../src/core/session.js';
+import { createInitialSession, setSessionFocusTag } from '../src/core/session.js';
 
-function completeCurrentStep(session, startedAt = 1_000) {
-  const running = startCurrentStep(session, startedAt);
-  return syncSession(running, running.endsAt + 1_000);
+function createEntry(overrides = {}) {
+  const settings = createDefaultSettings();
+  const session = setSessionFocusTag(createInitialSession(settings), 'study', 1_050);
+
+  return createFocusHistoryEntry({
+    completedAt: 95_000,
+    durationMs: 75_000,
+    focusNote: '',
+    session,
+    ...overrides
+  });
 }
 
 describe('focus history helpers', () => {
-  it('creates a history entry for completed focus steps', () => {
+  it('creates a history entry for an explicit focus save', () => {
     const settings = createDefaultSettings();
     const taggedSession = setSessionFocusTag(createInitialSession(settings), 'study', 1_050);
-    const completedFocus = completeCurrentStep(taggedSession);
 
-    const entry = createFocusHistoryEntry(completedFocus);
-
-    expect(entry).toMatchObject({
-      durationMs: 25 * 60 * 1000,
-      focusTag: 'study',
-      stepType: 'work'
-    });
-    expect(entry?.id).toBeTruthy();
-    expect(entry?.stepId).toBe(completedFocus.scenario[0].id);
-    expect(entry?.completedAt).toBe(completedFocus.finishedAt);
-  });
-
-  it('stores focus note snapshot in completed focus entries', () => {
-    const settings = createDefaultSettings();
-    const completedFocus = completeCurrentStep(createInitialSession(settings));
-
-    const entry = createFocusHistoryEntry(
-      completedFocus,
-      '',
-      'Write launch checklist and test migration flows'
-    );
-
-    expect(entry?.focusNote).toBe('Write launch checklist and tes');
-  });
-
-  it('does not create history entries for completed non-focus steps', () => {
-    const settings = createDefaultSettings();
-    const base = createInitialSession(settings);
-
-    const completedShortBreak = completeCurrentStep(
-      {
-        ...base,
-        currentStepIndex: 1
-      },
-      2_000
-    );
-
-    expect(completedShortBreak.scenario[completedShortBreak.currentStepIndex].type).toBe(
-      'shortBreak'
-    );
-    expect(createFocusHistoryEntry(completedShortBreak)).toBe(null);
-  });
-
-  it('stores actual elapsed duration for early-ended focus steps', () => {
-    const settings = createDefaultSettings();
-    const running = startCurrentStep(createInitialSession(settings), 10_000);
-    const earlyCompleted = forceCompleteCurrentStep(running, 70_000);
-
-    const entry = createFocusHistoryEntry(earlyCompleted);
-
-    expect(entry).toMatchObject({
-      durationMs: 60_000,
-      stepType: 'work'
-    });
-  });
-
-  it('creates focus history entry from free timer finish action', () => {
-    const settings = createDefaultSettings();
-    const taggedSession = setSessionFocusTag(createInitialSession(settings), 'work', 10_000);
-    const freeRunning = startFreeTimer(taggedSession, settings, 20_000);
-
-    const entry = createFreeTimerHistoryEntry({
-      finishedAt: 95_000,
-      focusNote: 'Handle production release checklist',
-      session: freeRunning
+    const entry = createFocusHistoryEntry({
+      completedAt: 95_000,
+      durationMs: 75_000,
+      focusNote: 'Write launch checklist and test migration flows',
+      session: taggedSession
     });
 
     expect(entry).toMatchObject({
       completedAt: 95_000,
       durationMs: 75_000,
-      focusNote: 'Handle production release chec',
-      focusTag: 'work',
+      focusNote: 'Write launch checklist and tes',
+      focusTag: 'study',
       stepType: 'work'
     });
-    expect(entry?.id).toBe('free-20000:95000');
-    expect(entry?.stepId).toBe('free-20000');
+    expect(entry?.id).toBe(`${taggedSession.scenario[0].id}:95000`);
+    expect(entry?.stepId).toBe(taggedSession.scenario[0].id);
   });
 
-  it('keeps full planned duration for naturally completed focus steps', () => {
+  it('does not create history entries for non-focus steps', () => {
     const settings = createDefaultSettings();
-    const running = startCurrentStep(createInitialSession(settings), 10_000);
-    const completed = syncSession(running, running.endsAt + 500);
+    const base = createInitialSession(settings);
 
-    const entry = createFocusHistoryEntry(completed);
+    const entry = createFocusHistoryEntry({
+      completedAt: 95_000,
+      durationMs: 75_000,
+      session: {
+        ...base,
+        currentStepIndex: 1
+      }
+    });
 
-    expect(entry?.durationMs).toBe(settings.templateDurations.work);
+    expect(entry).toBe(null);
+  });
+
+  it('stores either actual or planned duration as the entry duration', () => {
+    const settings = createDefaultSettings();
+    const session = createInitialSession(settings);
+    const actual = createFocusHistoryEntry({
+      completedAt: 95_000,
+      durationMs: 75_000,
+      idHint: 'actual-entry',
+      session
+    });
+    const planned = createFocusHistoryEntry({
+      completedAt: 96_000,
+      durationMs: settings.templateDurations.work,
+      idHint: 'planned-entry',
+      session
+    });
+
+    expect(actual?.durationMs).toBe(75_000);
+    expect(planned?.durationMs).toBe(settings.templateDurations.work);
   });
 
   it('deduplicates entries by id and supports removing single entries', () => {
-    const settings = createDefaultSettings();
-    const completedFocus = completeCurrentStep(createInitialSession(settings));
-    const entry = createFocusHistoryEntry(completedFocus);
+    const entry = createEntry();
 
     if (!entry) {
       throw new Error('Expected focus history entry to be created.');
@@ -240,7 +203,7 @@ describe('focus history helpers', () => {
     expect(updated[1]).toMatchObject({ id: 'focus-2', focusTag: 'study' });
   });
 
-  it('does not update history tag for unknown entry id or invalid tag', () => {
+  it('updates and clears focus notes on selected history entries', () => {
     const history = [
       {
         completedAt: 1_720_000_000_100,
@@ -252,61 +215,10 @@ describe('focus history helpers', () => {
       }
     ];
 
-    expect(updateFocusHistoryEntryFocusTag(history, 'missing', 'study')).toEqual(history);
-    expect(updateFocusHistoryEntryFocusTag(history, 'focus-1', 'deep')).toEqual(history);
-  });
+    const withNote = updateFocusHistoryEntryFocusNote(history, 'focus-1', 'Review release notes');
+    const cleared = updateFocusHistoryEntryFocusNote(withNote, 'focus-1', '');
 
-  it('updates only selected history entry note with a 30-char limit', () => {
-    const history = [
-      {
-        completedAt: 1_720_000_000_100,
-        durationMs: 25 * 60 * 1000,
-        focusTag: 'none',
-        id: 'focus-1',
-        stepId: 'focus-1',
-        stepType: 'work'
-      },
-      {
-        completedAt: 1_720_000_000_200,
-        durationMs: 25 * 60 * 1000,
-        focusNote: 'Quick planning',
-        focusTag: 'work',
-        id: 'focus-2',
-        stepId: 'focus-2',
-        stepType: 'work'
-      }
-    ];
-
-    const updated = updateFocusHistoryEntryFocusNote(
-      history,
-      'focus-2',
-      'Review deployment runbook and release checklist'
-    );
-
-    expect(updated).toHaveLength(2);
-    expect(updated[0]).toMatchObject({ id: 'focus-1' });
-    expect(updated[1]).toMatchObject({
-      focusNote: 'Review deployment runbook and '
-    });
-  });
-
-  it('clears history entry note with empty value and keeps no-op behavior for unknown id', () => {
-    const history = [
-      {
-        completedAt: 1_720_000_000_200,
-        durationMs: 25 * 60 * 1000,
-        focusNote: 'Quick planning',
-        focusTag: 'work',
-        id: 'focus-2',
-        stepId: 'focus-2',
-        stepType: 'work'
-      }
-    ];
-
-    const cleared = updateFocusHistoryEntryFocusNote(history, 'focus-2', '');
-    const untouched = updateFocusHistoryEntryFocusNote(history, 'missing', 'note');
-
-    expect(cleared[0]).not.toHaveProperty('focusNote');
-    expect(untouched).toEqual(history);
+    expect(withNote[0].focusNote).toBe('Review release notes');
+    expect(cleared[0].focusNote).toBeUndefined();
   });
 });

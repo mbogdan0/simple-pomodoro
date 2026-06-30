@@ -1,11 +1,6 @@
 import { createCompletionKey, shouldDispatchCompletion } from '../../core/alerts.js';
-import { appendFocusHistoryEntry, createFocusHistoryEntry } from '../../core/focus-history.js';
-import {
-  advanceAfterCompletion,
-  getCurrentStep,
-  markAlertsDispatched,
-  normalizeSession
-} from '../../core/session.js';
+import { appendFocusHistoryEntry } from '../../core/focus-history.js';
+import { getCurrentStep, markAlertsDispatched, normalizeSession } from '../../core/session.js';
 
 function createIdleStepKey(session) {
   if (session?.status !== 'idle') {
@@ -22,10 +17,8 @@ function isFiniteNumber(value) {
 export function reduceCommittedSession({
   commitNow,
   completionKeyHint = '',
-  completionReason = '',
   dispatchAlerts = false,
   focusHistory = [],
-  focusNoteDraft = '',
   historyEntryHint = null,
   idleStartedAt = null,
   lastCompletionKey = '',
@@ -51,24 +44,12 @@ export function reduceCommittedSession({
 
   if (session.status === 'completed_waiting_next') {
     const completionKey = completionKeyHint || createCompletionKey(session);
-    const shouldSuppressCompletionAlerts = completionReason === 'manual_early';
-    const nextEntry = createFocusHistoryEntry(session, completionKey, focusNoteDraft);
-
-    if (nextEntry) {
-      const appendedHistory = appendFocusHistoryEntry(nextFocusHistory, nextEntry);
-
-      if (appendedHistory.length !== nextFocusHistory.length) {
-        nextFocusHistory = appendedHistory;
-        shouldPersistFocusHistory = true;
-      }
-    }
-
     const mayDispatchByKey = completionKey
       ? shouldDispatchCompletion(completionKey, lastCompletionKey)
       : !session.alertsDispatched;
 
     if (!completionKey || mayDispatchByKey) {
-      if (dispatchAlerts && !shouldSuppressCompletionAlerts) {
+      if (dispatchAlerts) {
         completionAlerts.push({
           completionKey,
           session
@@ -81,8 +62,6 @@ export function reduceCommittedSession({
     if (completionKey) {
       nextLastCompletionKey = completionKey;
     }
-
-    session = advanceAfterCompletion(session, settings, commitNow);
   }
 
   const nextIdleStartedAt =

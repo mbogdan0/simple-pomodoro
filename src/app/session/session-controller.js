@@ -1,9 +1,4 @@
-import {
-  applySessionAction,
-  isFreeTimerMode,
-  normalizeSession,
-  syncSession
-} from '../../core/session.js';
+import { applySessionAction, normalizeSession, syncSession } from '../../core/session.js';
 import { loadActiveSession } from '../../core/storage.js';
 import { WORKER_ACTIONS } from '../../core/worker-protocol.js';
 import { reduceCommittedSession } from './session-commit-reducer.js';
@@ -53,13 +48,14 @@ export function createSessionController({
     state.lastCompletionKey = reduced.lastCompletionKey;
     state.pauseStartedAt = reduced.pauseStartedAt;
 
-    const previousWasFree = isFreeTimerMode(previousSession);
-    const nextIsFree = isFreeTimerMode(state.activeSession);
-    const freeTimerRunChanged =
-      previousSession?.freeTimerStartedAt !== state.activeSession?.freeTimerStartedAt;
+    const previousStepKey = `${previousSession?.currentStepIndex}:${previousSession?.stepStartedAt}`;
+    const nextStepKey = `${state.activeSession?.currentStepIndex}:${state.activeSession?.stepStartedAt}`;
 
-    if (!previousWasFree || !nextIsFree || freeTimerRunChanged) {
-      state.lastFreeTimerReminderKey = '';
+    if (
+      previousStepKey !== nextStepKey ||
+      state.activeSession?.status !== 'completed_waiting_next'
+    ) {
+      state.lastOvertimeReminderKey = '';
     }
 
     if (reduced.shouldPersistFocusHistory) {

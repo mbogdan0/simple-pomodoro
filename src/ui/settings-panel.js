@@ -26,6 +26,9 @@ export function renderSettingsPanel({
     resolvedNotificationSupport.permissionState !== 'granted';
   const sessionLocked = ['running', 'paused'].includes(sessionStatus);
   const hasNtfyPublishUrl = Boolean(settings?.ntfyPublishUrl);
+  const visibleStepTypes = settings.infiniteCycleEnabled
+    ? STEP_TYPES.filter((type) => type !== 'longBreak')
+    : STEP_TYPES;
 
   return `
     <section class="panel settings-layout" id="panel-settings" aria-label="Settings panel" role="region">
@@ -36,8 +39,9 @@ export function renderSettingsPanel({
         </div>
 
         <div class="template-grid">
-          ${STEP_TYPES.map(
-            (type) => `
+          ${visibleStepTypes
+            .map(
+              (type) => `
               <label class="template-card">
                 <span>${STEP_TYPE_LABELS[type]}</span>
                 <input
@@ -51,25 +55,32 @@ export function renderSettingsPanel({
                 <small>minutes</small>
               </label>
             `
-          ).join('')}
-          <label class="template-card">
-            <span>Repeats</span>
-            <input
-              data-repeat-count
-              inputmode="numeric"
-              max="24"
-              min="1"
-              type="number"
-              value="${settings.repeatCount}"
-            >
-            <small>focus sessions in one cycle</small>
-          </label>
+            )
+            .join('')}
+          ${
+            settings.infiniteCycleEnabled
+              ? ''
+              : `
+                <label class="template-card">
+                  <span>Repeats</span>
+                  <input
+                    data-repeat-count
+                    inputmode="numeric"
+                    max="24"
+                    min="1"
+                    type="number"
+                    value="${settings.repeatCount}"
+                  >
+                  <small>focus sessions in one cycle</small>
+                </label>
+              `
+          }
         </div>
         <label class="toggle-row">
-          <span>Auto-start next step</span>
+          <span>Infinite focus loop</span>
           <input
-            ${settings.autoStartNextStep ? 'checked' : ''}
-            data-setting-toggle="${SETTING_TOGGLE_KEYS.AUTO_START_NEXT_STEP}"
+            ${settings.infiniteCycleEnabled ? 'checked' : ''}
+            data-setting-toggle="${SETTING_TOGGLE_KEYS.INFINITE_CYCLE_ENABLED}"
             type="checkbox"
           >
         </label>

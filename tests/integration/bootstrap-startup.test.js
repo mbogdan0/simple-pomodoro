@@ -195,10 +195,13 @@ describe('bootstrap startup integration', () => {
     expect(globalThis.setInterval).toHaveBeenCalledWith(expect.any(Function), 500);
   });
 
-  it('confirms stale startup session and resets when user accepts', () => {
+  it('opens stale startup modal and resets when user accepts', () => {
     const documentStub = createDocumentStub();
+    const rootListeners = {};
     const root = {
-      addEventListener: vi.fn(),
+      addEventListener(type, handler) {
+        rootListeners[type] = handler;
+      },
       innerHTML: '',
       querySelector() {
         return null;
@@ -220,7 +223,6 @@ describe('bootstrap startup integration', () => {
     setNavigator({});
     setWindow({
       addEventListener: vi.fn(),
-      confirm: vi.fn(() => true),
       handlers: {},
       isSecureContext: false
     });
@@ -229,16 +231,38 @@ describe('bootstrap startup integration', () => {
 
     const app = startApp(root);
 
-    expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
+    expect(app.state.modal).toEqual({ type: 'stale-session' });
+    expect(root.innerHTML).toContain('Start a new session?');
+
+    rootListeners.click({
+      target: {
+        closest(selector) {
+          if (selector !== '[data-action]') {
+            return null;
+          }
+
+          return {
+            dataset: {
+              action: 'confirm-stale-session-reset'
+            }
+          };
+        }
+      }
+    });
+
+    expect(app.state.modal).toBeNull();
     expect(app.state.activeSession.currentStepIndex).toBe(0);
     expect(app.state.focusNoteDraft).toBe('');
     expect(storage.getItem(STORAGE_KEYS.focusNoteDraft)).toBe('""');
   });
 
-  it('keeps stale startup session when user declines reset prompt', () => {
+  it('keeps stale startup session when user cancels reset modal', () => {
     const documentStub = createDocumentStub();
+    const rootListeners = {};
     const root = {
-      addEventListener: vi.fn(),
+      addEventListener(type, handler) {
+        rootListeners[type] = handler;
+      },
       innerHTML: '',
       querySelector() {
         return null;
@@ -260,7 +284,6 @@ describe('bootstrap startup integration', () => {
     setNavigator({});
     setWindow({
       addEventListener: vi.fn(),
-      confirm: vi.fn(() => false),
       handlers: {},
       isSecureContext: false
     });
@@ -269,7 +292,24 @@ describe('bootstrap startup integration', () => {
 
     const app = startApp(root);
 
-    expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
+    expect(app.state.modal).toEqual({ type: 'stale-session' });
+    rootListeners.click({
+      target: {
+        closest(selector) {
+          if (selector !== '[data-action]') {
+            return null;
+          }
+
+          return {
+            dataset: {
+              action: 'cancel-modal'
+            }
+          };
+        }
+      }
+    });
+
+    expect(app.state.modal).toBeNull();
     expect(app.state.activeSession.currentStepIndex).toBe(3);
     expect(app.state.focusNoteDraft).toBe('Keep this note');
   });
@@ -334,7 +374,7 @@ describe('bootstrap startup integration', () => {
     expect(globalThis.clearInterval).toHaveBeenCalledWith(42);
     expect(root.removeEventListener).toHaveBeenCalledTimes(3);
     expect(windowStub.removeEventListener).toHaveBeenCalledTimes(7);
-    expect(documentStub.removeEventListener).toHaveBeenCalledTimes(2);
+    expect(documentStub.removeEventListener).toHaveBeenCalledTimes(3);
     expect(workerInstances[0].terminate).toHaveBeenCalledTimes(1);
   });
 });

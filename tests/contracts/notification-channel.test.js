@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createNotificationService } from '../../src/app/alerts/notification-service.js';
 import { createDefaultSettings } from '../../src/core/settings.js';
-import { createInitialSession, startFreeTimer } from '../../src/core/session.js';
+import { createInitialSession, startCurrentStep, syncSession } from '../../src/core/session.js';
 
 const originalWindow = globalThis.window;
 const originalNavigator = globalThis.navigator;
@@ -28,7 +28,6 @@ function createState(overrides = {}) {
       notificationsEnabled: true,
       soundEnabled: true
     },
-    autoStartNextStep: false,
     idleReminderEnabled: false,
     ntfyPublishUrl: ''
   };
@@ -47,8 +46,8 @@ function createState(overrides = {}) {
     },
     alertSettings: {},
     lastFocusMinuteReminderKey: '',
-    lastFreeTimerReminderKey: '',
     lastIdleReminderAt: 0,
+    lastOvertimeReminderKey: '',
     notificationNotice: '',
     ntfyNotice: '',
     serviceWorkerReady: false,
@@ -279,7 +278,7 @@ describe('notification service contracts', () => {
     expect(sent).toHaveLength(0);
   });
 
-  it('dispatches free timer reminder every five running minutes', () => {
+  it('dispatches focus overtime reminder every five overdue minutes', () => {
     const sent = installNotificationMock();
     const playUiActionTone = vi.fn();
     const state = createState();
@@ -290,23 +289,33 @@ describe('notification service contracts', () => {
       state
     });
     const settings = createDefaultSettings();
-    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 1_000);
+    const running = startCurrentStep(createInitialSession(settings), 1_000);
+    const completed = syncSession(running, running.endsAt + 1_000);
 
-    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 301_000);
-    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 330_000);
-    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 601_000);
+    notificationService.maybeDispatchFocusOvertimeReminder(
+      completed,
+      completed.finishedAt + 301_000
+    );
+    notificationService.maybeDispatchFocusOvertimeReminder(
+      completed,
+      completed.finishedAt + 330_000
+    );
+    notificationService.maybeDispatchFocusOvertimeReminder(
+      completed,
+      completed.finishedAt + 601_000
+    );
 
     expect(sent).toHaveLength(2);
-    expect(sent[0].title).toBe('Free timer is running ⏱');
+    expect(sent[0].title).toBe('Focus overtime');
     expect(sent[0].options.silent).toBe(false);
     expect(sent[1].options.silent).toBe(false);
     expect(playUiActionTone).toHaveBeenCalledTimes(2);
     expect(playUiActionTone).toHaveBeenNthCalledWith(1, true);
     expect(playUiActionTone).toHaveBeenNthCalledWith(2, true);
-    expect(state.lastFreeTimerReminderKey).toBe('1000:2');
+    expect(state.lastOvertimeReminderKey).toContain(':2');
   });
 
-  it('keeps free timer reminder notifications silent when sound is disabled', () => {
+  it('keeps focus overtime reminder notifications silent when sound is disabled', () => {
     const sent = installNotificationMock();
     const playUiActionTone = vi.fn();
     const state = createState({
@@ -323,12 +332,16 @@ describe('notification service contracts', () => {
       state
     });
     const settings = createDefaultSettings();
-    const freeRunning = startFreeTimer(createInitialSession(settings), settings, 1_000);
+    const running = startCurrentStep(createInitialSession(settings), 1_000);
+    const completed = syncSession(running, running.endsAt + 1_000);
 
-    notificationService.maybeDispatchFreeTimerReminder(freeRunning, 301_000);
+    notificationService.maybeDispatchFocusOvertimeReminder(
+      completed,
+      completed.finishedAt + 301_000
+    );
 
     expect(sent).toHaveLength(1);
-    expect(sent[0].title).toBe('Free timer is running ⏱');
+    expect(sent[0].title).toBe('Focus overtime');
     expect(sent[0].options.silent).toBe(true);
     expect(playUiActionTone).toHaveBeenCalledTimes(1);
     expect(playUiActionTone).toHaveBeenCalledWith(false);

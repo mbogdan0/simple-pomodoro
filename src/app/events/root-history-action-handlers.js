@@ -6,9 +6,22 @@ import {
 } from '../../core/focus-history.js';
 import { ROOT_ACTIONS } from './root-contracts.js';
 
-const CLEAR_HISTORY_ENTRY_CONFIRMATION_MESSAGE = 'Clear this history entry?';
-
 export function createRootHistoryActionHandlers({ persistFocusHistory, renderApp, state }) {
+  function clearHistoryEntry(entryId) {
+    state.focusHistory = removeFocusHistoryEntry(state.focusHistory, entryId);
+
+    if (state.historyTagEditEntryId === entryId) {
+      state.historyTagEditEntryId = '';
+    }
+
+    if (state.historyNoteEditEntryId === entryId) {
+      state.historyNoteEditEntryId = '';
+    }
+
+    persistFocusHistory(state);
+    renderApp();
+  }
+
   return {
     [ROOT_ACTIONS.CLEAR_HISTORY_ENTRY]: (button) => {
       const entryId = button?.dataset?.entryId;
@@ -17,22 +30,20 @@ export function createRootHistoryActionHandlers({ persistFocusHistory, renderApp
         return;
       }
 
-      if (!window.confirm(CLEAR_HISTORY_ENTRY_CONFIRMATION_MESSAGE)) {
+      state.modal = {
+        entryId,
+        type: 'clear-history-entry'
+      };
+      renderApp();
+    },
+    [ROOT_ACTIONS.CONFIRM_CLEAR_HISTORY_ENTRY]: () => {
+      if (state.modal?.type !== 'clear-history-entry' || !state.modal.entryId) {
         return;
       }
 
-      state.focusHistory = removeFocusHistoryEntry(state.focusHistory, entryId);
-
-      if (state.historyTagEditEntryId === entryId) {
-        state.historyTagEditEntryId = '';
-      }
-
-      if (state.historyNoteEditEntryId === entryId) {
-        state.historyNoteEditEntryId = '';
-      }
-
-      persistFocusHistory(state);
-      renderApp();
+      const entryId = state.modal.entryId;
+      state.modal = null;
+      clearHistoryEntry(entryId);
     },
     [ROOT_ACTIONS.SET_HISTORY_ENTRY_FOCUS_TAG]: (button) => {
       const entryId = button?.dataset?.entryId;

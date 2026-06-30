@@ -103,26 +103,24 @@ describe('session commit reducer', () => {
     expect(reducedStillPaused.pauseStartedAt).toBe(3_000);
   });
 
-  it('suppresses manual early completion alerts and still advances session', () => {
+  it('dispatches completion alerts without auto-advancing or writing history', () => {
     const settings = createDefaultSettings();
     const running = startCurrentStep(createInitialSession(settings), 10_000);
     const completed = syncSession(running, running.endsAt + 100);
     const reduced = reduceCommittedSession(
       createReducerInput({
         commitNow: running.endsAt + 100,
-        completionReason: 'manual_early',
         dispatchAlerts: true,
-        focusNoteDraft: 'Ship release checklist',
         nextSession: completed,
         previousSession: running,
         settings
       })
     );
 
-    expect(reduced.completionAlerts).toHaveLength(0);
-    expect(reduced.focusHistory).toHaveLength(1);
-    expect(reduced.shouldPersistFocusHistory).toBe(true);
+    expect(reduced.completionAlerts).toHaveLength(1);
+    expect(reduced.focusHistory).toHaveLength(0);
+    expect(reduced.shouldPersistFocusHistory).toBe(false);
     expect(reduced.lastCompletionKey).not.toBe('');
-    expect(reduced.session.status).toBe('idle');
+    expect(reduced.session.status).toBe('completed_waiting_next');
   });
 });

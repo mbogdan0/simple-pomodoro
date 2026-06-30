@@ -58,11 +58,11 @@ describe('storage layer', () => {
 
     saveSettings(
       {
+        infiniteCycleEnabled: 'yes',
         lastOpenTab: 'unknown-tab',
         ntfyPublishUrl: 'ntfy.sh/my-topic',
         pipClockTickEvery10s: 'yes',
         repeatCount: 0,
-        autoStartNextStep: 'yes',
         templateDurations: {
           longBreak: 15 * 60 * 1000,
           shortBreak: 5 * 60 * 1000,
@@ -77,9 +77,10 @@ describe('storage layer', () => {
     expect(loaded.lastOpenTab).toBe('timer');
     expect(loaded.ntfyPublishUrl).toBe('');
     expect(loaded.pipClockTickEvery10s).toBe(false);
+    expect(loaded.infiniteCycleEnabled).toBe(false);
     expect(loaded).not.toHaveProperty('pipEnabled');
+    expect(loaded).not.toHaveProperty('autoStartNextStep');
     expect(loaded.repeatCount).toBeGreaterThanOrEqual(1);
-    expect(loaded.autoStartNextStep).toBe(false);
   });
 
   it('keeps history as a valid last-open tab', () => {
@@ -134,18 +135,18 @@ describe('storage layer', () => {
     ]);
   });
 
-  it('persists auto-start and PiP clock choices', () => {
+  it('persists infinite mode and PiP clock choices', () => {
     const storage = createMemoryStorage();
     const settings = {
       ...createDefaultSettings(),
-      autoStartNextStep: true,
+      infiniteCycleEnabled: true,
       ntfyPublishUrl: 'https://ntfy.sh/fizjuz-bowFek-kofhi2',
       pipClockTickEvery10s: true
     };
 
     saveSettings(settings, storage);
 
-    expect(loadSettings(storage).autoStartNextStep).toBe(true);
+    expect(loadSettings(storage).infiniteCycleEnabled).toBe(true);
     expect(loadSettings(storage).ntfyPublishUrl).toBe('https://ntfy.sh/fizjuz-bowFek-kofhi2');
     expect(loadSettings(storage).pipClockTickEvery10s).toBe(true);
     expect(loadSettings(storage)).not.toHaveProperty('pipEnabled');

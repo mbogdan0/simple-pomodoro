@@ -1,7 +1,7 @@
 import {
   buildNotificationTag,
   createCompletionAlertPayload,
-  shouldDispatchFreeTimerReminder,
+  shouldDispatchFocusOvertimeReminder,
   shouldDispatchFocusMinuteReminder
 } from '../../core/alerts.js';
 import { getCurrentStep } from '../../core/session.js';
@@ -36,7 +36,6 @@ export function createNotificationService({
 
   function dispatchCompletionAlerts(session, completionKey = '') {
     const completionPayload = createCompletionAlertPayload({
-      autoStartNextStep: state.settings.autoStartNextStep,
       session
     });
     const notificationTag = buildNotificationTag('step-complete', completionKey);
@@ -92,11 +91,11 @@ export function createNotificationService({
     });
   }
 
-  function maybeDispatchFreeTimerReminder(session, now = Date.now()) {
-    const { key, shouldDispatch } = shouldDispatchFreeTimerReminder({
+  function maybeDispatchFocusOvertimeReminder(session, now = Date.now()) {
+    const { key, shouldDispatch } = shouldDispatchFocusOvertimeReminder({
       notificationsEnabled: state.settings.alertSettings.notificationsEnabled,
       now,
-      previousKey: state.lastFreeTimerReminderKey,
+      previousKey: state.lastOvertimeReminderKey,
       session
     });
 
@@ -104,13 +103,13 @@ export function createNotificationService({
       return;
     }
 
-    state.lastFreeTimerReminderKey = key;
+    state.lastOvertimeReminderKey = key;
     playUiActionTone(state.settings.alertSettings.soundEnabled);
     void sendNotificationWithFallback({
-      body: 'Focus session is still active.',
+      body: 'Focus overtime is still running.',
       silent: !state.settings.alertSettings.soundEnabled,
-      tag: buildNotificationTag('free-timer-reminder', key),
-      title: 'Free timer is running ⏱'
+      tag: buildNotificationTag('focus-overtime-reminder', key),
+      title: 'Focus overtime'
     });
   }
 
@@ -201,7 +200,7 @@ export function createNotificationService({
     dispatchCompletionAlerts,
     dispatchIdleReminder,
     getNotificationSupportModel,
-    maybeDispatchFreeTimerReminder,
+    maybeDispatchFocusOvertimeReminder,
     maybeDispatchFocusMinuteReminder,
     maybeDispatchIdleReminder,
     requestNotificationPermission,
