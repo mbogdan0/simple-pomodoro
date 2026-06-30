@@ -61,9 +61,7 @@ describe('timer panel behavior', () => {
   it('renders PiP toggle as an overflow menu item when available', () => {
     const html = renderTimerPanel(createTimerModel({ showPipToggle: true }));
 
-    expect(html).toMatch(
-      /class="overflow-actions__item"\s+data-action="toggle-pip-window"/
-    );
+    expect(html).toMatch(/class="overflow-actions__item"\s+data-action="toggle-pip-window"/);
     expect(html).not.toContain('action-row__right');
     expect(html).not.toContain('action-button--pip');
   });
