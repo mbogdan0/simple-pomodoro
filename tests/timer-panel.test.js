@@ -58,6 +58,16 @@ describe('timer panel behavior', () => {
     expect(html).toContain('role="status"');
   });
 
+  it('renders PiP toggle as an overflow menu item when available', () => {
+    const html = renderTimerPanel(createTimerModel({ showPipToggle: true }));
+
+    expect(html).toMatch(
+      /class="overflow-actions__item"\s+data-action="toggle-pip-window"/
+    );
+    expect(html).not.toContain('action-row__right');
+    expect(html).not.toContain('action-button--pip');
+  });
+
   it('hides PiP control when feature is unavailable in model', () => {
     const html = renderTimerPanel(createTimerModel({ showPipToggle: false }));
 

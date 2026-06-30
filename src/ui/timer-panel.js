@@ -117,7 +117,20 @@ export function renderTimerPanel(timerModel) {
   const progressTrack = timerModel.progressTrack ?? '#ede7de';
   const secondaryAction = timerModel.secondaryAction;
   const showPipToggle = Boolean(timerModel.showPipToggle);
+  const pipMenuItem = showPipToggle
+    ? `
+      <button
+        class="overflow-actions__item"
+        data-action="${ROOT_ACTIONS.TOGGLE_PIP_WINDOW}"
+        role="menuitem"
+        type="button"
+      >
+        ${pipToggleLabel}
+      </button>
+    `
+    : '';
   const overflowMenuItems = `
+    ${pipMenuItem}
     <button
       class="overflow-actions__item"
       data-action="${ROOT_ACTIONS.RESET_RUN}"
@@ -235,28 +248,6 @@ export function renderTimerPanel(timerModel) {
               ${overflowMenuItems}
             </div>
           </details>
-        </div>
-        <div class="action-row__right">
-          ${
-            showPipToggle
-              ? `
-                <button
-                  class="action-button subtle action-button--pip"
-                  data-action="${ROOT_ACTIONS.TOGGLE_PIP_WINDOW}"
-                  type="button"
-                >
-                  <span class="action-button__icon action-button__icon--pip" aria-hidden="true">
-                    <svg viewBox="0 0 16 16" focusable="false">
-                      <rect x="2.5" y="5.5" width="8" height="8" rx="1.5"></rect>
-                      <path d="M9.5 2.5h4v4"></path>
-                      <path d="M13.5 2.5L8 8"></path>
-                    </svg>
-                  </span>
-                  <span class="action-button__label">${pipToggleLabel}</span>
-                </button>
-              `
-              : ''
-          }
         </div>
       </div>
 

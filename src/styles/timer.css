@@ -223,19 +223,11 @@
   width: min(420px, 100%);
 }
 
-.action-row__left,
-.action-row__right {
+.action-row__left {
   align-items: center;
   display: flex;
-  gap: 10px;
-}
-
-.action-row__left {
   flex-wrap: wrap;
-}
-
-.action-row__right {
-  margin-left: auto;
+  gap: 10px;
 }
 
 .overflow-actions {
@@ -297,37 +289,9 @@
   transform: translateY(0.5px);
 }
 
-.action-button.subtle.action-button--pip {
-  background: transparent;
-  border-color: transparent;
-  border-radius: 0;
-  color: var(--muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 2px;
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
-}
-
 .action-button__icon {
   display: inline-flex;
   pointer-events: none;
-}
-
-.action-button__icon--pip svg {
-  display: block;
-  height: 14px;
-  width: 14px;
-}
-
-.action-button__icon--pip rect,
-.action-button__icon--pip path {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.4;
 }
 
 .action-button__icon--kebab svg {
@@ -338,18 +302,6 @@
 
 .action-button__icon--kebab circle {
   fill: currentColor;
-}
-
-.action-button.subtle.action-button--pip:hover {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text);
-}
-
-.action-button.subtle.action-button--pip:disabled {
-  background: transparent;
-  border-color: transparent;
-  text-decoration: none;
 }
 
 .action-button:disabled,
