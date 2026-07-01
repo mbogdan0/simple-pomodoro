@@ -1,4 +1,5 @@
 import { FOCUS_TAG_LABELS, FOCUS_TAGS } from '../core/constants.js';
+import { createFocusHistoryBackupStatus } from '../core/focus-history.js';
 import { MAX_FOCUS_NOTE_LENGTH, escapeHtml } from '../core/focus-note.js';
 import { formatClock } from '../core/format.js';
 import { ROOT_ACTIONS } from '../app/events/root-contracts.js';
@@ -241,17 +242,62 @@ function renderHistoryDayGroup(group, historyTagEditEntryId = '', historyNoteEdi
   `;
 }
 
+function renderHistoryHeader(
+  historyEntries,
+  { importNotice = '', lastFocusHistoryExportedAt = null, now = Date.now() } = {}
+) {
+  const backupStatus = createFocusHistoryBackupStatus(
+    historyEntries,
+    lastFocusHistoryExportedAt,
+    now
+  );
+
+  return `
+    <div class="panel-heading history-panel-heading">
+      <div class="history-panel-title">
+        <h2>Focus History</h2>
+        ${
+          historyEntries.length
+            ? `<p class="history-backup-status ${backupStatus.isWarning ? 'history-backup-status--warning' : ''}">${escapeHtml(backupStatus.label)}</p>`
+            : ''
+        }
+      </div>
+      <div class="history-backup-actions" aria-label="History backup actions">
+        <button
+          class="ghost-button history-backup-action"
+          data-action="${ROOT_ACTIONS.IMPORT_FOCUS_HISTORY}"
+          type="button"
+        >
+          Import
+        </button>
+        <button
+          class="ghost-button history-backup-action"
+          data-action="${ROOT_ACTIONS.EXPORT_FOCUS_HISTORY}"
+          ${historyEntries.length ? '' : 'disabled'}
+          type="button"
+        >
+          Export
+        </button>
+      </div>
+    </div>
+    ${
+      importNotice
+        ? `<p class="history-import-notice" role="status">${escapeHtml(importNotice)}</p>`
+        : ''
+    }
+  `;
+}
+
 export function renderHistoryPanel(
   historyEntries = [],
   historyTagEditEntryId = '',
-  historyNoteEditEntryId = ''
+  historyNoteEditEntryId = '',
+  backupOptions = {}
 ) {
   if (!historyEntries.length) {
     return `
       <section class="panel history-layout" id="panel-history" aria-label="History panel" role="region">
-        <div class="panel-heading">
-          <h2>Focus History</h2>
-        </div>
+        ${renderHistoryHeader(historyEntries, backupOptions)}
         <p class="inline-note history-empty">No completed focus sessions yet.</p>
       </section>
     `;
@@ -259,9 +305,7 @@ export function renderHistoryPanel(
 
   return `
     <section class="panel history-layout" id="panel-history" aria-label="History panel" role="region">
-      <div class="panel-heading">
-        <h2>Focus History</h2>
-      </div>
+      ${renderHistoryHeader(historyEntries, backupOptions)}
       <ul class="history-list">
         ${groupHistoryEntriesByDay(historyEntries)
           .map((group) =>

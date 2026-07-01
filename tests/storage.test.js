@@ -7,10 +7,12 @@ import {
   createMemoryStorage,
   loadActiveSession,
   loadFocusHistory,
+  loadFocusHistoryLastExportedAt,
   loadFocusNoteDraft,
   loadSettings,
   saveActiveSession,
   saveFocusHistory,
+  saveFocusHistoryLastExportedAt,
   saveFocusNoteDraft,
   saveSettings
 } from '../src/core/storage.js';
@@ -51,6 +53,18 @@ describe('storage layer', () => {
     saveFocusNoteDraft('Deep work on architecture review', storage);
 
     expect(loadFocusNoteDraft(storage)).toBe('Deep work on architecture revi');
+  });
+
+  it('roundtrips and normalizes the last focus history export timestamp', () => {
+    const storage = createMemoryStorage();
+
+    saveFocusHistoryLastExportedAt(1_780_000_000_000.8, storage);
+
+    expect(loadFocusHistoryLastExportedAt(storage)).toBe(1_780_000_000_001);
+
+    saveFocusHistoryLastExportedAt(-1, storage);
+
+    expect(loadFocusHistoryLastExportedAt(storage)).toBeNull();
   });
 
   it('normalizes repeat count and unsupported tabs while loading settings', () => {
@@ -184,6 +198,8 @@ describe('storage layer', () => {
     };
 
     expect(() => saveSettings(settings, throwingStorage)).not.toThrow();
+    expect(() => saveFocusHistoryLastExportedAt(1_780_000_000_000, throwingStorage)).not.toThrow();
     expect(loadSettings(throwingStorage).repeatCount).toBe(3);
+    expect(loadFocusHistoryLastExportedAt(throwingStorage)).toBe(1_780_000_000_000);
   });
 });

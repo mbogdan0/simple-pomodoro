@@ -88,6 +88,10 @@ function writeJson(storage, key, value) {
   }
 }
 
+function normalizeStoredTimestamp(value) {
+  return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+}
+
 export function loadSettings(storage) {
   const resolvedStorage = resolveStorage(storage);
   return normalizeSettings(
@@ -114,6 +118,20 @@ export function loadFocusHistory(storage) {
 
 export function saveFocusHistory(history, storage) {
   writeJson(resolveStorage(storage), STORAGE_KEYS.focusHistory, normalizeFocusHistory(history));
+}
+
+export function loadFocusHistoryLastExportedAt(storage) {
+  return normalizeStoredTimestamp(
+    parseJson(resolveStorage(storage), STORAGE_KEYS.focusHistoryLastExportedAt)
+  );
+}
+
+export function saveFocusHistoryLastExportedAt(exportedAt, storage) {
+  writeJson(
+    resolveStorage(storage),
+    STORAGE_KEYS.focusHistoryLastExportedAt,
+    normalizeStoredTimestamp(exportedAt)
+  );
 }
 
 export function loadFocusNoteDraft(storage) {

@@ -36,6 +36,8 @@ describe('history panel behavior', () => {
     ]);
 
     expect(html).toContain('Focus History');
+    expect(html).toContain('data-action="import-focus-history"');
+    expect(html).toContain('data-action="export-focus-history"');
     expect(html).toContain('history-list');
     expect(html).toContain('history-day-group');
     expect(html).toContain('history-day-list');
@@ -69,8 +71,11 @@ describe('history panel behavior', () => {
     const html = renderHistoryPanel([]);
 
     expect(html).toContain('No completed focus sessions yet.');
+    expect(html).toContain('data-action="import-focus-history"');
+    expect(html).toMatch(/data-action="export-focus-history"[^>]*disabled/);
     expect(html).not.toContain('data-focus-note-input');
     expect(html).not.toContain('history-list');
+    expect(html).not.toContain('Last backup:');
   });
 
   it('renders inline history tag choices for selected editing entry', () => {
@@ -162,5 +167,65 @@ describe('history panel behavior', () => {
 
     expect(html).toContain('&quot;&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).not.toContain('<script>');
+  });
+
+  it('renders backup status and warning only when stale history spans at least 21 days', () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const now = new Date(2026, 6, 1).getTime();
+    const history = [
+      {
+        completedAt: now,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'work',
+        id: 'focus-new',
+        stepId: 'focus-new',
+        stepType: 'work'
+      },
+      {
+        completedAt: now - 22 * dayMs,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'study',
+        id: 'focus-old',
+        stepId: 'focus-old',
+        stepType: 'work'
+      }
+    ];
+    const staleHtml = renderHistoryPanel(history, '', '', {
+      lastFocusHistoryExportedAt: null,
+      now
+    });
+    const freshHtml = renderHistoryPanel(history, '', '', {
+      lastFocusHistoryExportedAt: now,
+      now
+    });
+
+    expect(staleHtml).toContain('Last backup: never');
+    expect(staleHtml).toContain('history-backup-status--warning');
+    expect(freshHtml).toContain('Last backup: today');
+    expect(freshHtml).not.toContain('history-backup-status--warning');
+  });
+
+  it('renders import result notices inline', () => {
+    const completedAt = new Date(2026, 3, 20, 18, 30, 0).getTime();
+    const html = renderHistoryPanel(
+      [
+        {
+          completedAt,
+          durationMs: 25 * 60 * 1000,
+          focusTag: 'work',
+          id: 'focus-1',
+          stepId: 'focus-1',
+          stepType: 'work'
+        }
+      ],
+      '',
+      '',
+      {
+        importNotice: 'Imported 1 entries. Skipped 2 duplicates.'
+      }
+    );
+
+    expect(html).toContain('history-import-notice');
+    expect(html).toContain('Imported 1 entries. Skipped 2 duplicates.');
   });
 });

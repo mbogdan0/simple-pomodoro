@@ -31,6 +31,7 @@ export function createRootActionHandlers(deps) {
     audioService,
     notificationService,
     persistFocusHistory,
+    persistFocusHistoryLastExportedAt,
     persistFocusNoteDraft,
     persistSettings,
     postWorkerAction,
@@ -52,6 +53,7 @@ export function createRootActionHandlers(deps) {
   const handlers = {
     ...createRootHistoryActionHandlers({
       persistFocusHistory,
+      persistFocusHistoryLastExportedAt,
       renderApp,
       state
     }),

@@ -14,6 +14,7 @@ import { applyStartupSessionPolicy } from './session/startup-session.js';
 import {
   createAppState,
   persistFocusHistory,
+  persistFocusHistoryLastExportedAt,
   persistFocusNoteDraft,
   persistSession,
   persistSettings
@@ -141,6 +142,7 @@ export function startApp(root) {
     commitSession: sessionController.commitSession,
     notificationService,
     persistFocusHistory,
+    persistFocusHistoryLastExportedAt,
     persistFocusNoteDraft,
     persistSettings,
     postWorkerAction: workerCommandBus.postWorkerAction,

@@ -6,6 +6,8 @@ import { createDefaultSettings } from '../../src/core/settings.js';
 import { WORKER_ACTIONS } from '../../src/core/worker-protocol.js';
 
 const originalWindow = globalThis.window;
+const originalDocument = globalThis.document;
+const originalURL = globalThis.URL;
 
 function createState(overrides = {}) {
   const settings = createDefaultSettings();
@@ -17,9 +19,11 @@ function createState(overrides = {}) {
     focusNoteDraft: '',
     historyNoteEditEntryId: '',
     historyTagEditEntryId: '',
+    historyImportNotice: '',
     idleStartedAt: null,
     isNtfyTesting: false,
     lastCompletionKey: '',
+    lastFocusHistoryExportedAt: null,
     lastFocusMinuteReminderKey: '',
     lastIdleReminderAt: Date.now(),
     lastOvertimeReminderKey: '',
@@ -52,6 +56,7 @@ function createDeps(stateOverrides = {}) {
   const playCompletionTone = vi.fn(() => true);
   const playUiActionTone = vi.fn(() => true);
   const persistFocusHistory = vi.fn();
+  const persistFocusHistoryLastExportedAt = vi.fn();
   const persistFocusNoteDraft = vi.fn();
   const persistSettings = vi.fn();
   const postWorkerAction = vi.fn();
@@ -70,12 +75,14 @@ function createDeps(stateOverrides = {}) {
       testNtfy: vi.fn(async () => '')
     },
     persistFocusHistory,
+    persistFocusHistoryLastExportedAt,
     persistFocusNoteDraft,
     persistSettings,
     postWorkerAction,
     renderApp,
     root: {
       addEventListener: vi.fn(),
+      querySelector: vi.fn(() => null),
       querySelectorAll: vi.fn(() => [])
     },
     state,
@@ -86,6 +93,7 @@ function createDeps(stateOverrides = {}) {
     deps,
     spies: {
       persistFocusHistory,
+      persistFocusHistoryLastExportedAt,
       persistFocusNoteDraft,
       persistSettings,
       playCompletionTone,
@@ -112,6 +120,8 @@ describe('root action handlers', () => {
   });
 
   afterEach(() => {
+    globalThis.document = originalDocument;
+    globalThis.URL = originalURL;
     globalThis.window = originalWindow;
     vi.restoreAllMocks();
   });
@@ -128,6 +138,8 @@ describe('root action handlers', () => {
         'confirm-clear-history-entry',
         'confirm-reset-run',
         'confirm-stale-session-reset',
+        'export-focus-history',
+        'import-focus-history',
         'pause-step',
         'request-notification-permission',
         'reset-run',
@@ -268,6 +280,123 @@ describe('root action handlers', () => {
     expect(state.historyNoteEditEntryId).toBe('');
     expect(spies.persistFocusHistory).toHaveBeenCalledTimes(2);
     expect(spies.renderApp).toHaveBeenCalledTimes(6);
+  });
+
+  it('exports focus history and records the export timestamp', () => {
+    const append = vi.fn();
+    const click = vi.fn();
+    const remove = vi.fn();
+    const revokeObjectURL = vi.fn();
+    const createObjectURL = vi.fn(() => 'blob:focus-history');
+    globalThis.document = {
+      body: {
+        append
+      },
+      createElement(tagName) {
+        expect(tagName).toBe('a');
+        return {
+          click,
+          remove,
+          style: {}
+        };
+      }
+    };
+    globalThis.URL = {
+      createObjectURL,
+      revokeObjectURL
+    };
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_780_000_000_000);
+    const { deps, spies, state } = createDeps({
+      focusHistory: [
+        {
+          completedAt: 1_720_000_000_000,
+          durationMs: 25 * 60 * 1000,
+          focusTag: 'none',
+          id: 'focus-1',
+          stepId: 'step-1',
+          stepType: 'work'
+        }
+      ]
+    });
+    const { handlers } = createRootActionHandlers(deps);
+
+    handlers['export-focus-history'](createActionButton());
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(append).toHaveBeenCalledTimes(1);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:focus-history');
+    expect(state.lastFocusHistoryExportedAt).toBe(1_780_000_000_000);
+    expect(spies.persistFocusHistoryLastExportedAt).toHaveBeenCalledTimes(1);
+    expect(spies.renderApp).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockRestore();
+  });
+
+  it('imports focus history from a temporary file input', async () => {
+    let changeHandler = null;
+    const append = vi.fn();
+    const click = vi.fn();
+    const remove = vi.fn();
+    const input = {
+      accept: '',
+      addEventListener(type, handler) {
+        if (type === 'change') {
+          changeHandler = handler;
+        }
+      },
+      click,
+      files: [
+        {
+          text: vi.fn(async () =>
+            JSON.stringify({
+              app: 'Simple Pomodoro Timer',
+              exportedAt: 1_782_888_573_513,
+              focusHistory: [
+                {
+                  completedAt: 1_782_804_484_836,
+                  durationMs: 40_801,
+                  focusTag: 'none',
+                  id: 'step-661aa234-51d7-47c2-b192-0819a0e56cfe:1782804484836',
+                  stepId: 'step-661aa234-51d7-47c2-b192-0819a0e56cfe',
+                  stepType: 'work'
+                }
+              ],
+              version: 1
+            })
+          )
+        }
+      ],
+      remove,
+      style: {},
+      type: ''
+    };
+    globalThis.document = {
+      body: {
+        append
+      },
+      createElement(tagName) {
+        expect(tagName).toBe('input');
+        return input;
+      }
+    };
+    const { deps, spies, state } = createDeps();
+    const { handlers } = createRootActionHandlers(deps);
+
+    handlers['import-focus-history'](createActionButton());
+    changeHandler();
+    await flushPromises();
+
+    expect(input.accept).toBe('application/json,.json');
+    expect(input.type).toBe('file');
+    expect(append).toHaveBeenCalledWith(input);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(state.focusHistory).toHaveLength(1);
+    expect(state.historyImportNotice).toBe('Imported 1 entries. Skipped 0 duplicates.');
+    expect(spies.persistFocusHistory).toHaveBeenCalledTimes(1);
+    expect(spies.renderApp).toHaveBeenCalledTimes(1);
   });
 
   it('keeps no-op behavior for missing datasets and unrelated modal confirmations', () => {

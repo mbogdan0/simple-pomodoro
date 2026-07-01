@@ -17,6 +17,7 @@
  * @property {{
  *   addEventListener: (eventType: string, handler: EventListener | ((event: Event) => void)) => void,
  *   removeEventListener?: (eventType: string, handler: EventListener | ((event: Event) => void)) => void,
+ *   querySelector?: (selector: string) => unknown,
  *   querySelectorAll?: (selector: string) => ArrayLike<{ open?: boolean }>
  * }} root
  * @property {{
@@ -30,6 +31,7 @@
  *   testNtfy: () => Promise<string>
  * }} notificationService
  * @property {(state: import('../types.js').AppState) => void} persistFocusHistory
+ * @property {(state: import('../types.js').AppState) => void} persistFocusHistoryLastExportedAt
  * @property {(state: import('../types.js').AppState) => void} persistFocusNoteDraft
  * @property {(state: import('../types.js').AppState) => void} persistSettings
  * @property {(type: string, payload?: object) => void} postWorkerAction

@@ -5,6 +5,8 @@ export const ROOT_ACTIONS = Object.freeze({
   CONFIRM_CLEAR_HISTORY_ENTRY: 'confirm-clear-history-entry',
   CONFIRM_RESET_RUN: 'confirm-reset-run',
   CONFIRM_STALE_SESSION_RESET: 'confirm-stale-session-reset',
+  EXPORT_FOCUS_HISTORY: 'export-focus-history',
+  IMPORT_FOCUS_HISTORY: 'import-focus-history',
   PAUSE_STEP: 'pause-step',
   REQUEST_NOTIFICATION_PERMISSION: 'request-notification-permission',
   RESET_RUN: 'reset-run',

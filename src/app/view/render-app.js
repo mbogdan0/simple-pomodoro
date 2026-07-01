@@ -76,7 +76,11 @@ export function createAppRenderer({ root, state, pipController, getNotificationS
               ? renderHistoryPanel(
                   state.focusHistory,
                   state.historyTagEditEntryId,
-                  state.historyNoteEditEntryId
+                  state.historyNoteEditEntryId,
+                  {
+                    importNotice: state.historyImportNotice,
+                    lastFocusHistoryExportedAt: state.lastFocusHistoryExportedAt
+                  }
                 )
               : ''
           }

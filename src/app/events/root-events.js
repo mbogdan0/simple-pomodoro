@@ -2,6 +2,7 @@
 
 import { createRootActionHandlers } from './root-action-handlers.js';
 import { createRootClickHandlers } from './root-click-handlers.js';
+import { createRootHistoryChangeHandlers } from './root-history-change-handlers.js';
 import { createRootInputHandlers } from './root-input-handlers.js';
 import { createRootSettingsHandlers } from './root-settings-handlers.js';
 
@@ -11,6 +12,7 @@ import { createRootSettingsHandlers } from './root-settings-handlers.js';
 export function createRootEvents(deps) {
   const { root } = deps;
   const { handlers: actionHandlers, playUiActionTone } = createRootActionHandlers(deps);
+  const historyChangeHandlers = createRootHistoryChangeHandlers(deps);
   const settingsHandlers = createRootSettingsHandlers(deps);
   const inputHandlers = createRootInputHandlers(deps);
   const clickHandlers = createRootClickHandlers({
@@ -31,13 +33,21 @@ export function createRootEvents(deps) {
     deps.renderApp();
   }
 
+  function handleRootChange(event) {
+    if (historyChangeHandlers.handleRootChange(event)) {
+      return;
+    }
+
+    settingsHandlers.handleRootChange(event);
+  }
+
   function bindRootEvents() {
     if (isBound) {
       return;
     }
 
     root.addEventListener('click', clickHandlers.handleRootClick);
-    root.addEventListener('change', settingsHandlers.handleRootChange);
+    root.addEventListener('change', handleRootChange);
     root.addEventListener('input', inputHandlers.handleRootInput);
     document.addEventListener('click', clickHandlers.handleDocumentClick);
     document.addEventListener('keydown', handleDocumentKeydown);
@@ -50,7 +60,7 @@ export function createRootEvents(deps) {
     }
 
     root.removeEventListener?.('click', clickHandlers.handleRootClick);
-    root.removeEventListener?.('change', settingsHandlers.handleRootChange);
+    root.removeEventListener?.('change', handleRootChange);
     root.removeEventListener?.('input', inputHandlers.handleRootInput);
     document.removeEventListener?.('click', clickHandlers.handleDocumentClick);
     document.removeEventListener?.('keydown', handleDocumentKeydown);
@@ -61,7 +71,7 @@ export function createRootEvents(deps) {
     bindRootEvents,
     dispose,
     handleRootInput: inputHandlers.handleRootInput,
-    handleRootChange: settingsHandlers.handleRootChange,
+    handleRootChange,
     handleRootClick: clickHandlers.handleRootClick
   };
 }

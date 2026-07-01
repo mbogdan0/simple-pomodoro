@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { MAX_FOCUS_HISTORY_ENTRIES } from '../src/core/constants.js';
 import {
   appendFocusHistoryEntry,
+  createFocusHistoryBackupStatus,
   createFocusHistoryEntry,
+  createFocusHistoryExportPayload,
+  mergeFocusHistory,
   normalizeFocusHistoryEntry,
+  parseFocusHistoryImportPayload,
   removeFocusHistoryEntry,
   updateFocusHistoryEntryFocusNote,
   updateFocusHistoryEntryFocusTag
@@ -220,5 +224,143 @@ describe('focus history helpers', () => {
 
     expect(withNote[0].focusNote).toBe('Review release notes');
     expect(cleared[0].focusNote).toBeUndefined();
+  });
+
+  it('creates and parses focus history export payloads', () => {
+    const history = [
+      {
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'work',
+        id: 'focus-1',
+        stepId: 'step-1',
+        stepType: 'work'
+      }
+    ];
+    const payload = createFocusHistoryExportPayload(history, 1_780_000_000_000);
+    const parsed = parseFocusHistoryImportPayload(payload);
+
+    expect(payload).toMatchObject({
+      app: 'Simple Pomodoro Timer',
+      exportedAt: 1_780_000_000_000,
+      version: 1
+    });
+    expect(parsed.error).toBe('');
+    expect(parsed.focusHistory).toEqual(history);
+    expect(parseFocusHistoryImportPayload(history).focusHistory).toEqual(history);
+    expect(parseFocusHistoryImportPayload({ focusHistory: [{ id: '' }] }).error).toBe(
+      'No valid focus history entries were found.'
+    );
+  });
+
+  it('merges imported focus history without duplicate ids or natural duplicate sessions', () => {
+    const localHistory = [
+      {
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusNote: 'Local note',
+        focusTag: 'work',
+        id: 'focus-1',
+        stepId: 'step-1',
+        stepType: 'work'
+      }
+    ];
+    const importedHistory = [
+      {
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusNote: 'Imported note',
+        focusTag: 'study',
+        id: 'focus-1',
+        stepId: 'step-1',
+        stepType: 'work'
+      },
+      {
+        completedAt: 1_720_000_000_000,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'study',
+        id: 'alternate-id',
+        stepId: 'step-1',
+        stepType: 'work'
+      },
+      {
+        completedAt: 1_730_000_000_000,
+        durationMs: 30 * 60 * 1000,
+        focusTag: 'study',
+        id: 'focus-2',
+        stepId: 'step-2',
+        stepType: 'work'
+      }
+    ];
+
+    const merged = mergeFocusHistory(localHistory, importedHistory);
+
+    expect(merged.addedCount).toBe(1);
+    expect(merged.skippedCount).toBe(2);
+    expect(merged.history).toEqual([
+      {
+        completedAt: 1_730_000_000_000,
+        durationMs: 30 * 60 * 1000,
+        focusTag: 'study',
+        id: 'focus-2',
+        stepId: 'step-2',
+        stepType: 'work'
+      },
+      localHistory[0]
+    ]);
+  });
+
+  it('keeps merged history newest-first and bounded', () => {
+    const localHistory = [];
+    const importedHistory = [];
+
+    for (let index = 0; index < MAX_FOCUS_HISTORY_ENTRIES + 10; index += 1) {
+      importedHistory.push({
+        completedAt: 1_720_000_000_000 + index,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: `focus-${index}`,
+        stepId: `step-${index}`,
+        stepType: 'work'
+      });
+    }
+
+    const merged = mergeFocusHistory(localHistory, importedHistory);
+
+    expect(merged.history).toHaveLength(MAX_FOCUS_HISTORY_ENTRIES);
+    expect(merged.history[0].id).toBe(`focus-${MAX_FOCUS_HISTORY_ENTRIES + 9}`);
+  });
+
+  it('creates smart backup warning status only for stale exports with 21+ days of history', () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const now = new Date(2026, 6, 1).getTime();
+    const history = [
+      {
+        completedAt: now - 22 * dayMs,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: 'old',
+        stepId: 'old',
+        stepType: 'work'
+      },
+      {
+        completedAt: now,
+        durationMs: 25 * 60 * 1000,
+        focusTag: 'none',
+        id: 'new',
+        stepId: 'new',
+        stepType: 'work'
+      }
+    ];
+
+    expect(createFocusHistoryBackupStatus(history, null, now)).toMatchObject({
+      isWarning: true,
+      label: 'Last backup: never'
+    });
+    expect(createFocusHistoryBackupStatus(history, now, now)).toMatchObject({
+      isWarning: false,
+      label: 'Last backup: today'
+    });
+    expect(createFocusHistoryBackupStatus(history.slice(1), null, now).isWarning).toBe(false);
   });
 });

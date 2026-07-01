@@ -103,6 +103,14 @@ function renderStaleSessionModal() {
   });
 }
 
+function renderHistoryMessageModal(modal) {
+  return renderModalShell({
+    title: modal.title || 'History import',
+    body: `<p>${escapeHtml(modal.message || '')}</p>`,
+    actions: [{ action: ROOT_ACTIONS.CANCEL_MODAL, label: 'OK', primary: true }]
+  });
+}
+
 export function renderAppModal(modal, timerModel) {
   if (!modal) {
     return '';
@@ -122,6 +130,10 @@ export function renderAppModal(modal, timerModel) {
 
   if (modal.type === 'stale-session') {
     return renderStaleSessionModal();
+  }
+
+  if (modal.type === 'history-message') {
+    return renderHistoryMessageModal(modal);
   }
 
   return '';

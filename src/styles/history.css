@@ -6,6 +6,54 @@
   padding: 0;
 }
 
+.history-panel-heading {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.history-panel-title {
+  display: grid;
+  gap: 4px;
+}
+
+.history-backup-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.history-backup-status--warning {
+  color: #a6532f;
+}
+
+.history-backup-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.history-backup-action {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  padding: 10px 14px;
+}
+
+.history-backup-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.history-import-notice {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0;
+}
+
 .history-day-group {
   display: grid;
   gap: 10px;

@@ -18,9 +18,11 @@ function createState(overrides = {}) {
     focusNoteDraft: '',
     historyNoteEditEntryId: '',
     historyTagEditEntryId: '',
+    historyImportNotice: '',
     idleStartedAt: null,
     isNtfyTesting: false,
     lastCompletionKey: '',
+    lastFocusHistoryExportedAt: null,
     lastFocusMinuteReminderKey: '',
     lastIdleReminderAt: Date.now(),
     lastOvertimeReminderKey: '',
@@ -57,6 +59,7 @@ function createDeps(rootOverrides = {}, stateOverrides = {}) {
         testNtfy: vi.fn(async () => '')
       },
       persistFocusHistory: vi.fn(),
+      persistFocusHistoryLastExportedAt: vi.fn(),
       persistFocusNoteDraft: vi.fn(),
       persistSettings: vi.fn(),
       postWorkerAction: vi.fn(),
@@ -68,6 +71,12 @@ function createDeps(rootOverrides = {}, stateOverrides = {}) {
     root,
     state
   };
+}
+
+async function flushPromises(cycles = 4) {
+  for (let index = 0; index < cycles; index += 1) {
+    await Promise.resolve();
+  }
 }
 
 describe('root events shell', () => {
@@ -234,6 +243,40 @@ describe('root events shell', () => {
     expect(deps.renderApp).not.toHaveBeenCalled();
   });
 
+  it('keeps import controls mounted when a history editor is open', () => {
+    const documentHandlers = {};
+    const { deps, state } = createDeps(
+      {},
+      {
+        historyTagEditEntryId: 'focus-1'
+      }
+    );
+
+    globalThis.document = {
+      addEventListener(type, handler) {
+        documentHandlers[type] = handler;
+      }
+    };
+
+    const rootEvents = createRootEvents(deps);
+    rootEvents.bindRootEvents();
+
+    documentHandlers.click({
+      target: {
+        closest(selector) {
+          if (selector.includes('.history-backup-actions')) {
+            return {};
+          }
+
+          return null;
+        }
+      }
+    });
+
+    expect(state.historyTagEditEntryId).toBe('focus-1');
+    expect(deps.renderApp).not.toHaveBeenCalled();
+  });
+
   it('unbinds root and document listeners on dispose', () => {
     const documentHandlers = {};
     const documentRemovals = vi.fn();
@@ -353,5 +396,106 @@ describe('root events shell', () => {
     expect(input.value).toBe('Audit release checklist and in');
     expect(deps.persistFocusHistory).toHaveBeenCalledTimes(1);
     expect(deps.renderApp).not.toHaveBeenCalled();
+  });
+
+  it('imports focus history JSON through the root change handler', async () => {
+    const { deps, state } = createDeps(
+      {},
+      {
+        focusHistory: [
+          {
+            completedAt: 1_720_000_000_000,
+            durationMs: 25 * 60 * 1000,
+            focusTag: 'work',
+            id: 'local-focus',
+            stepId: 'local-step',
+            stepType: 'work'
+          }
+        ],
+        historyNoteEditEntryId: 'local-focus',
+        historyTagEditEntryId: 'local-focus'
+      }
+    );
+    const rootEvents = createRootEvents(deps);
+    const input = {
+      files: [
+        {
+          text: vi.fn(async () =>
+            JSON.stringify({
+              app: 'Simple Pomodoro Timer',
+              exportedAt: 1_780_000_000_000,
+              focusHistory: [
+                {
+                  completedAt: 1_720_000_000_000,
+                  durationMs: 25 * 60 * 1000,
+                  focusTag: 'study',
+                  id: 'local-focus',
+                  stepId: 'local-step',
+                  stepType: 'work'
+                },
+                {
+                  completedAt: 1_730_000_000_000,
+                  durationMs: 30 * 60 * 1000,
+                  focusTag: 'study',
+                  id: 'imported-focus',
+                  stepId: 'imported-step',
+                  stepType: 'work'
+                }
+              ],
+              version: 1
+            })
+          )
+        }
+      ],
+      matches(selector) {
+        return selector === '[data-focus-history-import-input]';
+      },
+      value: 'backup.json'
+    };
+
+    rootEvents.handleRootChange({ target: input });
+    await flushPromises();
+
+    expect(state.focusHistory.map((entry) => entry.id)).toEqual(['imported-focus', 'local-focus']);
+    expect(state.historyNoteEditEntryId).toBe('');
+    expect(state.historyTagEditEntryId).toBe('');
+    expect(state.modal).toEqual({
+      message: 'Imported 1 entries. Skipped 1 duplicates.',
+      title: 'Import complete',
+      type: 'history-message'
+    });
+    expect(state.historyImportNotice).toBe('Imported 1 entries. Skipped 1 duplicates.');
+    expect(input.value).toBe('');
+    expect(deps.persistFocusHistory).toHaveBeenCalledTimes(1);
+    expect(deps.renderApp).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows import errors for invalid JSON files and clears the file input', async () => {
+    const { deps, state } = createDeps();
+    const rootEvents = createRootEvents(deps);
+    const input = {
+      files: [
+        {
+          text: vi.fn(async () => '{not json')
+        }
+      ],
+      matches(selector) {
+        return selector === '[data-focus-history-import-input]';
+      },
+      value: 'broken.json'
+    };
+
+    rootEvents.handleRootChange({ target: input });
+    await flushPromises();
+
+    expect(state.modal).toEqual({
+      message: 'Choose a valid JSON focus history backup file.',
+      title: 'Import failed',
+      type: 'history-message'
+    });
+    expect(state.historyImportNotice).toBe('Choose a valid JSON focus history backup file.');
+    expect(input.value).toBe('');
+    expect(deps.persistFocusHistory).not.toHaveBeenCalled();
+    expect(deps.renderApp).toHaveBeenCalledTimes(1);
   });
 });

@@ -69,11 +69,13 @@ export const DEFAULT_ALERT_SETTINGS = {
 
 export const STORAGE_KEYS = {
   focusHistory: 'timer.focus-history.v2',
+  focusHistoryLastExportedAt: 'timer.focus-history-last-exported-at.v1',
   focusNoteDraft: 'timer.focus-note-draft.v2',
   settings: 'timer.settings.v3',
   activeSession: 'timer.active-session.v3'
 };
 export const MAX_FOCUS_HISTORY_ENTRIES = 500;
+export const FOCUS_HISTORY_BACKUP_WARNING_AGE_MS = 21 * 24 * 60 * 60 * 1000;
 
 export const WORKER_TICK_INTERVAL_MS = 250;
 export const BACKGROUND_COMPLETION_THRESHOLD_MS = 1000;
